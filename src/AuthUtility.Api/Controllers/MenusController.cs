@@ -222,6 +222,15 @@ public class MenusController : ControllerBase
                 Icon =
                     request.Icon?.Trim(),
 
+                FullName =
+                    EmptyToNull(request.FullName),
+
+                Description =
+                    EmptyToNull(request.Description),
+
+                Color =
+                    EmptyToNull(request.Color)?.ToLower(),
+
                 MenuType =
                     menuType,
 
@@ -384,6 +393,15 @@ public class MenusController : ControllerBase
         menu.Icon =
             request.Icon?.Trim();
 
+        menu.FullName =
+            EmptyToNull(request.FullName);
+
+        menu.Description =
+            EmptyToNull(request.Description);
+
+        menu.Color =
+            EmptyToNull(request.Color)?.ToLower();
+
         menu.MenuType =
             menuType;
 
@@ -514,6 +532,15 @@ public class MenusController : ControllerBase
             Icon =
                 menu.Icon,
 
+            FullName =
+                menu.FullName,
+
+            Description =
+                menu.Description,
+
+            Color =
+                menu.Color,
+
             MenuType =
                 menu.MenuType,
 
@@ -637,6 +664,16 @@ public class MenusController : ControllerBase
         return route;
     }
 
+
+    private static string? EmptyToNull(
+        string? value
+    )
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+    }
+
     /* =========================================================
    NAVIGATION MENU USER LOGIN
 
@@ -704,6 +741,12 @@ public async Task<IActionResult> GetNavigation()
                 Route = x.Route,
 
                 Icon = x.Icon,
+
+                FullName = x.FullName,
+
+                Description = x.Description,
+
+                Color = x.Color,
 
                 MenuType = x.MenuType,
 

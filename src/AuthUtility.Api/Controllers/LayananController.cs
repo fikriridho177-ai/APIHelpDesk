@@ -53,7 +53,8 @@ public class LayananController(AppDbContext db) : ControllerBase
         var visible = access.Menus.Values
             .Where(menu => access.Has(menu.Id, MenuPermission.View))
             .Select(menu => new LynServiceDto(
-                menu.Id, menu.ParentId, menu.Code, menu.Name, menu.Route, menu.Icon, menu.MenuType, menu.SortOrder,
+                menu.Id, menu.ParentId, menu.Code, menu.Name, menu.Route, menu.Icon,
+                menu.FullName, menu.Description, menu.Color, menu.MenuType, menu.SortOrder,
                 new LynPermissionDto(
                     access.Has(menu.Id, MenuPermission.View),
                     access.Has(menu.Id, MenuPermission.Create),

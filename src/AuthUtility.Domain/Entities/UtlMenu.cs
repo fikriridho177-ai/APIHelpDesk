@@ -19,6 +19,14 @@ public class UtlMenu
 
     public string? Icon { get; set; }
 
+    // Keterangan kartu dashboard (dipakai kartu divisi layanan).
+    public string? FullName { get; set; }
+
+    public string? Description { get; set; }
+
+    // Warna kartu: blue, green, purple, orange, teal, cyan, ...
+    public string? Color { get; set; }
+
     public string MenuType { get; set; } = "MENU";
 
     public int SortOrder { get; set; }

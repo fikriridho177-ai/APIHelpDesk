@@ -14,6 +14,12 @@ public class NavigationMenuDto
 
     public string? Icon { get; set; }
 
+    public string? FullName { get; set; }
+
+    public string? Description { get; set; }
+
+    public string? Color { get; set; }
+
     public string MenuType { get; set; } = "MENU";
 
     public int SortOrder { get; set; }

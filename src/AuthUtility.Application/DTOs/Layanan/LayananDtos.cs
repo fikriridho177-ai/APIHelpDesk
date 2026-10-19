@@ -21,6 +21,9 @@ public record LynServiceDto(
     string Name,
     string? Route,
     string? Icon,
+    string? FullName,
+    string? Description,
+    string? Color,
     string MenuType,
     int SortOrder,
     LynPermissionDto Permissions

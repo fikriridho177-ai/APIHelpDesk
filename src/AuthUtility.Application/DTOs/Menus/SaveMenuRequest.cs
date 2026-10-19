@@ -7,6 +7,9 @@ public class SaveMenuRequest
     public string Name { get; set; } = "";
     public string? Route { get; set; }
     public string? Icon { get; set; }
+    public string? FullName { get; set; }
+    public string? Description { get; set; }
+    public string? Color { get; set; }
     public string MenuType { get; set; } = "MENU";
     public int SortOrder { get; set; }
     public bool Active { get; set; } = true;
