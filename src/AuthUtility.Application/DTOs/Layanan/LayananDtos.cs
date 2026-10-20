@@ -99,3 +99,13 @@ public class LynActionRequest
     public DateTime? ScheduledAt { get; set; }
     public string? Assignee { get; set; }
 }
+
+/* ---------- Portal ---------- */
+
+// Widget Antrian: tiket yang menunggu tindakan user (Total = semua, Items = maksimal take).
+public record LynQueueDto(int Total, List<LynRequestListItemDto> Items);
+
+public record LynDivisionKpiDto(string Division, int Masuk, int Terbuka, int Selesai, double? RataHariSelesai);
+
+// Widget KPI Divisi: tiket yang dibuat dalam Days hari terakhir.
+public record LynKpiDto(int Days, List<LynDivisionKpiDto> Divisions);

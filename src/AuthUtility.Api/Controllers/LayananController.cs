@@ -242,6 +242,43 @@ public class LayananController(AppDbContext db) : ControllerBase
     }
 
     /* =========================================================
+       PORTAL (widget Antrian & KPI Divisi)
+    ========================================================= */
+
+    // Tiket orang lain yang menunggu langkah berikutnya dari user (Terima / Jadwalkan / Proses).
+    [HttpGet("queue")]
+    public async Task<IActionResult> GetQueue(int take = 10)
+    {
+        var access = await LayananAccess.LoadAsync(db, CurrentUserId);
+        if (access == null) return Forbid();
+
+        var candidates = (await QueryVisible(access, mine: false))
+            .Select(x => new QueueCandidate(x, GetAllowedActions(x, access)));
+
+        var (total, items) = PortalCalculator.SelectQueue(candidates, access.UserId, Math.Clamp(take, 1, 50));
+
+        return Ok(new LynQueueDto(total, items.Select(x => ToListItem(x, access)).ToList()));
+    }
+
+    // Jumlah tiket per divisi dalam N hari terakhir (mengikuti hak lihat user).
+    [HttpGet("kpi")]
+    public async Task<IActionResult> GetKpi(int days = 30)
+    {
+        var access = await LayananAccess.LoadAsync(db, CurrentUserId);
+        if (access == null) return Forbid();
+
+        days = Math.Clamp(days, 1, 365);
+        var rows = (await QueryVisible(access, mine: false))
+            .Select(x => (x, access.GetDivisionName(x.MenuId)));
+
+        var divisions = PortalCalculator.ComputeKpi(rows, DateTime.UtcNow.AddDays(-days))
+            .Select(x => new LynDivisionKpiDto(x.Division, x.Masuk, x.Terbuka, x.Selesai, x.RataHariSelesai))
+            .ToList();
+
+        return Ok(new LynKpiDto(days, divisions));
+    }
+
+    /* =========================================================
        HELPER
     ========================================================= */
 

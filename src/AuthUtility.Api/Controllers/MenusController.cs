@@ -217,7 +217,7 @@ public class MenusController : ControllerBase
                     request.Name.Trim(),
 
                 Route =
-                    NormalizeRoute(request.Route),
+                    menuType == MenuTypes.Widget ? null : NormalizeRoute(request.Route),
 
                 Icon =
                     request.Icon?.Trim(),
@@ -388,7 +388,7 @@ public class MenusController : ControllerBase
             request.Name.Trim();
 
         menu.Route =
-            NormalizeRoute(request.Route);
+            menuType == MenuTypes.Widget ? null : NormalizeRoute(request.Route);
 
         menu.Icon =
             request.Icon?.Trim();
@@ -623,14 +623,8 @@ public class MenusController : ControllerBase
         string? value
     )
     {
-        return value?
-            .Trim()
-            .ToUpper()
-            == "GROUP"
-
-            ? "GROUP"
-
-            : "MENU";
+        // GROUP, MENU atau WIDGET (widget portal).
+        return MenuTypes.Normalize(value);
     }
 
 
