@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -163,6 +164,11 @@ public sealed class WeatherService(
         catch (InvalidOperationException exception)
         {
             logger.LogWarning(exception, "Format feed peringatan BMKG tidak valid.");
+            return ("unavailable", []);
+        }
+        catch (XmlException exception)
+        {
+            logger.LogWarning(exception, "XML feed peringatan BMKG tidak valid.");
             return ("unavailable", []);
         }
     }

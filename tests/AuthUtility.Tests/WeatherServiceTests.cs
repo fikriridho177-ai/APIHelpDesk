@@ -77,6 +77,26 @@ public sealed class WeatherServiceTests
         Assert.Equal("unavailable", result.AlertStatus);
     }
 
+    [Fact]
+    public async Task GetForecastAsync_keeps_forecast_when_bmkg_xml_is_malformed()
+    {
+        var service = CreateService(request =>
+        {
+            if (request.RequestUri!.Host == "open-meteo.test")
+                return JsonResponse(OpenMeteoResponse());
+
+            return XmlResponse("<rss><channel><item><title>broken");
+        });
+
+        var result = await service.GetForecastAsync(
+            new WeatherQuery(-0.5071, 101.4478),
+            CancellationToken.None);
+
+        Assert.NotEmpty(result.Forecast);
+        Assert.Empty(result.Alerts);
+        Assert.Equal("unavailable", result.AlertStatus);
+    }
+
     private static WeatherService CreateService(
         Func<HttpRequestMessage, HttpResponseMessage> handler)
     {
