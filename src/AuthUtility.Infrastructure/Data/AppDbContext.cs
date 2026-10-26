@@ -62,6 +62,9 @@ public class AppDbContext : DbContext
     public DbSet<LynRequestLog> LynRequestLogs =>
         Set<LynRequestLog>();
 
+    public DbSet<LynJenisPermintaan> LynJenisPermintaan =>
+        Set<LynJenisPermintaan>();
+
     public DbSet<SnsKebun> SnsKebuns => Set<SnsKebun>();
     public DbSet<SnsAfdeling> SnsAfdelings => Set<SnsAfdeling>();
     public DbSet<SnsBlok> SnsBloks => Set<SnsBlok>();
@@ -335,10 +338,23 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.RequesterUserId);
 
+            entity.HasOne(x => x.Jenis)
+                .WithMany()
+                .HasForeignKey(x => x.JenisId);
+
             entity.HasMany(x => x.Logs)
                 .WithOne()
                 .HasForeignKey(x => x.RequestId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LynJenisPermintaan>(entity =>
+        {
+            entity.ToTable("LynJenisPermintaan");
+
+            entity.HasOne(x => x.DivisionMenu)
+                .WithMany()
+                .HasForeignKey(x => x.DivisionMenuId);
         });
 
         modelBuilder.Entity<LynRequestLog>(entity =>

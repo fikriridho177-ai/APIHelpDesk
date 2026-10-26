@@ -74,6 +74,8 @@ builder.Services.AddDbContext<RSUPPKBDbContext>(options =>
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<AuthUtility.Api.Sensus.PersilReader>();
+// Peta GIS: pembaca read-only database PostGIS WebGIS (ConnectionStrings:WebGis).
+builder.Services.AddSingleton<AuthUtility.Api.WebGis.WebGisReader>();
 
 // Database MyKTTATest (SQL Server) - hanya dibaca, data sensor ECS Monitoring (akses WAD)
 builder.Services.AddDbContext<MyKTTATestDbContext>(options =>

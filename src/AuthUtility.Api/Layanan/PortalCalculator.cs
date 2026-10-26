@@ -20,15 +20,6 @@ public static class PortalCalculator
         [LynStatus.Dijadwalkan] = "PROCESS",
     };
 
-    private static int PriorityRank(string priority) => priority switch
-    {
-        "MENDESAK" => 0,
-        "TINGGI" => 1,
-        "NORMAL" => 2,
-        "RENDAH" => 3,
-        _ => 4
-    };
-
     // Antrian: tiket orang lain yang menunggu langkah berikutnya dari user,
     // urut prioritas tertinggi lalu yang paling lama menunggu.
     public static (int Total, List<LynRequest> Items) SelectQueue(
@@ -39,7 +30,7 @@ public static class PortalCalculator
                         NextStep.TryGetValue(c.Request.Status, out var step) &&
                         c.AllowedActions.Contains(step))
             .Select(c => c.Request)
-            .OrderBy(r => PriorityRank(r.Priority))
+            .OrderBy(r => LynPriority.Rank(r.Priority))
             .ThenBy(r => r.CreatedAt)
             .ToList();
 

@@ -55,10 +55,10 @@ public class PortalCalculatorTests
     {
         var result = PortalCalculator.SelectQueue(
         [
-            C(Req(1, LynStatus.Baru, priority: "NORMAL", created: Now.AddDays(-5)), "ACCEPT"),
-            C(Req(2, LynStatus.Baru, priority: "MENDESAK", created: Now.AddDays(-1)), "ACCEPT"),
-            C(Req(3, LynStatus.Baru, priority: "NORMAL", created: Now.AddDays(-9)), "ACCEPT"),
-            C(Req(4, LynStatus.Baru, priority: "RENDAH", created: Now.AddDays(-20)), "ACCEPT"),
+            C(Req(1, LynStatus.Baru, priority: "SEDANG", created: Now.AddDays(-5)), "ACCEPT"),
+            C(Req(2, LynStatus.Baru, priority: "URGENT", created: Now.AddDays(-1)), "ACCEPT"),
+            C(Req(3, LynStatus.Baru, priority: "SEDANG", created: Now.AddDays(-9)), "ACCEPT"),
+            C(Req(4, LynStatus.Baru, priority: "NORMAL", created: Now.AddDays(-20)), "ACCEPT"),
             C(Req(5, LynStatus.Baru, priority: "TINGGI", created: Now.AddDays(-1)), "ACCEPT"),
         ], Me, 10);
 

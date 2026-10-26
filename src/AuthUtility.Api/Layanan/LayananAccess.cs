@@ -18,6 +18,10 @@ public class LayananAccess
     // di Manajemen Menu (route-nya ikut berubah) tetap dikenali sebagai layanan.
     public const string ServiceCodePrefix = "LYN_";
 
+    // Halaman Approval / Monitoring / Analisis / Master Jenis Permintaan (bukan layanan, tidak tampil di daftar layanan).
+    public const string PageCodePrefix = "PMT_";
+    public const string MasterJenisCode = "PMT_MASTER_JENIS";
+
     public int UserId { get; private init; }
     public UtlUser User { get; private init; } = null!;
     public bool IsSuperAdmin { get; private init; }
@@ -42,7 +46,7 @@ public class LayananAccess
             .AsNoTracking()
             .Where(x => x.Active && (x.Code == "LAYANAN" || x.Code == "LAYANAN_PENGAJUAN" ||
                                      (x.Route != null && x.Route.StartsWith(ServiceRoutePrefix)) ||
-                                     x.Code.StartsWith(ServiceCodePrefix)))
+                                     x.Code.StartsWith(ServiceCodePrefix) || x.Code.StartsWith(PageCodePrefix)))
             .ToDictionaryAsync(x => x.Id);
 
         var rights = await db.GroupMenus
@@ -69,9 +73,30 @@ public class LayananAccess
     }
 
     // Sub-layanan = menu tipe MENU dengan route /layanan/... atau kode LYN_...
+    // Halaman PMT_ (Approval, Master Jenis, ...) bukan layanan walau route-nya dipindah ke /layanan/...
     public bool IsService(UtlMenu menu) =>
         menu.MenuType == "MENU" &&
+        !menu.Code.StartsWith(PageCodePrefix) &&
         ((menu.Route != null && menu.Route.StartsWith(ServiceRoutePrefix)) || menu.Code.StartsWith(ServiceCodePrefix));
+
+    // Divisi = menu GROUP berkode LYN_ tepat di bawah root LAYANAN (RNA, GIS, WAD, QC, NAT, ...).
+    public bool IsDivision(UtlMenu menu) =>
+        menu.MenuType == "GROUP" &&
+        menu.Code.StartsWith(ServiceCodePrefix) &&
+        menu.ParentId.HasValue &&
+        Menus.TryGetValue(menu.ParentId.Value, out var parent) && parent.Code == "LAYANAN";
+
+    public IEnumerable<UtlMenu> Divisions => Menus.Values.Where(IsDivision);
+
+    public bool Has(string menuCode, MenuPermission permission)
+    {
+        var menu = Menus.Values.FirstOrDefault(x => x.Code == menuCode);
+        return menu != null && Has(menu.Id, permission);
+    }
+
+    // Boleh mengatur master jenis divisi ini: petugas divisi yang bisa memproses (Update / Approve).
+    public bool CanManageDivision(int divisionMenuId) =>
+        Has(divisionMenuId, MenuPermission.Update) || Has(divisionMenuId, MenuPermission.Approve);
 
     public bool Has(int menuId, MenuPermission permission)
     {
@@ -108,7 +133,12 @@ public class LayananAccess
         (IsHandler(request.MenuId) && InDepartmentScope(request.RequesterDeptId));
 
     // Nama divisi = menu tepat di bawah root LAYANAN (RNA, GIS, WAD, QC, NAT).
-    public string? GetDivisionName(int menuId)
+    public string? GetDivisionName(int menuId) => GetDivision(menuId)?.Name;
+
+    // Kunci antrian: id menu divisi (fallback: menu tiket itu sendiri).
+    public int GetDivisionKey(int menuId) => GetDivision(menuId)?.Id ?? menuId;
+
+    public UtlMenu? GetDivision(int menuId)
     {
         var visited = new HashSet<int>();
         Menus.TryGetValue(menuId, out var current);
@@ -116,7 +146,7 @@ public class LayananAccess
         while (current?.ParentId != null && visited.Add(current.Id))
         {
             if (!Menus.TryGetValue(current.ParentId.Value, out var parent)) break;
-            if (parent.Code == "LAYANAN") return current.Name;
+            if (parent.Code == "LAYANAN") return current;
             current = parent;
         }
 
@@ -127,7 +157,7 @@ public class LayananAccess
             if (parts.Length >= 2)
             {
                 var divisionCode = $"{parts[0]}_{parts[1]}";
-                return Menus.Values.FirstOrDefault(x => x.Code == divisionCode)?.Name;
+                return Menus.Values.FirstOrDefault(x => x.Code == divisionCode);
             }
         }
 

@@ -50,8 +50,15 @@ public class LayananController(AppDbContext db) : ControllerBase
         var access = await LayananAccess.LoadAsync(db, CurrentUserId);
         if (access == null) return Forbid();
 
+        var jenisCounts = await db.LynJenisPermintaan
+            .AsNoTracking()
+            .Where(x => x.Active)
+            .GroupBy(x => x.DivisionMenuId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count);
+
         var visible = access.Menus.Values
-            .Where(menu => access.Has(menu.Id, MenuPermission.View))
+            .Where(menu => access.Has(menu.Id, MenuPermission.View) && !menu.Code.StartsWith(LayananAccess.PageCodePrefix))
             .Select(menu => new LynServiceDto(
                 menu.Id, menu.ParentId, menu.Code, menu.Name, menu.Route, menu.Icon,
                 menu.FullName, menu.Description, menu.Color, menu.MenuType, menu.SortOrder,
@@ -62,7 +69,8 @@ public class LayananController(AppDbContext db) : ControllerBase
                     access.Has(menu.Id, MenuPermission.Update),
                     access.Has(menu.Id, MenuPermission.Delete),
                     access.Has(menu.Id, MenuPermission.Approve),
-                    access.Has(menu.Id, MenuPermission.Export))))
+                    access.Has(menu.Id, MenuPermission.Export)),
+                jenisCounts.GetValueOrDefault(menu.Id)))
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.Name)
             .ToList();
@@ -99,10 +107,13 @@ public class LayananController(AppDbContext db) : ControllerBase
             requests = requests.Where(x =>
                 x.Title.ToLower().Contains(keyword) ||
                 (x.RequestNo ?? "").ToLower().Contains(keyword) ||
-                (x.Requester?.Name ?? "").ToLower().Contains(keyword)).ToList();
+                (x.Requester?.Name ?? "").ToLower().Contains(keyword) ||
+                (x.RequesterName ?? "").ToLower().Contains(keyword) ||
+                (x.Location ?? "").ToLower().Contains(keyword)).ToList();
         }
 
-        return Ok(requests.Take(MaxListSize).Select(x => ToListItem(x, access)).ToList());
+        var queue = await LoadQueuePositions(access);
+        return Ok(requests.Take(MaxListSize).Select(x => ToListItem(x, access, queue)).ToList());
     }
 
     [HttpGet("requests/{id:long}")]
@@ -111,10 +122,20 @@ public class LayananController(AppDbContext db) : ControllerBase
         var access = await LayananAccess.LoadAsync(db, CurrentUserId);
         if (access == null) return Forbid();
 
-        var request = await db.LynRequests.AsNoTracking().Include(x => x.Requester).FirstOrDefaultAsync(x => x.Id == id);
+        var request = await db.LynRequests.AsNoTracking().Include(x => x.Requester).Include(x => x.Jenis).FirstOrDefaultAsync(x => x.Id == id);
         if (request == null || !access.CanSee(request)) return NotFound(new { message = "Pengajuan tidak ditemukan." });
 
         return Ok(await BuildDetail(request, access));
+    }
+
+    // Data akun login untuk mengisi awal bagian pemohon di form pengajuan.
+    [HttpGet("requester-profile")]
+    public async Task<IActionResult> GetRequesterProfile()
+    {
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == CurrentUserId);
+        if (user == null) return Forbid();
+
+        return Ok(new LynRequesterProfileDto(user.Name, user.Email, user.Phone, user.DeptId, user.CompanyId));
     }
 
     [HttpPost("requests")]
@@ -123,27 +144,82 @@ public class LayananController(AppDbContext db) : ControllerBase
         var access = await LayananAccess.LoadAsync(db, CurrentUserId);
         if (access == null) return Forbid();
 
-        var menu = access.Menus.Values.FirstOrDefault(x => x.Code == body.MenuCode && access.IsService(x));
+        // Jenis Permintaan dari master -> tiket masuk ke divisi jenis tersebut.
+        // Tanpa JenisId: MenuCode boleh berisi kode jenis, atau kode sub-layanan (cara lama).
+        LynJenisPermintaan? jenis = null;
+        if (body.JenisId != null)
+        {
+            jenis = await db.LynJenisPermintaan.AsNoTracking().FirstOrDefaultAsync(x => x.Id == body.JenisId && x.Active);
+            if (jenis == null) return BadRequest(new { message = "Jenis permintaan tidak ditemukan atau tidak aktif." });
+        }
+        else if (!string.IsNullOrWhiteSpace(body.MenuCode))
+        {
+            var code = body.MenuCode.Trim();
+            jenis = await db.LynJenisPermintaan.AsNoTracking().FirstOrDefaultAsync(x => x.Code == code && x.Active);
+        }
+
+        var menu = jenis != null
+            ? access.Menus.GetValueOrDefault(jenis.DivisionMenuId)
+            : access.Menus.Values.FirstOrDefault(x => x.Code == body.MenuCode && access.IsService(x));
         if (menu == null) return BadRequest(new { message = "Layanan tidak ditemukan atau tidak aktif." });
         if (!access.Has(menu.Id, MenuPermission.Create)) return NoAccess("mengajukan layanan ini");
 
-        var title = body.Title.Trim();
-        var description = body.Description.Trim();
-        var priority = body.Priority.Trim().ToUpperInvariant();
+        static string Clean(string? value) => (value ?? "").Trim();
 
-        if (title.Length == 0 || title.Length > 200) return BadRequest(new { message = "Judul wajib diisi (maksimal 200 karakter)." });
-        if (description.Length == 0) return BadRequest(new { message = "Deskripsi kebutuhan wajib diisi." });
-        if (!LynPriority.All.Contains(priority)) return BadRequest(new { message = "Prioritas tidak valid." });
+        var otherType = Clean(body.OtherType);
+        var description = Clean(body.Description);
+        var location = Clean(body.Location);
+        var priority = Clean(body.Priority).ToUpperInvariant();
+        var companies = LynRequestRules.JoinCompanies(body.Companies, body.OtherCompany);
+
+        // Isian wajib sesuai form permintaan (tanda *).
+        var required = new (string Value, string Label, int Max)[]
+        {
+            (Clean(body.RequesterName), "Nama Pemohon", 150),
+            (Clean(body.RequesterPosition), "Jabatan Pemohon", 100),
+            (Clean(body.RequesterDepartment), "Departemen", 150),
+            (companies, "Perusahaan", 300),
+            (Clean(body.RequesterPhone), "Nomor HP/Whatsapp", 50),
+            (Clean(body.RequesterEmail), "Email", 150),
+            (description, "Deskripsi Permintaan", int.MaxValue),
+            (location, "Lokasi Pekerjaan", 200),
+        };
+        foreach (var (value, label, max) in required)
+        {
+            if (value.Length == 0) return BadRequest(new { message = $"{label} wajib diisi." });
+            if (value.Length > max) return BadRequest(new { message = $"{label} maksimal {max} karakter." });
+        }
+
+        var isOther = jenis?.IsOther ?? menu.Code.EndsWith("_LAINNYA", StringComparison.OrdinalIgnoreCase);
+        if (isOther && otherType.Length == 0)
+            return BadRequest(new { message = "Jenis permintaan lainnya wajib diisi." });
+        if (otherType.Length > 150) return BadRequest(new { message = "Jenis permintaan lainnya maksimal 150 karakter." });
+        if (!Clean(body.RequesterEmail).Contains('@')) return BadRequest(new { message = "Format email tidak valid." });
+        if (!LynPriority.All.Contains(priority)) return BadRequest(new { message = "Skala prioritas tidak valid." });
+        if (body.NeededDate == null) return BadRequest(new { message = "Tanggal Deadline wajib diisi." });
+
+        var title = Clean(body.Title);
+        if (title.Length == 0) title = LynRequestRules.BuildTitle(jenis?.Name ?? menu.Name, otherType, location);
+        if (title.Length > LynRequestRules.TitleMaxLength) return BadRequest(new { message = "Judul maksimal 200 karakter." });
 
         var request = new LynRequest
         {
             MenuId = menu.Id,
+            JenisId = jenis?.Id,
             RequesterUserId = access.UserId,
+            // DeptId & CompanyId akun tetap disimpan untuk filter Akses Departemen.
             RequesterDeptId = access.User.DeptId,
             RequesterCompanyId = access.User.CompanyId,
+            RequesterName = Clean(body.RequesterName),
+            RequesterPosition = Clean(body.RequesterPosition),
+            RequesterDepartment = Clean(body.RequesterDepartment),
+            RequesterCompanies = companies,
+            RequesterPhone = Clean(body.RequesterPhone),
+            RequesterEmail = Clean(body.RequesterEmail),
+            OtherType = otherType.Length == 0 ? null : otherType,
             Title = title,
             Description = description,
-            Location = body.Location?.Trim(),
+            Location = location,
             NeededDate = body.NeededDate,
             Priority = priority
         };
@@ -169,6 +245,7 @@ public class LayananController(AppDbContext db) : ControllerBase
         await tx.CommitAsync();
 
         request.Requester = access.User;
+        request.Jenis = jenis;
         return Ok(await BuildDetail(request, access));
     }
 
@@ -179,7 +256,7 @@ public class LayananController(AppDbContext db) : ControllerBase
         var access = await LayananAccess.LoadAsync(db, CurrentUserId);
         if (access == null) return Forbid();
 
-        var request = await db.LynRequests.Include(x => x.Requester).FirstOrDefaultAsync(x => x.Id == id);
+        var request = await db.LynRequests.Include(x => x.Requester).Include(x => x.Jenis).FirstOrDefaultAsync(x => x.Id == id);
         if (request == null || !access.CanSee(request)) return NotFound(new { message = "Pengajuan tidak ditemukan." });
 
         var action = body.Action.Trim().ToUpperInvariant();
@@ -256,8 +333,9 @@ public class LayananController(AppDbContext db) : ControllerBase
             .Select(x => new QueueCandidate(x, GetAllowedActions(x, access)));
 
         var (total, items) = PortalCalculator.SelectQueue(candidates, access.UserId, Math.Clamp(take, 1, 50));
+        var queue = await LoadQueuePositions(access);
 
-        return Ok(new LynQueueDto(total, items.Select(x => ToListItem(x, access)).ToList()));
+        return Ok(new LynQueueDto(total, items.Select(x => ToListItem(x, access, queue)).ToList()));
     }
 
     // Jumlah tiket per divisi dalam N hari terakhir (mengikuti hak lihat user).
@@ -279,19 +357,94 @@ public class LayananController(AppDbContext db) : ControllerBase
     }
 
     /* =========================================================
+       MONITORING & ANALISIS PERMINTAAN
+    ========================================================= */
+
+    // Ringkasan + baris tiket untuk halaman Monitoring / Analisis dan export Excel / PDF.
+    // Data mengikuti hak lihat yang sama dengan Daftar Pengajuan (milik sendiri + petugas sesuai Akses Menu & Departemen).
+    [HttpGet("report")]
+    public async Task<IActionResult> GetReport(DateOnly? dateFrom, DateOnly? dateTo, string? divisionCode, int? jenisId, string? status)
+    {
+        var access = await LayananAccess.LoadAsync(db, CurrentUserId);
+        if (access == null) return Forbid();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        var from = dateFrom ?? today.AddDays(-89);
+        var to = dateTo ?? today;
+        if (to < from) (from, to) = (to, from);
+
+        // Batas tanggal dalam WIB -> UTC.
+        var fromUtc = DateTime.SpecifyKind(from.ToDateTime(TimeOnly.MinValue).AddHours(-7), DateTimeKind.Utc);
+        var toUtc = DateTime.SpecifyKind(to.AddDays(1).ToDateTime(TimeOnly.MinValue).AddHours(-7), DateTimeKind.Utc);
+
+        var requests = (await QueryVisible(access, mine: false))
+            .Where(x => x.CreatedAt >= fromUtc && x.CreatedAt < toUtc)
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(divisionCode))
+        {
+            var menuIds = GetMenuAndDescendantIds(access, divisionCode.Trim());
+            requests = requests.Where(x => menuIds.Contains(x.MenuId)).ToList();
+        }
+
+        if (jenisId != null) requests = requests.Where(x => x.JenisId == jenisId).ToList();
+        if (!string.IsNullOrWhiteSpace(status)) requests = requests.Where(x => x.Status == status.Trim()).ToList();
+
+        var queue = await LoadQueuePositions(access);
+
+        var rows = requests
+            .Select(x => new ReportRow(x, access.GetDivisionName(x.MenuId) ?? PortalCalculator.OtherDivision, JenisName(x, access, withOther: false)))
+            .ToList();
+
+        var result = LynReportCalculator.Build(rows, today);
+
+        var items = rows.Select(r =>
+        {
+            var x = r.Request;
+            return new LynReportRowDto(
+                x.Id, x.RequestNo, r.Division, JenisName(x, access), x.Title, x.Description, x.Location, x.Priority, x.Status,
+                string.IsNullOrWhiteSpace(x.RequesterName) ? x.Requester?.Name ?? "" : x.RequesterName,
+                x.RequesterPosition, x.RequesterDepartment, x.RequesterCompanies, x.RequesterPhone,
+                x.CreatedAt, x.NeededDate, x.ScheduledAt, x.ClosedAt, x.Assignee,
+                queue.TryGetValue(x.Id, out var no) ? no : null,
+                !LynStatus.Closed.Contains(x.Status) && x.NeededDate.HasValue && x.NeededDate.Value < today,
+                x.Status == LynStatus.Selesai && x.ClosedAt.HasValue
+                    ? Math.Round((x.ClosedAt.Value - x.CreatedAt).TotalDays, 1, MidpointRounding.AwayFromZero)
+                    : null);
+        }).ToList();
+
+        return Ok(new
+        {
+            dateFrom = from,
+            dateTo = to,
+            result.Total,
+            result.PerDivisi,
+            result.PerJenis,
+            result.PerPrioritas,
+            result.PerBulan,
+            rows = items
+        });
+    }
+
+    /* =========================================================
        HELPER
     ========================================================= */
 
     private async Task<List<LynRequest>> QueryVisible(LayananAccess access, bool mine)
     {
         var me = access.UserId;
+        // Menu divisi (tiket dengan jenis permintaan) maupun sub-layanan (tiket model lama).
         var handlerMenuIds = mine
             ? new List<int>()
-            : access.Menus.Values.Where(m => access.IsService(m) && access.IsHandler(m.Id)).Select(m => m.Id).ToList();
+            : access.Menus.Values
+                .Where(m => !m.Code.StartsWith(LayananAccess.PageCodePrefix) && access.IsHandler(m.Id))
+                .Select(m => m.Id)
+                .ToList();
 
         var candidates = await db.LynRequests
             .AsNoTracking()
             .Include(x => x.Requester)
+            .Include(x => x.Jenis)
             .Where(x => x.RequesterUserId == me || handlerMenuIds.Contains(x.MenuId))
             .OrderByDescending(x => x.Id)
             .ToListAsync();
@@ -345,7 +498,28 @@ public class LayananController(AppDbContext db) : ControllerBase
         return allowed;
     }
 
-    private LynRequestListItemDto ToListItem(LynRequest x, LayananAccess access)
+    // Nomor antrian semua tiket yang masih antri (dihitung dari seluruh tiket divisi, bukan hanya yang terlihat user).
+    private async Task<Dictionary<long, int>> LoadQueuePositions(LayananAccess access)
+    {
+        var waiting = await db.LynRequests
+            .AsNoTracking()
+            .Where(x => LynStatus.Waiting.Contains(x.Status))
+            .Select(x => new { x.Id, x.MenuId, x.Status, x.Priority, x.CreatedAt })
+            .ToListAsync();
+
+        return LynRequestRules.QueuePositions(
+            waiting.Select(x => new QueueEntry(x.Id, access.GetDivisionKey(x.MenuId), x.Status, x.Priority, x.CreatedAt)));
+    }
+
+    // Nama jenis permintaan: dari master jenis, atau nama sub-layanan untuk tiket model lama.
+    // withOther = tambahkan isian "Lainnya" (untuk baris tiket); tanpa isian untuk pengelompokan analisis.
+    private static string JenisName(LynRequest x, LayananAccess access, bool withOther = true)
+    {
+        var name = x.Jenis?.Name ?? access.Menus.GetValueOrDefault(x.MenuId)?.Name ?? "(layanan nonaktif)";
+        return !withOther || string.IsNullOrWhiteSpace(x.OtherType) ? name : $"{name}: {x.OtherType}";
+    }
+
+    private LynRequestListItemDto ToListItem(LynRequest x, LayananAccess access, IReadOnlyDictionary<long, int>? queue = null)
     {
         access.Menus.TryGetValue(x.MenuId, out var menu);
 
@@ -353,18 +527,21 @@ public class LayananController(AppDbContext db) : ControllerBase
             x.Id,
             x.RequestNo,
             x.MenuId,
-            menu?.Code ?? "",
-            menu?.Name ?? "(layanan nonaktif)",
+            x.Jenis?.Code ?? menu?.Code ?? "",
+            x.Jenis?.Name ?? menu?.Name ?? "(layanan nonaktif)",
             access.GetDivisionName(x.MenuId),
             x.Title,
             x.Priority,
             x.Status,
             x.RequesterUserId,
-            x.Requester?.Name ?? "",
+            string.IsNullOrWhiteSpace(x.RequesterName) ? x.Requester?.Name ?? "" : x.RequesterName,
             x.RequesterDeptId,
             x.CreatedAt,
             x.ScheduledAt,
-            x.UpdatedAt);
+            x.UpdatedAt,
+            x.JenisId,
+            queue != null && queue.TryGetValue(x.Id, out var no) ? no : null,
+            GetAllowedActions(x, access));
     }
 
     private async Task<LynRequestDetailDto> BuildDetail(LynRequest request, LayananAccess access)
@@ -376,8 +553,10 @@ public class LayananController(AppDbContext db) : ControllerBase
             .Select(x => new LynRequestLogDto(x.Id, x.Action, x.FromStatus, x.ToStatus, x.Note, x.User!.Name, x.CreatedAt))
             .ToListAsync();
 
+        var queue = await LoadQueuePositions(access);
+
         return new LynRequestDetailDto(
-            ToListItem(request, access),
+            ToListItem(request, access, queue),
             request.Description,
             request.Location,
             request.NeededDate,
@@ -385,6 +564,12 @@ public class LayananController(AppDbContext db) : ControllerBase
             request.ClosedAt,
             request.Requester?.UserId ?? "",
             request.RequesterCompanyId,
+            request.RequesterPosition,
+            request.RequesterDepartment,
+            request.RequesterCompanies,
+            request.RequesterPhone,
+            request.RequesterEmail,
+            request.OtherType,
             GetAllowedActions(request, access),
             logs);
     }
