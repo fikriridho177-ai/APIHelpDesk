@@ -116,4 +116,4 @@
 - [x] **Step 2: Extend frontend device/weather types and pass selected logger coordinates into the compact dashboard panel.**
 - [x] **Step 3: Add a logger selector to the full weather page and show a clear fallback state for loggers without coordinates.**
 - [x] **Step 4: Run backend tests/build and frontend build; verify the provided logger coordinates map to the expected forecast query.**
-- [ ] **Step 5: Commit the coordinate-aware integration.**
+- [x] **Step 5: Commit the coordinate-aware integration.**
