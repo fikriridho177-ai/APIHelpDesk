@@ -1,5 +1,6 @@
 using System.Text;
 using AuthUtility.Api.Chat;
+using AuthUtility.Api.Weather;
 using AuthUtility.Application.Interfaces;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +87,19 @@ builder.Services.AddScoped<
     IPasswordHasher<UtlUser>,
     PasswordHasher<UtlUser>
 >();
+
+builder.Services.Configure<WeatherOptions>(
+    builder.Configuration.GetSection("Weather"));
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<WeatherService>((serviceProvider, client) =>
+{
+    var options = serviceProvider
+        .GetRequiredService<IOptions<WeatherOptions>>()
+        .Value;
+
+    client.Timeout = TimeSpan.FromSeconds(
+        Math.Clamp(options.TimeoutSeconds, 1, 60));
+});
 
 var jwtKey = Encoding.UTF8.GetBytes(
     builder.Configuration["Jwt:Key"]!
