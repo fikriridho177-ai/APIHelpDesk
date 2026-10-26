@@ -8,7 +8,8 @@ sebagai lapisan keselamatan operasional.
 
 ## Goals
 
-- Menyediakan prakiraan harian 10 hari berbasis koordinat latitude/longitude.
+- Menyediakan prakiraan harian 10 hari berbasis latitude/longitude tersimpan
+  pada setiap logger.
 - Menggunakan Open-Meteo sebagai provider prakiraan tanpa API key untuk tahap
   awal.
 - Mengambil RSS/CAP nowcast BMKG sebagai daftar peringatan aktif.
@@ -25,23 +26,26 @@ sebagai lapisan keselamatan operasional.
   resmi BMKG.
 - Tidak membuat konfigurasi API key OpenWeather pada tahap ini.
 - Tidak mengubah struktur database logger atau menebak koordinat dari teks
-  `Lokasi` logger.
+  `Lokasi` logger; gunakan kolom koordinat yang sudah ada pada `MstLogger`.
 - Tidak membuat notifikasi push, eskalasi, atau keputusan otomatis terhadap
   pompa/valve.
 
 ## Selected architecture
 
-Backend ASP.NET Core menyediakan `GET /api/weather/forecast` yang menerima
+Backend ASP.NET Core memperluas response `GET /api/iot/devices` dengan
+`latitude` dan `longitude` dari `MstLogger`. Frontend memakai koordinat logger
+terpilih saat memanggil `GET /api/weather/forecast`, yang tetap menerima
 `latitude`, `longitude`, dan optional `area`. Service backend memanggil
 Open-Meteo untuk prakiraan sampai 10 hari dan BMKG `/alerts/nowcast/id` untuk
 peringatan aktif. Cache memory berdurasi 15 menit mencegah refresh halaman
 menjadi banjir request.
 
 Frontend React menggunakan API backend tersebut. `WeatherForecastPanel` dapat
-dipasang di dashboard IoT maupun halaman detail. Lokasi awal memakai Pekanbaru
-(`-0.5071, 101.4478`) sebagai fallback yang terlihat oleh pengguna dan dapat
-diubah melalui input koordinat; deployment dapat mengganti fallback ini di
-source/config berikutnya setelah koordinat lokasi WAD dikonfirmasi.
+dipasang di dashboard IoT maupun halaman detail. Dashboard mengikuti logger
+yang dipilih pada daftar perangkat, sedangkan halaman detail menyediakan
+pilihan logger. Lokasi awal Pekanbaru (`-0.5071, 101.4478`) hanya dipakai saat
+panel belum menerima daftar logger; logger tanpa koordinat ditahan dan harus
+memakai logger lain atau override koordinat manual melalui input.
 
 ## Backend response contract
 
@@ -99,6 +103,8 @@ endpoint mengembalikan `503`.
   curah hujan, dan angin.
 - Dashboard IoT menampilkan lima hari pertama sebagai ringkasan dan tautan ke
   detail 10 hari; halaman detail menampilkan semua 10 hari.
+- Ketika logger berganti, koordinat dan prakiraan mengikuti logger tersebut;
+  logger tanpa koordinat tidak boleh diam-diam dianggap berada di lokasi lain.
 - Copy membedakan `Prakiraan` provider dan `Peringatan resmi BMKG`; tidak ada
   label "akurat 100%".
 
@@ -109,6 +115,8 @@ endpoint mengembalikan `503`.
 - Feed BMKG diparse tanpa membuat request browser langsung ke BMKG.
 - Error BMKG tidak mematikan forecast provider.
 - Endpoint menolak koordinat di luar rentang geografis.
+- Endpoint perangkat mengembalikan latitude/longitude logger tanpa mengubah
+  kontrak field lama.
 - Dashboard IoT menampilkan panel cuaca dan route detail dapat dibuka.
 - `dotnet test`, `dotnet build`, dan `npm run build` berhasil.
 - Tidak ada API key cuaca di source frontend atau bundle.

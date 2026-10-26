@@ -72,61 +72,86 @@ public sealed class WeatherService(
             WeatherQuery query,
             CancellationToken cancellationToken)
     {
-        var url = BuildOpenMeteoUrl(query);
-        using var response = await httpClient.GetAsync(
-            url,
-            HttpCompletionOption.ResponseHeadersRead,
-            cancellationToken);
+        try
+        {
+            var url = BuildOpenMeteoUrl(query);
+            using var response = await httpClient.GetAsync(
+                url,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+            response.EnsureSuccessStatusCode();
 
-        await using var contentStream = await response.Content.ReadAsStreamAsync(
-            cancellationToken);
-        using var document = await JsonDocument.ParseAsync(
-            contentStream,
-            cancellationToken: cancellationToken);
+            await using var contentStream = await response.Content.ReadAsStreamAsync(
+                cancellationToken);
+            using var document = await JsonDocument.ParseAsync(
+                contentStream,
+                cancellationToken: cancellationToken);
 
-        if (!document.RootElement.TryGetProperty("daily", out var daily))
-            throw new HttpRequestException("Open-Meteo tidak mengembalikan data harian.");
+            if (!document.RootElement.TryGetProperty("daily", out var daily))
+                throw new HttpRequestException("Open-Meteo tidak mengembalikan data harian.");
 
-        var dates = ReadStringArray(daily, "time");
-        var days = dates
-            .Select((date, index) => new WeatherDayForecast
-            {
-                Date = date,
-                WeatherCode = ReadInt(daily, "weather_code", index),
-                Summary = GetWeatherSummary(
-                    ReadInt(daily, "weather_code", index)),
-                TemperatureMaxC = ReadDouble(
-                    daily,
-                    "temperature_2m_max",
-                    index),
-                TemperatureMinC = ReadDouble(
-                    daily,
-                    "temperature_2m_min",
-                    index),
-                PrecipitationProbability = ReadInt(
-                    daily,
-                    "precipitation_probability_max",
-                    index),
-                PrecipitationMm = ReadDouble(
-                    daily,
-                    "precipitation_sum",
-                    index),
-                WindMaxKmh = ReadDouble(
-                    daily,
-                    "wind_speed_10m_max",
-                    index)
-            })
-            .ToArray();
+            var dates = ReadStringArray(daily, "time");
+            if (dates.Length == 0)
+                throw new HttpRequestException("Open-Meteo tidak mengembalikan tanggal prakiraan.");
 
-        var timezone = document.RootElement.TryGetProperty(
-            "timezone",
-            out var timezoneElement)
-            ? timezoneElement.GetString() ?? "auto"
-            : "auto";
+            var days = dates
+                .Select((date, index) => new WeatherDayForecast
+                {
+                    Date = date,
+                    WeatherCode = ReadInt(daily, "weather_code", index),
+                    Summary = GetWeatherSummary(
+                        ReadInt(daily, "weather_code", index)),
+                    TemperatureMaxC = ReadDouble(
+                        daily,
+                        "temperature_2m_max",
+                        index),
+                    TemperatureMinC = ReadDouble(
+                        daily,
+                        "temperature_2m_min",
+                        index),
+                    PrecipitationProbability = ReadInt(
+                        daily,
+                        "precipitation_probability_max",
+                        index),
+                    PrecipitationMm = ReadDouble(
+                        daily,
+                        "precipitation_sum",
+                        index),
+                    WindMaxKmh = ReadDouble(
+                        daily,
+                        "wind_speed_10m_max",
+                        index)
+                })
+                .ToArray();
 
-        return (timezone, days);
+            var timezone = document.RootElement.TryGetProperty(
+                "timezone",
+                out var timezoneElement)
+                ? timezoneElement.GetString() ?? "auto"
+                : "auto";
+
+            return (timezone, days);
+        }
+        catch (OperationCanceledException exception)
+            when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new HttpRequestException(
+                "Open-Meteo timeout.",
+                exception);
+        }
+        catch (JsonException exception)
+        {
+            throw new HttpRequestException(
+                "Respons Open-Meteo tidak valid.",
+                exception);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new HttpRequestException(
+                "Struktur respons Open-Meteo tidak valid.",
+                exception);
+        }
     }
 
     private async Task<(string Status, IReadOnlyList<WeatherAlert> Alerts)>

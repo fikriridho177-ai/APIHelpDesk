@@ -97,6 +97,34 @@ public sealed class WeatherServiceTests
         Assert.Equal("unavailable", result.AlertStatus);
     }
 
+    [Fact]
+    public async Task GetForecastAsync_raises_provider_error_when_open_meteo_payload_is_malformed()
+    {
+        var service = CreateService(request =>
+        {
+            if (request.RequestUri!.Host == "open-meteo.test")
+                return JsonResponse("{ malformed");
+
+            return XmlResponse("<rss />");
+        });
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.GetForecastAsync(
+                new WeatherQuery(-0.5071, 101.4478),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetForecastAsync_raises_provider_error_when_open_meteo_times_out()
+    {
+        var service = CreateService(_ => throw new TaskCanceledException("Open-Meteo timeout"));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            service.GetForecastAsync(
+                new WeatherQuery(-0.5071, 101.4478),
+                CancellationToken.None));
+    }
+
     private static WeatherService CreateService(
         Func<HttpRequestMessage, HttpResponseMessage> handler)
     {

@@ -58,8 +58,8 @@ public class IotDeviceController(
         const string sql = """
             SELECT
                 LoggerID, LoggerCode, NamaLogger,
-                SourceType, Lokasi, Controller,
-                Communication, IntervalMenit, Aktif
+                SourceType, Lokasi, Latitude, Longitude,
+                Controller, Communication, IntervalMenit, Aktif
             FROM dbo.MstLogger
             WHERE (@sourceType IS NULL OR SourceType = @sourceType)
             ORDER BY SourceType, NamaLogger;
@@ -90,12 +90,14 @@ public class IotDeviceController(
                     namaLogger = Str(reader, 2),
                     sourceType = Str(reader, 3),
                     lokasi = Str(reader, 4),
-                    controller = Str(reader, 5),
-                    communication = Str(reader, 6),
-                    intervalMenit = reader.IsDBNull(7)
-                        ? (int?)null : reader.GetInt32(7),
-                    aktif = !reader.IsDBNull(8)
-                        && reader.GetBoolean(8)
+                    latitude = Number(reader, 5),
+                    longitude = Number(reader, 6),
+                    controller = Str(reader, 7),
+                    communication = Str(reader, 8),
+                    intervalMenit = reader.IsDBNull(9)
+                        ? (int?)null : reader.GetInt32(9),
+                    aktif = !reader.IsDBNull(10)
+                        && reader.GetBoolean(10)
                 });
             }
 
@@ -491,6 +493,28 @@ public class IotDeviceController(
 
     private static decimal? Dec(DbDataReader r, int i) =>
         r.IsDBNull(i) ? null : r.GetDecimal(i);
+
+    private static double? Number(DbDataReader r, int i)
+    {
+        if (r.IsDBNull(i))
+            return null;
+
+        var value = r.GetValue(i);
+        if (value is double number)
+            return number;
+        if (value is float single)
+            return single;
+        if (value is decimal decimalNumber)
+            return (double)decimalNumber;
+
+        return double.TryParse(
+            Convert.ToString(value, CultureInfo.InvariantCulture),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var parsed)
+            ? parsed
+            : null;
+    }
 
     private static DateTime? Date(DbDataReader r, int i) =>
         r.IsDBNull(i) ? null : r.GetDateTime(i);
