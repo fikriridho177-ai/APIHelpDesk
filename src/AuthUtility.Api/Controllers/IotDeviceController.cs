@@ -20,18 +20,17 @@ public class IotDeviceController(
     ILogger<IotDeviceController> logger
 ) : ControllerBase
 {
-    // Sementara memakai izin baca ECS.
-    // Buat permission khusus IoT sebelum produksi.
+    // IoT Management adalah area admin read-only.
+    // User biasa tetap mengakses monitoring melalui menu-menu WAD.
+    private const string SuperAdminGateMenuCode = "DASHBOARD_IOT";
+
     private async Task<bool> HasAccess()
     {
-        foreach (var code in EcsController.MenuCodes)
-        {
-            if (await permissions.HasPermissionAsync(
-                User, code, MenuPermission.Read))
-                return true;
-        }
+        var permission = await permissions.GetPermissionsAsync(
+            User,
+            SuperAdminGateMenuCode);
 
-        return false;
+        return permission?.IsSuperAdmin == true;
     }
 
     // =====================================================
@@ -151,14 +150,21 @@ public class IotDeviceController(
 
         const string sql = """
             SELECT
-                SensorParameterID,
-                SensorCode,
-                ParameterCode,
-                NamaParameter,
-                Satuan
-            FROM dbo.vwLoggerLatestParameter
-            WHERE LoggerID = @loggerId
-            ORDER BY SensorCode, ParameterCode, SensorParameterID;
+                V.SensorParameterID,
+                V.SensorCode,
+                V.ParameterCode,
+                V.NamaParameter,
+                V.Satuan,
+                C.CategoryCode,
+                C.CategoryName,
+                C.DisplayOrder
+            FROM dbo.vwLoggerDataDetail AS V
+            LEFT JOIN dbo.MstSensorParameter AS SP
+                ON SP.SensorParameterID = V.SensorParameterID
+            LEFT JOIN dbo.MstParameterCategory AS C
+                ON C.ParameterCategoryID = SP.ParameterCategoryID
+            WHERE V.LoggerID = @loggerId
+            ORDER BY V.SensorCode, V.ParameterCode, V.SensorParameterID;
             """;
 
         try
@@ -189,7 +195,10 @@ public class IotDeviceController(
                     sensorCode = Str(reader, 1),
                     parameterCode = Str(reader, 2),
                     namaParameter = Str(reader, 3),
-                    satuan = Str(reader, 4)
+                    satuan = Str(reader, 4),
+                    categoryCode = Str(reader, 5),
+                    categoryName = Str(reader, 6),
+                    categoryOrder = reader.IsDBNull(7) ? (int?)null : reader.GetInt32(7)
                 });
             }
 

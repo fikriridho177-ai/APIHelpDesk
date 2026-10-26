@@ -20,18 +20,17 @@ public class IotMonitoringController(
     ILogger<IotMonitoringController> logger
 ) : ControllerBase
 {
-    // Sementara mengikuti permission baca ECS.
-    // Ganti dengan permission khusus IoT sebelum produksi.
+    // IoT Management adalah area admin read-only.
+    // User biasa tetap mengakses monitoring melalui menu-menu WAD.
+    private const string SuperAdminGateMenuCode = "DASHBOARD_IOT";
+
     private async Task<bool> HasAccess()
     {
-        foreach (var code in EcsController.MenuCodes)
-        {
-            if (await permissions.HasPermissionAsync(
-                User, code, MenuPermission.Read))
-                return true;
-        }
+        var permission = await permissions.GetPermissionsAsync(
+            User,
+            SuperAdminGateMenuCode);
 
-        return false;
+        return permission?.IsSuperAdmin == true;
     }
 
     // GET /api/iot/monitoring
