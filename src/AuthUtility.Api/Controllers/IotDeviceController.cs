@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using AuthUtility.Application.Interfaces;
+using AuthUtility.Api.IoT;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -128,14 +129,104 @@ public class IotDeviceController(
     // =====================================================
     // GET /api/iot/devices/3/history?take=20
     // GET /api/iot/devices/3/history?take=20&format=detail
+    // GET /api/iot/devices/3/history?period=day|week|month|year
+    // GET /api/iot/devices/3/history?period=day|week|month|year&anchorDate=yyyy-MM-dd
+    // GET /api/iot/devices/3/history?period=week&from=yyyy-MM-ddTHH:mm&to=yyyy-MM-ddTHH:mm
     // =====================================================
     [HttpGet("{loggerId:int}/history")]
-    public Task<IActionResult> GetHistory(
+    public async Task<IActionResult> GetHistory(
         int loggerId,
         [FromQuery] int take = 20,
-        [FromQuery] string format = "compact")
+        [FromQuery] string format = "compact",
+        [FromQuery] string? period = null,
+        [FromQuery] string? anchorDate = null,
+        [FromQuery(Name = "from")] string? fromValue = null,
+        [FromQuery(Name = "to")] string? toValue = null)
     {
-        return GetPayloads(loggerId, take, format, false);
+        if (!string.IsNullOrWhiteSpace(period))
+        {
+            if (!IotHistoryPeriodDefinition.TryCreate(
+                    period,
+                    out var periodDefinition))
+            {
+                return BadRequest(new
+                {
+                    message = "period harus day, week, month, atau year."
+                });
+            }
+
+            DateOnly? parsedAnchorDate = null;
+            if (anchorDate is not null)
+            {
+                if (!IotHistoryPeriodDefinition.TryParseAnchorDate(
+                        anchorDate,
+                        out var requestedAnchorDate))
+                {
+                    return BadRequest(new
+                    {
+                        message = "anchorDate harus berformat yyyy-MM-dd."
+                    });
+                }
+
+                parsedAnchorDate = requestedAnchorDate;
+            }
+
+            var hasFrom = fromValue is not null;
+            var hasTo = toValue is not null;
+            if (hasFrom != hasTo)
+            {
+                return BadRequest(new
+                {
+                    message = "from dan to harus diisi bersama."
+                });
+            }
+
+            DateTime? parsedFrom = null;
+            DateTime? parsedTo = null;
+            if (hasFrom)
+            {
+                if (parsedAnchorDate.HasValue)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Gunakan anchorDate atau from dan to."
+                    });
+                }
+
+                if (!IotHistoryPeriodDefinition.TryParseRangeDateTime(
+                        fromValue,
+                        out var requestedFrom) ||
+                    !IotHistoryPeriodDefinition.TryParseRangeDateTime(
+                        toValue,
+                        out var requestedTo))
+                {
+                    return BadRequest(new
+                    {
+                        message = "from dan to harus berformat yyyy-MM-ddTHH:mm."
+                    });
+                }
+
+                if (requestedFrom >= requestedTo)
+                {
+                    return BadRequest(new
+                    {
+                        message = "from harus lebih kecil dari to."
+                    });
+                }
+
+                parsedFrom = requestedFrom;
+                parsedTo = requestedTo;
+            }
+
+            return await GetPeriodHistory(
+                loggerId,
+                periodDefinition,
+                parsedAnchorDate,
+                parsedFrom,
+                parsedTo);
+        }
+
+        return await GetPayloads(loggerId, take, format, false);
     }
 
     // =====================================================
@@ -322,49 +413,7 @@ public class IotDeviceController(
             AddParam(cmd, "@loggerId", loggerId, DbType.Int32);
             AddParam(cmd, "@take", take, DbType.Int32);
 
-            await using var reader =
-                await cmd.ExecuteReaderAsync(HttpContext.RequestAborted);
-
-            var payloads = new List<PayloadData>();
-            var payloadMap = new Dictionary<long, PayloadData>();
-
-            while (await reader.ReadAsync(HttpContext.RequestAborted))
-            {
-                long rawId = reader.GetInt64(0);
-
-                if (!payloadMap.TryGetValue(rawId, out var payload))
-                {
-                    payload = new PayloadData
-                    {
-                        RawId = rawId,
-                        LoggerId = reader.GetInt32(1),
-                        LoggerCode = Str(reader, 2),
-                        SourceType = Str(reader, 3),
-                        TanggalSensor = Date(reader, 4),
-                        ReceivedAt = Date(reader, 5)
-                    };
-
-                    payloadMap.Add(rawId, payload);
-                    payloads.Add(payload);
-                }
-
-                if (reader.IsDBNull(6))
-                    continue;
-
-                payload.Readings.Add(new SensorReadingDto
-                {
-                    RawDtlId = reader.GetInt64(6),
-                    SensorParameterId = reader.GetInt32(7),
-                    ParameterCode = Str(reader, 8),
-                    NamaParameter = Str(reader, 9),
-                    RawValue = Dec(reader, 10),
-                    RawText = Str(reader, 11),
-                    StatusData = Str(reader, 12),
-                    NilaiHasil = Dec(reader, 13),
-                    Satuan = Str(reader, 14),
-                    StatusHasil = Str(reader, 15)
-                });
-            }
+            var payloads = await ReadPayloads(cmd);
 
             if (payloads.Count == 0)
                 return NotFound(new
@@ -399,6 +448,183 @@ public class IotDeviceController(
                 message = "Gagal membaca payload sensor IoT."
             });
         }
+    }
+
+    private async Task<IActionResult> GetPeriodHistory(
+        int loggerId,
+        IotHistoryPeriodDefinition period,
+        DateOnly? anchorDate,
+        DateTime? rangeFrom,
+        DateTime? rangeTo)
+    {
+        if (!await HasAccess()) return Forbid();
+
+        if (loggerId <= 0)
+            return BadRequest(new { message = "loggerId tidak valid." });
+
+        var window = period.Resolve(
+            DateTime.Now,
+            anchorDate,
+            rangeFrom,
+            rangeTo);
+
+        const string sql = """
+            SELECT
+                H.RawID,
+                H.LoggerID,
+                L.LoggerCode,
+                L.SourceType,
+                H.TanggalSensor,
+                H.ReceivedAt,
+
+                D.RawDtlID,
+                D.SensorParameterID,
+                P.ParameterCode,
+                P.NamaParameter,
+
+                D.RawValue,
+                D.RawText,
+                D.StatusData,
+
+                R.NilaiHasil,
+                R.Satuan,
+                R.StatusHasil
+            FROM dbo.TrnLoggerRawHdr AS H
+            INNER JOIN dbo.MstLogger AS L
+                ON H.LoggerID = L.LoggerID
+            LEFT JOIN dbo.TrnLoggerRawDtl AS D
+                ON H.RawID = D.RawID
+            LEFT JOIN dbo.MstSensorParameter AS P
+                ON D.SensorParameterID = P.SensorParameterID
+            OUTER APPLY
+            (
+                SELECT TOP (1)
+                    X.NilaiHasil,
+                    X.Satuan,
+                    X.StatusHasil
+                FROM dbo.TrnLoggerHasil AS X
+                WHERE X.RawDtlID = D.RawDtlID
+                  AND X.IsCurrent = 1
+                ORDER BY X.ProcessedAt DESC, X.HasilID DESC
+            ) AS R
+            WHERE H.LoggerID = @loggerId
+              AND H.TanggalSensor >= @from
+              AND H.TanggalSensor < @to
+            ORDER BY H.TanggalSensor, H.RawID, D.RawDtlID;
+            """;
+
+        try
+        {
+            var connection = db.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(HttpContext.RequestAborted);
+
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = sql;
+            cmd.CommandTimeout = 120;
+            AddParam(cmd, "@loggerId", loggerId, DbType.Int32);
+            AddParam(cmd, "@from", window.From, DbType.DateTime2);
+            AddParam(cmd, "@to", window.To, DbType.DateTime2);
+
+            var payloads = await ReadPayloads(cmd);
+            var points = payloads
+                .Select(payload => ToCompact(payload))
+                .Select(payload => new IotHistoryPoint(
+                    payload.RawId,
+                    payload.LoggerId,
+                    payload.Ts,
+                    payload.ReceivedAt,
+                    payload.Data))
+                .ToArray();
+
+            var data = IotHistoryAggregator
+                .Aggregate(points, period)
+                .Select(point => new CompactPayloadDto
+                {
+                    RawId = point.RawId,
+                    LoggerId = point.LoggerId,
+                    Ts = point.Ts,
+                    ReceivedAt = point.ReceivedAt,
+                    Data = point.Data.ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value,
+                        StringComparer.OrdinalIgnoreCase)
+                })
+                .ToList();
+
+            return Ok(new
+            {
+                loggerId,
+                period = period.Code,
+                aggregation = period.AggregationCode,
+                from = window.From,
+                to = window.To,
+                total = data.Count,
+                rawTotal = payloads.Count,
+                data
+            });
+        }
+        catch (DbException ex)
+        {
+            logger.LogError(ex,
+                "Gagal membaca history IoT LoggerID {LoggerId} periode {Period}",
+                loggerId,
+                period.Code);
+
+            return StatusCode(503, new
+            {
+                message = "Gagal membaca history sensor IoT."
+            });
+        }
+    }
+
+    private async Task<List<PayloadData>> ReadPayloads(DbCommand cmd)
+    {
+        await using var reader =
+            await cmd.ExecuteReaderAsync(HttpContext.RequestAborted);
+
+        var payloads = new List<PayloadData>();
+        var payloadMap = new Dictionary<long, PayloadData>();
+
+        while (await reader.ReadAsync(HttpContext.RequestAborted))
+        {
+            long rawId = reader.GetInt64(0);
+
+            if (!payloadMap.TryGetValue(rawId, out var payload))
+            {
+                payload = new PayloadData
+                {
+                    RawId = rawId,
+                    LoggerId = reader.GetInt32(1),
+                    LoggerCode = Str(reader, 2),
+                    SourceType = Str(reader, 3),
+                    TanggalSensor = Date(reader, 4),
+                    ReceivedAt = Date(reader, 5)
+                };
+
+                payloadMap.Add(rawId, payload);
+                payloads.Add(payload);
+            }
+
+            if (reader.IsDBNull(6))
+                continue;
+
+            payload.Readings.Add(new SensorReadingDto
+            {
+                RawDtlId = reader.GetInt64(6),
+                SensorParameterId = reader.GetInt32(7),
+                ParameterCode = Str(reader, 8),
+                NamaParameter = Str(reader, 9),
+                RawValue = Dec(reader, 10),
+                RawText = Str(reader, 11),
+                StatusData = Str(reader, 12),
+                NilaiHasil = Dec(reader, 13),
+                Satuan = Str(reader, 14),
+                StatusHasil = Str(reader, 15)
+            });
+        }
+
+        return payloads;
     }
 
     // =====================================================

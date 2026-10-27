@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using AuthUtility.Application.Interfaces;
+using AuthUtility.Api.IoT;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -65,6 +66,8 @@ public class IotMonitoringController(
                 L.NamaLogger,
                 L.SourceType,
                 L.Lokasi,
+                L.Latitude,
+                L.Longitude,
                 L.IntervalMenit,
                 L.Aktif,
 
@@ -72,7 +75,7 @@ public class IotMonitoringController(
                 H.TanggalSensor,
                 H.ReceivedAt,
 
-                DATEDIFF_BIG(
+                DATEDIFF(
                     SECOND, H.ReceivedAt, GETDATE()
                 ) AS AgeSeconds,
 
@@ -160,16 +163,19 @@ public class IotMonitoringController(
 
                 if (!lookup.TryGetValue(loggerId, out var device))
                 {
-                    int interval = reader.IsDBNull(5)
+                    double? latitude = Number(reader, 5);
+                    double? longitude = Number(reader, 6);
+
+                    int interval = reader.IsDBNull(7)
                         ? 0
-                        : reader.GetInt32(5);
+                        : reader.GetInt32(7);
 
-                    bool aktif = !reader.IsDBNull(6)
-                        && reader.GetBoolean(6);
+                    bool aktif = !reader.IsDBNull(8)
+                        && reader.GetBoolean(8);
 
-                    long? ageSeconds = reader.IsDBNull(10)
+                    long? ageSeconds = reader.IsDBNull(12)
                         ? null
-                        : reader.GetInt64(10);
+                        : reader.GetInt32(12);
 
                     device = new MonitoringDevice
                     {
@@ -178,13 +184,15 @@ public class IotMonitoringController(
                         NamaLogger = GetString(reader, 2),
                         SourceType = GetString(reader, 3),
                         Lokasi = GetString(reader, 4),
+                        Latitude = latitude,
+                        Longitude = longitude,
                         IntervalMenit = interval,
                         Aktif = aktif,
-                        RawId = reader.IsDBNull(7)
+                        RawId = reader.IsDBNull(9)
                             ? null
-                            : reader.GetInt64(7),
-                        LastSensorAt = GetDate(reader, 8),
-                        LastReceivedAt = GetDate(reader, 9),
+                            : reader.GetInt64(9),
+                        LastSensorAt = GetDate(reader, 10),
+                        LastReceivedAt = GetDate(reader, 11),
                         AgeMinutes = ageSeconds.HasValue
                             ? Math.Round(
                                 Math.Max(0L, ageSeconds.Value) / 60.0,
@@ -192,7 +200,7 @@ public class IotMonitoringController(
                             : null
                     };
 
-                    device.Status = DetermineStatus(
+                    device.Status = IotMonitoringRules.DetermineStatus(
                         aktif,
                         interval,
                         device.AgeMinutes);
@@ -201,17 +209,17 @@ public class IotMonitoringController(
                     devices.Add(device);
                 }
 
-                if (reader.IsDBNull(11))
+                if (reader.IsDBNull(13))
                     continue;
 
-                long rawDtlId = reader.GetInt64(11);
+                long rawDtlId = reader.GetInt64(13);
 
-                int parameterId = reader.IsDBNull(12)
+                int parameterId = reader.IsDBNull(14)
                     ? 0
-                    : reader.GetInt32(12);
+                    : reader.GetInt32(14);
 
                 string code =
-                    GetString(reader, 13) ?? "PARAMETER";
+                    GetString(reader, 15) ?? "PARAMETER";
 
                 string key = code;
 
@@ -223,9 +231,9 @@ public class IotMonitoringController(
                 if (device.Data.ContainsKey(key))
                     key = $"{code}#{parameterId}#{rawDtlId}";
 
-                decimal? value = GetDecimal(reader, 14);
-                string? statusData = GetString(reader, 15);
-                string? statusHasil = GetString(reader, 16);
+                decimal? value = GetDecimal(reader, 16);
+                string? statusData = GetString(reader, 17);
+                string? statusHasil = GetString(reader, 18);
 
                 device.Data[key] = value;
 
@@ -274,31 +282,6 @@ public class IotMonitoringController(
         }
     }
 
-    private static string DetermineStatus(
-        bool aktif,
-        int interval,
-        double? ageMinutes)
-    {
-        if (!aktif)
-            return "INACTIVE";
-
-        if (ageMinutes is null)
-            return "NO_RECENT_DATA";
-
-        // Jika interval tidak valid, jangan
-        // menganggap perangkat ONLINE.
-        if (interval <= 0)
-            return "UNKNOWN";
-
-        if (ageMinutes <= interval * 2.0)
-            return "ONLINE";
-
-        if (ageMinutes <= interval * 6.0)
-            return "STALE";
-
-        return "NO_RECENT_DATA";
-    }
-
     private static string? GetString(
         DbDataReader reader, int index)
     {
@@ -323,6 +306,29 @@ public class IotMonitoringController(
             : reader.GetDecimal(index);
     }
 
+    private static double? Number(
+        DbDataReader reader, int index)
+    {
+        if (reader.IsDBNull(index))
+            return null;
+
+        var value = reader.GetValue(index);
+        if (value is double number)
+            return number;
+        if (value is float single)
+            return single;
+        if (value is decimal decimalNumber)
+            return (double)decimalNumber;
+
+        return double.TryParse(
+            Convert.ToString(value, CultureInfo.InvariantCulture),
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var parsed)
+            ? parsed
+            : null;
+    }
+
     public sealed class MonitoringDevice
     {
         public int LoggerId { get; set; }
@@ -330,6 +336,8 @@ public class IotMonitoringController(
         public string? NamaLogger { get; set; }
         public string? SourceType { get; set; }
         public string? Lokasi { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
         public int IntervalMenit { get; set; }
         public bool Aktif { get; set; }
 
