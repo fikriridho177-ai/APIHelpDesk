@@ -1,0 +1,14 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: apihelpdesk-api:local
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
+    ports:
+      - "${API_PORT:-5100}:8080"
+    restart: unless-stopped
