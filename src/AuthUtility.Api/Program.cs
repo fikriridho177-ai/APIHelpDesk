@@ -144,6 +144,7 @@ builder.Services.AddAuthorization();
 // ===== Live Chat (realtime) =====
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ChatPresenceTracker>();
+builder.Services.AddSingleton<AuthUtility.Api.Presence.AppPresenceTracker>();
 
 builder.Services.AddCors(options =>
 {
@@ -212,6 +213,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<AuthUtility.Api.Presence.PresenceHub>("/hubs/presence");
 
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
