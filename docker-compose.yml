@@ -1,0 +1,16 @@
+services:
+  api:
+    build: .
+    image: helpdesk-api
+    container_name: helpdesk-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    # Nilai di bawah menimpa appsettings.json. Isi lewat file .env (jangan di-commit).
+    environment:
+      ConnectionStrings__DefaultConnection: ${DEFAULT_CONNECTION}
+      ConnectionStrings__PKBPayrollConnection: ${PKBPAYROLL_CONNECTION}
+      ConnectionStrings__MyPADConnection: ${MYPAD_CONNECTION}
+      ConnectionStrings__RSUPPKBConnection: ${RSUPPKB_CONNECTION}
+      ConnectionStrings__MyKTTATestConnection: ${MYKTTATEST_CONNECTION}
+      ConnectionStrings__WebGis: ${WEBGIS_CONNECTION}

@@ -24,6 +24,15 @@ public class PKBPayrollEmployeeController(
             {
                 await connection.OpenAsync();
             }
+            // SELECT
+            //         RegNo,
+            //         NAMA,
+            //         NIK,
+            //         CompanyID,
+            //         DeptID
+            //     FROM vwMstKaryawanPkbJkt
+            //     WHERE TGLKELUAR IS NULL
+            //     ORDER BY NAMA, RegNo
 
             await using var command = connection.CreateCommand();
 
@@ -34,8 +43,7 @@ public class PKBPayrollEmployeeController(
                     NIK,
                     CompanyID,
                     DeptID
-                FROM tblMstKaryawan
-                WHERE TGLKELUAR IS NULL
+                FROM vwMstKaryawanPkbJkt
                 ORDER BY NAMA, RegNo
             ";
 
