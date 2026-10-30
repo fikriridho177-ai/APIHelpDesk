@@ -13,7 +13,7 @@ The stack does not create databases or run migrations. The API must be able to r
 
 - Git.
 - Docker Engine or Docker Desktop with Docker Compose v2 (`docker compose version`).
-- A Git provider credential that can read both `APIHelpDesk` and `MyHelpDesk` when deploying from Dokploy.
+- A Git provider credential that can read both `APIHelpDesk` and `MyHelpDesk` when deploying from Dokploy. For private repositories, use Dokploy's **Git** provider with an SSH key and the SSH repository URL.
 - Network access from the API container to the configured databases and external ECS/weather services.
 - A free public TCP port for the frontend; the default is `8080`.
 
@@ -47,7 +47,7 @@ git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
-For Dokploy, keep the API repository as the Compose source, enable **Enable Submodules** in the service settings, and use a GitHub provider account that can read both repositories.
+For Dokploy, use the **Git** provider with the SSH URL `git@github.com:fikriridho177-ai/APIHelpDesk.git`, select an SSH key that can read both repositories, enable **Enable Submodules** in the service settings, and keep the Compose path as `./deployment/docker-compose.yml`. The GitHub provider's parent-repository access does not automatically authenticate a private HTTPS submodule.
 
 Create the host-only environment file and fill in the real values for databases, JWT, ECS, and optional WebGIS settings:
 
@@ -83,7 +83,7 @@ docker compose --env-file deployment/.env -f deployment/docker-compose.yml up -d
 docker compose --env-file deployment/.env -f deployment/docker-compose.yml ps
 ```
 
-If the pull or submodule update reports local changes or cannot fast-forward, stop and review the checkout before rebuilding. Do not discard local changes as part of an ordinary deployment update. In Dokploy, enable **Enable Submodules** for this Compose service and ensure its GitHub provider can read `MyHelpDesk`.
+If the pull or submodule update reports local changes or cannot fast-forward, stop and review the checkout before rebuilding. Do not discard local changes as part of an ordinary deployment update. In Dokploy, enable **Enable Submodules** for this Compose service and ensure the selected SSH key can read `MyHelpDesk`.
 
 ## Status and logs
 
