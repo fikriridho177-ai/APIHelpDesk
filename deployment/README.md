@@ -121,6 +121,8 @@ There is no automatic database rollback. Check whether the selected application 
 
 - Keep `deployment/.env` on the deployment host; it is ignored by Git.
 - Keep `VITE_API_URL=/api` and `VITE_IOT_API_URL=/api` for the integrated stack so browser requests remain same-origin.
+- Set `Cors__Origins__0` to the exact frontend origin used by the browser, including the scheme and port when present (for example `http://helpdesk.example.com`). This is required for SignalR WebSocket negotiation.
+- For legacy SQL Server instances that fail during the pre-login TLS handshake, add `Encrypt=False;TrustServerCertificate=True` to each SQL Server connection string. Keep PostgreSQL connection strings in PostgreSQL format; do not add SQL Server `Encrypt` keywords to them.
 - Do not put passwords, connection strings, JWT keys, or access tokens in Dockerfiles, Compose files, or committed frontend files.
 - Verify the deployment file is ignored with `git check-ignore -v deployment/.env`.
 - Rotate any credential that has been exposed outside the protected deployment host, even if the value is later moved into `.env`.
@@ -138,8 +140,12 @@ Confirm that the integrated build uses `/api`, then inspect the API log. A direc
 
 ### Live Chat or online users do not update
 
-Inspect the `web` log and confirm the request reaches `/hubs/chat` or `/hubs/presence`. The Nginx configuration must keep HTTP/1.1 and forward Upgrade/Connection headers; rebuild the web image after changing `nginx.conf`.
+Inspect the `api` log for a CORS message containing the browser origin. Add that exact origin under `Cors__Origins__0`, then redeploy. The Nginx configuration must keep HTTP/1.1 and forward Upgrade/Connection headers; rebuild the web image after changing `nginx.conf`.
 
 ### API starts but cannot load data
 
 Check the connection string names and network routes in `deployment/.env`, then inspect `docker compose logs api`. The stack does not create or migrate the external databases.
+
+### SQL Server pre-login TLS handshake fails
+
+If the API log contains `Encryption(ssl/tls) handshake failed` or `Received an unexpected EOF`, confirm that the SQL Server connection string has `Encrypt=False;TrustServerCertificate=True`. If the error persists after a fresh deployment, the SQL Server may enforce encryption with an incompatible TLS configuration; fix the SQL Server certificate/TLS policy or use a private VPN route to a compatible instance. Do not publish SQL Server port `1433` to the public internet.

@@ -1,5 +1,6 @@
 using System.Text;
 using AuthUtility.Api.Chat;
+using AuthUtility.Api.Configuration;
 using AuthUtility.Api.Weather;
 using AuthUtility.Application.Interfaces;
 using AuthUtility.Domain.Entities;
@@ -146,17 +147,17 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<ChatPresenceTracker>();
 builder.Services.AddSingleton<AuthUtility.Api.Presence.AppPresenceTracker>();
 
+var configuredCorsOrigins = builder.Configuration
+    .GetSection("Cors:Origins")
+    .GetChildren()
+    .Select(section => section.Value);
+var frontendCorsOrigins = FrontendCorsPolicy.Build(configuredCorsOrigins);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-       policy.WithOrigins(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "http://localhost:5174",
-                "http://127.0.0.1:5174",
-                "http://192.168.9.23:5173"
-            )
+       policy.WithOrigins(frontendCorsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
