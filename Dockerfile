@@ -23,6 +23,14 @@ WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
+# Temporary compatibility workaround for the unpatched SQL Server 2014 RTM
+# pre-login TLS handshake. Keep this limited to the API runtime image; the
+# SQL Server should still be upgraded when that becomes possible.
+USER root
+RUN sed -i '/\[openssl_init\]/a ssl_conf = ssl_sect' /etc/ssl/openssl.cnf
+RUN printf "\n[ssl_sect]\nsystem_default = system_default_sect\n" >> /etc/ssl/openssl.cnf
+RUN printf "\n[system_default_sect]\nMinProtocol = TLSv1\nCipherString = DEFAULT@SECLEVEL=0\n" >> /etc/ssl/openssl.cnf
+
 COPY --from=build /app/publish .
 
 USER $APP_UID
