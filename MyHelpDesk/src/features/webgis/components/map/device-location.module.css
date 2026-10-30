@@ -1,0 +1,33 @@
+.trigger {
+  position: absolute; top: 164px; right: 10px; z-index: 1;
+  display: grid; place-items: center; width: 44px; height: 44px;
+  background: var(--surface); color: var(--forest); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.trigger:hover { background: var(--brand-soft); }
+.trigger.active { background: var(--forest); color: white; }
+.panel {
+  position: absolute; top: 10px; right: 64px; z-index: 1;
+  width: 280px; max-width: calc(100% - 80px); max-height: calc(100% - 65px);
+  overflow: auto; padding: 14px; background: var(--surface); color: var(--forest);
+  border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  font-size: 12px;
+}
+.panel[hidden] { display: none; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.heading h2 { margin: 0; font-size: 15px; }
+.close { display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.status { margin: 4px 0; font-weight: 700; color: var(--forest); }
+.message { margin: 6px 0; line-height: 1.5; color: var(--muted); }
+.coordinates { margin: 12px 0; font-variant-numeric: tabular-nums; }
+.coordinates div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 5px 0; }
+.coordinates dd { margin: 0; font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.actions button { min-height: 44px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--forest); cursor: pointer; }
+.actions button[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--forest); }
+.actions button:disabled { opacity: 0.55; cursor: not-allowed; }
+.privacy { margin: 12px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.dot { width: 18px; height: 18px; border-radius: 50%; background: #2076c7; border: 3px solid white; box-shadow: 0 0 0 2px #155a9b, 0 2px 6px #163a2b44; pointer-events: none; }
+@media (max-width: 760px) {
+  .panel { top: 56px; max-height: calc(100% - 100px); padding: 10px; }
+}

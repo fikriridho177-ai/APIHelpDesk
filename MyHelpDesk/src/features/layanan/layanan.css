@@ -1,0 +1,1142 @@
+/* =========================================================
+   LAYANAN (RNA, GIS, WAD, QC, NAT)
+========================================================= */
+
+.lyn-page {
+  display: grid;
+  gap: 20px;
+}
+
+.lyn-muted {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.lyn-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+
+  padding: 28px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+
+  color: #64748b;
+  text-align: center;
+  background: #ffffff;
+}
+
+.lyn-empty svg {
+  font-size: 28px;
+  color: #94a3b8;
+}
+
+.lyn-empty p {
+  margin: 0;
+}
+
+/* ---------- Warna (dipakai kartu, badge, chip) ---------- */
+
+.tone-blue   { --tone-bg: #e8f0fe; --tone-fg: #1d4ed8; }
+.tone-indigo { --tone-bg: #e0e7ff; --tone-fg: #4338ca; }
+.tone-purple { --tone-bg: #f1e9fb; --tone-fg: #7c3aed; }
+.tone-green  { --tone-bg: #e7f6e9; --tone-fg: #15803d; }
+.tone-teal   { --tone-bg: #e3f5ef; --tone-fg: #0f766e; }
+.tone-cyan   { --tone-bg: #e2f4f8; --tone-fg: #0e7490; }
+.tone-amber  { --tone-bg: #fdf4e3; --tone-fg: #b45309; }
+.tone-orange { --tone-bg: #fdf0df; --tone-fg: #c2410c; }
+.tone-red    { --tone-bg: #fdecec; --tone-fg: #b91c1c; }
+.tone-gray   { --tone-bg: #f1f5f9; --tone-fg: #475569; }
+
+/* ---------- Hero ---------- */
+
+.lyn-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 28px 32px;
+  border-radius: 18px;
+
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.18), transparent 45%),
+    linear-gradient(120deg, #14532d 0%, #15803d 45%, #0e7490 100%);
+  box-shadow: 0 12px 30px rgba(21, 128, 61, 0.22);
+}
+
+.lyn-hero.compact {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.18), transparent 45%),
+    linear-gradient(120deg, #1e3a8a 0%, #2563eb 55%, #4f46e5 100%);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.22);
+}
+
+.lyn-hero h1 {
+  margin: 4px 0 6px;
+  color: #ffffff;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+
+.lyn-hero p {
+  margin: 0;
+  max-width: 560px;
+  opacity: 0.9;
+}
+
+.lyn-hero-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.lyn-hero-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lyn-hero-flow li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px 12px 6px 6px;
+  border-radius: 999px;
+
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.lyn-hero-flow li span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #15803d;
+  font-weight: 700;
+  font-size: 0.72rem;
+  background: #ffffff;
+}
+
+/* ---------- Judul seksi ---------- */
+
+.lyn-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.lyn-section-title h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.lyn-section-title span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+/* ---------- Kartu divisi ---------- */
+
+.lyn-division-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.lyn-division-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+
+  min-height: 220px;
+  padding: 20px;
+
+  border: 1px solid transparent;
+  border-radius: 18px;
+
+  color: #1e293b;
+  text-align: left;
+  background: var(--tone-bg);
+  cursor: pointer;
+
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.lyn-division-card:hover,
+.lyn-division-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: var(--tone-fg);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+  outline: none;
+}
+
+.lyn-division-icon {
+  display: grid;
+  place-items: center;
+
+  width: 56px;
+  height: 56px;
+
+  border-radius: 50%;
+  font-size: 28px;
+
+  color: var(--tone-fg);
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.lyn-division-text {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+}
+
+.lyn-division-text strong {
+  font-size: 1.25rem;
+}
+
+.lyn-division-text em {
+  color: var(--tone-fg);
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.lyn-division-text small {
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.lyn-division-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.lyn-division-arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--tone-fg);
+  background: #ffffff;
+  transition: transform 0.18s ease;
+}
+
+.lyn-division-card:hover .lyn-division-arrow {
+  transform: translateX(3px);
+}
+
+/* ---------- Header halaman layanan ---------- */
+
+.lyn-service-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  padding: 24px 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, var(--tone-bg), transparent 55%),
+    #ffffff;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+}
+
+.lyn-service-hero h1 {
+  margin: 2px 0 4px;
+  font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+}
+
+.lyn-service-hero p {
+  margin: 0;
+  color: #475569;
+}
+
+.lyn-service-hero-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+
+  font-size: 32px;
+  color: var(--tone-fg);
+  background: var(--tone-bg);
+}
+
+.lyn-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.lyn-crumbs a {
+  color: #64748b;
+  text-decoration: none;
+}
+
+.lyn-crumbs a:hover {
+  color: #2563eb;
+}
+
+.lyn-crumbs span {
+  display: inline-flex;
+  gap: 6px;
+  color: #cbd5e1;
+}
+
+/* ---------- Kartu sub-layanan ---------- */
+
+.lyn-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.lyn-service-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  color: #1e293b;
+  text-align: left;
+  background: #ffffff;
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.lyn-service-card > svg {
+  color: #94a3b8;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.lyn-service-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--tone-fg);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+.lyn-service-card:hover > svg {
+  color: var(--tone-fg);
+  transform: translateX(3px);
+}
+
+.lyn-service-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+
+  font-size: 20px;
+  color: var(--tone-fg);
+  background: var(--tone-bg);
+}
+
+.lyn-service-text {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.lyn-service-text small {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+/* ---------- Kartu umum ---------- */
+
+.lyn-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+
+  padding: 20px;
+  border: 1px solid #e5eaf1;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(20, 33, 61, 0.05);
+}
+
+.lyn-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lyn-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.lyn-card-header p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.lyn-info-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #475569;
+}
+
+.lyn-info-card svg {
+  flex-shrink: 0;
+  font-size: 24px;
+  color: #2563eb;
+}
+
+.lyn-info-card p {
+  margin: 0;
+}
+
+.lyn-service-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 420px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+/* ---------- Form ---------- */
+
+.lyn-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.lyn-field {
+  display: grid;
+  gap: 6px;
+}
+
+.lyn-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.lyn-field textarea {
+  resize: vertical;
+}
+
+.lyn-field input[readonly] {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+/* Judul kelompok informasi di detail pengajuan. */
+.lyn-info-title {
+  margin: 0 0 -6px;
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.lyn-info-item a {
+  color: #2563eb;
+  word-break: break-all;
+}
+
+/* Judul kelompok isian form (Data Pemohon / Permintaan). */
+.lyn-form-section {
+  margin: 4px 0 -4px;
+  padding-top: 10px;
+  border-top: 1px solid #eef2f7;
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+
+.lyn-form-section:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Pilihan centang (Perusahaan). */
+.lyn-checks {
+  margin: 0;
+  padding: 0;
+  border: none;
+  gap: 4px;
+}
+
+.lyn-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e293b;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.lyn-check input[type='checkbox'] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+
+.lyn-check .lyn-check-other {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+}
+
+.lyn-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.lyn-priority-picker,
+.lyn-status-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lyn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+
+  color: #475569;
+  font-size: 0.8rem;
+  background: #ffffff;
+}
+
+.lyn-chip b {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: #f1f5f9;
+}
+
+.lyn-chip:hover {
+  border-color: #94a3b8;
+}
+
+.lyn-chip.active {
+  border-color: var(--tone-fg, #1e293b);
+  color: var(--tone-fg, #ffffff);
+  font-weight: 600;
+  background: var(--tone-bg, #1e293b);
+}
+
+.lyn-chip.active b {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- Tombol ---------- */
+
+.lyn-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.lyn-button.primary  { color: #ffffff; background: #2563eb; }
+.lyn-button.success  { color: #ffffff; background: #16a34a; }
+.lyn-button.danger   { color: #ffffff; background: #dc2626; }
+.lyn-button.neutral  { color: #334155; background: #e2e8f0; }
+.lyn-button.ghost    { color: #334155; background: #ffffff; border-color: #cbd5e1; }
+
+.lyn-button.active {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+
+.lyn-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.lyn-icon-button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: #475569;
+  background: #f1f5f9;
+}
+
+/* ---------- Daftar pengajuan ---------- */
+
+.lyn-list-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.lyn-list-tools select {
+  width: auto;
+  padding: 8px 10px;
+}
+
+.lyn-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 0 10px;
+  border: 1px solid #ccd5e2;
+  border-radius: 10px;
+
+  color: #94a3b8;
+  background: #ffffff;
+}
+
+.lyn-search input {
+  width: 200px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.lyn-request-list {
+  display: grid;
+  gap: 8px;
+}
+
+.lyn-request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+
+  color: #1e293b;
+  text-align: left;
+  background: #ffffff;
+
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.lyn-request-row:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.lyn-request-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.lyn-request-main strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lyn-request-main small {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.lyn-request-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.lyn-request-no {
+  color: #2563eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.lyn-request-service {
+  color: #64748b;
+}
+
+.lyn-request-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.lyn-badge,
+.lyn-priority {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+
+  padding: 3px 10px;
+  border-radius: 999px;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--tone-fg);
+  background: var(--tone-bg);
+}
+
+.lyn-priority {
+  padding: 2px 8px;
+  border: 1px solid var(--tone-bg);
+  font-weight: 600;
+  background: transparent;
+}
+
+/* ---------- Modal detail ---------- */
+
+.lyn-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3200; /* di atas navbar, di bawah jendela live chat */
+
+  display: grid;
+  place-items: center;
+
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.lyn-modal {
+  display: flex;
+  flex-direction: column;
+
+  width: min(760px, 100%);
+  max-height: 90vh;
+
+  overflow: hidden;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+}
+
+.lyn-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.lyn-modal-header h2 {
+  margin: 4px 0 2px;
+  font-size: 1.25rem;
+}
+
+.lyn-modal-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.lyn-modal-header-side {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.lyn-modal-body {
+  display: grid;
+  gap: 20px;
+  padding: 20px 24px 24px;
+  overflow-y: auto;
+}
+
+.lyn-modal-body h4 {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+/* Stepper alur flowchart */
+.lyn-stepper {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lyn-stepper li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.lyn-stepper li::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: -50%;
+  width: 100%;
+  height: 3px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.lyn-stepper li:first-child::before {
+  display: none;
+}
+
+.lyn-stepper li.done::before,
+.lyn-stepper li.current::before {
+  background: #16a34a;
+}
+
+.lyn-step-dot {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  place-items: center;
+
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e2e8f0;
+  border-radius: 50%;
+
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #ffffff;
+}
+
+.lyn-stepper li.done .lyn-step-dot {
+  border-color: #16a34a;
+  color: #ffffff;
+  background: #16a34a;
+}
+
+.lyn-stepper li.current .lyn-step-dot {
+  border-color: #2563eb;
+  color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.lyn-step-label {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.lyn-stepper li.current .lyn-step-label {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.lyn-stopped {
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: var(--tone-fg);
+  font-weight: 600;
+  background: var(--tone-bg);
+}
+
+.lyn-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.lyn-info-item {
+  display: grid;
+  gap: 2px;
+}
+
+.lyn-info-item span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.lyn-info-item strong {
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+
+.lyn-description p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+
+.lyn-actions {
+  padding: 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #f8fbff;
+}
+
+.lyn-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lyn-action-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+/* Timeline riwayat */
+.lyn-timeline {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lyn-timeline li {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.lyn-timeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 22px;
+  bottom: 0;
+  left: 10px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.lyn-timeline-dot {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  width: 22px;
+  height: 22px;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+
+  font-size: 11px;
+  color: var(--tone-fg);
+  background: var(--tone-bg);
+  box-shadow: 0 0 0 1px var(--tone-fg);
+}
+
+.lyn-timeline strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.lyn-timeline small {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.lyn-timeline p {
+  margin: 6px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  background: #f1f5f9;
+}
+
+/* ---------- Responsif ---------- */
+
+@media (max-width: 960px) {
+  .lyn-service-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .lyn-hero,
+  .lyn-service-hero {
+    padding: 20px;
+  }
+
+  .lyn-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lyn-search input {
+    width: 140px;
+  }
+
+  .lyn-stepper .lyn-step-label {
+    font-size: 0.65rem;
+  }
+
+  .lyn-request-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lyn-request-side {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* ---------- Jenis Permintaan (pilihan dari Master Jenis Permintaan) ---------- */
+
+.lyn-jenis-picker {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.lyn-jenis-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.lyn-jenis-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.lyn-jenis-option:hover {
+  border-color: #93c5fd;
+}
+
+.lyn-jenis-option.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.lyn-jenis-option input[type='radio'] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.lyn-jenis-option strong {
+  display: block;
+  color: #1e293b;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.lyn-jenis-option small {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.lyn-jenis-picker > input {
+  margin-top: 8px;
+}
+
+/* Nomor antrian tiket */
+.lyn-queue {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Halaman Approval / Monitoring / Analisis / Master Jenis Permintaan */
+.pmt-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pmt-reason {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.pmt-reason input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+}
+
+.pmt-late {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.pmt-inactive td {
+  color: #94a3b8;
+}

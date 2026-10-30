@@ -1,0 +1,747 @@
+/* =========================================================
+   SENSUS (memakai komponen dasar dari layanan.css)
+========================================================= */
+
+/* ---------- Filter & toolbar ---------- */
+
+.sns-filter {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.sns-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sns-toolbar h3,
+.sns-toolbar h4 {
+  margin: 0;
+}
+
+.sns-toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sns-toolbar-right select {
+  width: auto;
+}
+
+.sns-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sns-tabs-action {
+  margin-left: auto;
+}
+
+.sns-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.sns-inline-check input {
+  width: auto;
+}
+
+.sns-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  grid-column: 1 / -1;
+}
+
+.sns-wide {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Kotak angka ---------- */
+
+.sns-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.sns-stat {
+  display: grid;
+  gap: 2px;
+  padding: 16px 18px;
+  border: 1px solid #e5eaf1;
+  border-left-width: 4px;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.sns-stat strong {
+  color: #0f172a;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.sns-stat small {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.sns-stat.tone-indigo { border-left-color: #4f46e5; }
+.sns-stat.tone-blue   { border-left-color: #2563eb; }
+.sns-stat.tone-green  { border-left-color: #16a34a; }
+.sns-stat.tone-orange { border-left-color: #ea580c; }
+.sns-stat.tone-red    { border-left-color: #dc2626; }
+
+/* ---------- Tabel ---------- */
+
+.sns-table th {
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sns-table td {
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.sns-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sns-table.compact th,
+.sns-table.compact td {
+  padding: 6px 10px;
+}
+
+.sns-row {
+  cursor: pointer;
+}
+
+.sns-row:hover td {
+  background: #f8fafc;
+}
+
+.sns-check {
+  width: 36px;
+}
+
+.sns-check input {
+  width: auto;
+}
+
+.sns-no {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sns-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.sns-actions .lyn-icon-button + .lyn-icon-button {
+  margin-left: 6px;
+}
+
+.lyn-icon-button.danger-text {
+  color: #dc2626;
+}
+
+.sns-scroll {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.sns-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: #4338ca;
+  background: #e0e7ff;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.sns-percent {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  margin-right: 8px;
+  overflow: hidden;
+  vertical-align: middle;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.sns-percent span {
+  display: block;
+  height: 100%;
+  background: #f97316;
+}
+
+/* ---------- Grafik batang ---------- */
+
+.sns-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.sns-bar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 140px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.sns-bar-label {
+  overflow: hidden;
+  color: #334155;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sns-bar-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.sns-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.sns-bar-fill.tone-green { background: #16a34a; }
+.sns-bar-fill.tone-teal  { background: #0d9488; }
+.sns-bar-fill.tone-amber { background: #f59e0b; }
+.sns-bar-fill.tone-red   { background: #dc2626; }
+.sns-bar-fill.tone-gray  { background: #94a3b8; }
+
+.sns-bar-value {
+  min-width: 40px;
+  color: #0f172a;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ---------- Layout ---------- */
+
+.sns-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.sns-master-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.sns-jenis-list {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* Daftar / tabel scroll sendiri agar halaman tidak memanjang. */
+.sns-scroll {
+  max-height: min(60vh, 560px);
+  overflow: auto;
+}
+
+.sns-sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  box-shadow: inset 0 -1px 0 #e5eaf1;
+}
+
+.sns-jenis-item {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+  color: #0f172a;
+  background: #ffffff;
+  text-align: left;
+}
+
+.sns-jenis-item:hover {
+  background: #f8fafc;
+}
+
+.sns-jenis-item.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.sns-jenis-item.inactive {
+  opacity: 0.6;
+}
+
+.sns-jenis-item small {
+  color: #64748b;
+}
+
+/* ---------- Modal ---------- */
+
+.sns-modal {
+  width: min(960px, 100%);
+}
+
+.sns-form-modal {
+  width: min(640px, 100%);
+}
+
+.sns-form-modal .lyn-modal-header h2 {
+  margin: 0;
+}
+
+.sns-subtitle {
+  margin: 8px 0 0;
+  color: #334155;
+}
+
+.sns-approval-box {
+  border-color: #bfdbfe;
+  background: #f8fbff;
+}
+
+.sns-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.sns-photos img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e5eaf1;
+}
+
+.sns-log {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+.sns-log p {
+  margin: 2px 0 0;
+  color: #475569;
+}
+
+@media (max-width: 860px) {
+  .sns-master-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .sns-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   MASTER KEBUN & BLOK (data persil MyPAD / RSUPPKB)
+========================================================= */
+
+.persil-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.persil-readonly svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- Kartu sumber data ---------- */
+
+.persil-sources {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.persil-source {
+  --accent: #2563eb;
+  --accent-soft: #eff6ff;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+
+  padding: 12px 14px;
+  border: 1px solid #e5eaf1;
+  border-radius: 16px;
+  color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(20, 33, 61, 0.04);
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.persil-source:hover {
+  background: #ffffff;
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(20, 33, 61, 0.08);
+}
+
+.persil-source.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.persil-source.tone-green  { --accent: #16a34a; --accent-soft: #f0fdf4; }
+.persil-source.tone-orange { --accent: #ea580c; --accent-soft: #fff7ed; }
+.persil-source.tone-purple { --accent: #7c3aed; --accent-soft: #f5f3ff; }
+.persil-source.tone-teal   { --accent: #0d9488; --accent-soft: #f0fdfa; }
+
+.persil-source-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.persil-source.active .persil-source-icon {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+.persil-source-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.persil-source-text {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+
+.persil-source-total {
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+.persil-db {
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: #475569;
+  background: #f1f5f9;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Filter ---------- */
+
+.persil-filter {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.persil-search .lyn-search {
+  width: 100%;
+}
+
+.persil-progress {
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.persil-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #ea580c;
+}
+
+/* ---------- Peta & sebaran ---------- */
+
+.persil-visual {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.persil-map {
+  position: relative;
+}
+
+.persil-map svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(42, 120, 214, 0.06), transparent 55%),
+    #fbfcfe;
+}
+
+.persil-grid {
+  stroke: #e8edf3;
+  stroke-width: 1;
+}
+
+.persil-axis {
+  fill: #94a3b8;
+  font-size: 10px;
+}
+
+.persil-dot {
+  fill: #2a78d6;
+  fill-opacity: 0.75;
+  stroke: #ffffff;
+  stroke-width: 1;
+}
+
+.persil-dot-hover {
+  fill: none;
+  stroke: #1d4ed8;
+  stroke-width: 2;
+}
+
+.persil-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  min-width: 170px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  font-size: 0.78rem;
+  pointer-events: none;
+}
+
+.persil-tooltip span {
+  color: #475569;
+}
+
+.persil-tooltip-coord {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.persil-tooltip em {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.persil-map-note {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.persil-map-empty {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.persil-skeleton {
+  height: 300px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 37%, #f1f5f9 63%);
+  background-size: 400% 100%;
+  animation: persil-shimmer 1.3s ease infinite;
+}
+
+.persil-skeleton.short {
+  height: 220px;
+}
+
+@keyframes persil-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .persil-skeleton { animation: none; }
+}
+
+.persil-wilayah-list {
+  display: grid;
+  gap: 4px;
+}
+
+.persil-wilayah {
+  display: grid;
+  grid-template-columns: minmax(60px, 90px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: #0f172a;
+  background: transparent;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.persil-wilayah:hover {
+  background: #f1f5f9;
+}
+
+.persil-wilayah.active {
+  background: #eff6ff;
+  box-shadow: inset 0 0 0 1px #93c5fd;
+}
+
+.persil-wilayah-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.persil-wilayah-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.persil-wilayah-track span {
+  display: block;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  background: #2a78d6;
+}
+
+.persil-wilayah-value {
+  min-width: 44px;
+  color: #334155;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* ---------- Tabel ---------- */
+
+/* Tabel scroll sendiri agar halaman tidak memanjang; header tetap terlihat. */
+.persil-table-wrap {
+  max-height: min(60vh, 560px);
+  overflow: auto;
+}
+
+.persil-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  box-shadow: inset 0 -1px 0 #e5eaf1;
+}
+
+.persil-table tbody tr:nth-child(even) td {
+  background: #fafbfd;
+}
+
+.persil-table tbody tr:hover td {
+  background: #f1f5f9;
+}
+
+.persil-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  color: #1e40af;
+  background: #dbeafe;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.persil-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.persil-map-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+.persil-map-link:hover {
+  text-decoration: underline;
+}
+
+.persil-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 960px) {
+  .persil-visual,
+  .persil-filter {
+    grid-template-columns: 1fr;
+  }
+}

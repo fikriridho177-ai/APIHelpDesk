@@ -1,0 +1,313 @@
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+.dashboard-page {
+  display: grid;
+  gap: 20px;
+}
+
+/* ---------- Sambutan ---------- */
+
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+
+  padding: 28px 32px;
+  border-radius: 18px;
+
+  color: #ffffff;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255, 255, 255, 0.18), transparent 40%),
+    linear-gradient(120deg, #1e3a8a 0%, #2563eb 55%, #4f46e5 100%);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.25);
+}
+
+.dashboard-hero h1 {
+  margin: 4px 0 6px;
+  color: #ffffff;
+  font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+}
+
+.dashboard-hero-date {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.dashboard-hero-subtitle {
+  margin: 0;
+  max-width: 620px;
+  opacity: 0.9;
+}
+
+.dashboard-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* Tombol Live Chat di banner */
+.dashboard-chat-button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 14px;
+
+  color: #1e3a8a;
+  font-size: 22px;
+  text-align: left;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.dashboard-chat-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.25);
+}
+
+.dashboard-chat-button span {
+  display: grid;
+  font-size: 0.95rem;
+}
+
+.dashboard-chat-button small {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+/* ---------- Judul seksi ---------- */
+
+.dashboard-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dashboard-section-title h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.dashboard-section-title span {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.dashboard-empty {
+  padding: 24px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #64748b;
+  background: #ffffff;
+}
+
+/* ---------- Kartu layanan ---------- */
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.dashboard-card {
+  --tone-bg: #eff6ff;
+  --tone-accent: #2563eb;
+
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  min-height: 190px;
+  padding: 20px 18px 52px;
+
+  border: 1px solid transparent;
+  border-radius: 18px;
+
+  color: #1e293b;
+  text-align: left;
+  background: var(--tone-bg);
+  cursor: pointer;
+
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.dashboard-card:hover,
+.dashboard-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: var(--tone-accent);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+  outline: none;
+}
+
+.dashboard-card-icon {
+  display: grid;
+  place-items: center;
+
+  width: 52px;
+  height: 52px;
+  margin-bottom: 6px;
+
+  border-radius: 50%;
+  font-size: 26px;
+
+  color: var(--tone-accent);
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-card-title {
+  font-size: 1rem;
+}
+
+.dashboard-card-desc {
+  color: #475569;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.dashboard-card-arrow {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+
+  display: grid;
+  place-items: center;
+
+  width: 32px;
+  height: 32px;
+
+  border-radius: 50%;
+  font-size: 16px;
+
+  color: var(--tone-accent);
+  background: #ffffff;
+
+  transition: transform 0.18s ease;
+}
+
+.dashboard-card:hover .dashboard-card-arrow {
+  transform: translateX(3px);
+}
+
+.tone-blue   { --tone-bg: #e8f0fe; --tone-accent: #2563eb; }
+.tone-green  { --tone-bg: #e7f6e9; --tone-accent: #16a34a; }
+.tone-purple { --tone-bg: #f1e9fb; --tone-accent: #7c3aed; }
+.tone-orange { --tone-bg: #fdf0df; --tone-accent: #ea7a0c; }
+.tone-teal   { --tone-bg: #e3f5ef; --tone-accent: #0f8a6a; }
+.tone-cyan   { --tone-bg: #e2f4f8; --tone-accent: #0e7490; }
+
+/* ---------- Ringkasan tiket ---------- */
+
+.dashboard-summary {
+  display: grid;
+  gap: 16px;
+
+  padding: 20px;
+  border: 1px solid #e5eaf1;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 4px 18px rgba(20, 33, 61, 0.05);
+}
+
+.dashboard-summary-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-summary-head small {
+  display: block;
+  color: #64748b;
+}
+
+.dashboard-summary-link {
+  margin-left: auto;
+}
+
+.dashboard-summary-badge {
+  display: grid;
+  place-items: center;
+
+  width: 42px;
+  height: 42px;
+
+  border-radius: 50%;
+  font-size: 20px;
+
+  color: #ffffff;
+  background: #15803d;
+}
+
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.dashboard-stat {
+  --stat-bg: #eff6ff;
+  --stat-accent: #2563eb;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--stat-bg);
+}
+
+.dashboard-stat strong {
+  display: block;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.dashboard-stat small {
+  color: #475569;
+}
+
+.dashboard-stat-icon {
+  display: grid;
+  place-items: center;
+
+  width: 40px;
+  height: 40px;
+
+  border-radius: 50%;
+  font-size: 20px;
+
+  color: #ffffff;
+  background: var(--stat-accent);
+}
+
+.stat-red   { --stat-bg: #fdecec; --stat-accent: #dc2626; }
+.stat-amber { --stat-bg: #fdf4e3; --stat-accent: #d97706; }
+.stat-green { --stat-bg: #e8f6ec; --stat-accent: #16a34a; }
+.stat-blue  { --stat-bg: #e8f0fe; --stat-accent: #2563eb; }
+
+.dashboard-summary-note {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .dashboard-hero {
+    padding: 22px 20px;
+  }
+}

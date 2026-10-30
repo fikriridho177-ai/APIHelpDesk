@@ -1,0 +1,15 @@
+﻿node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+*.timestamp-*.mjs
+.vite/
+.superpowers/sdd/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

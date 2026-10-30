@@ -1,0 +1,44 @@
+.search { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 600; margin: 14px 0 8px; }
+.searchField { position: relative; display: flex; align-items: center; min-width: 0; }
+.searchField > svg { position: absolute; left: 12px; pointer-events: none; color: var(--muted); }
+.search input { width: 100%; min-width: 0; min-height: 44px; font: inherit; font-weight: 400; color: var(--foreground); padding: 10px 12px 10px 37px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.search input:focus-visible, .groupButton:focus-visible, .details summary:focus-visible, .reset:focus-visible, .topActions a:focus-visible, .adminLinks a:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.topActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; margin: 0 0 10px; font-size: 12px; }
+.topActions a, .adminLinks a, .reset { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.reset { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; text-align: left; }
+.reset:disabled { opacity: .5; cursor: default; }
+.groups { display: grid; gap: 12px; }
+.group { border: 1px solid var(--border); border-radius: var(--radius-md); }
+.groupButton { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 44px; padding: 10px; border: 0; border-radius: var(--radius-md); background: var(--background); color: var(--forest); font: inherit; font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; }
+.groupButton[aria-expanded="true"] { border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.groupButton > svg { flex: 0 0 auto; }
+.groupName { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.count { display: inline-flex; justify-content: center; min-width: 24px; border: 1px solid var(--border); border-radius: 4px; padding: 2px 5px; font-size: 11px; color: var(--muted); white-space: nowrap; font-weight: 500; background: var(--surface); }
+.entry { padding: 0 10px; border-top: 1px solid var(--border); border-left: 3px solid transparent; }
+.entry:last-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+.entry[data-visible="true"] { background: var(--brand-soft); border-left-color: var(--brand); }
+.entry :global(.gis-layer-item) { border: 0; padding: 10px 0 0; gap: 3px; }
+.entry :global(.gis-layer-item label) { gap: 4px; min-height: 44px; }
+.entry :global(.gis-layer-item input) { margin: 0 3px 0 0; }
+.entry :global(.gis-layer-item strong) { overflow-wrap: anywhere; }
+.entry :global(.gis-layer-item small) { line-height: 1.5; }
+.symbol { display: block; flex: 0 0 36px; }
+.rasterSymbol { display: flex; flex: 0 0 36px; align-items: center; justify-content: center; color: var(--brand); }
+.opacity { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; margin: 10px 0; color: var(--foreground); }
+.opacity input { grid-column: 1 / -1; width: 100%; min-width: 0; min-height: 32px; accent-color: var(--brand); }
+.opacity input:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.details { padding: 0 0 5px 25px; font-size: 12px; color: var(--muted); }
+.details summary { cursor: pointer; color: var(--brand); padding: 12px 0; min-height: 44px; font-size: 12px; }
+.details p { margin: 0 0 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.details dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px 10px; margin: 8px 0 12px; font-size: 12px; }
+.details dd { margin: 0; text-align: right; color: var(--foreground); overflow-wrap: anywhere; }
+.details dt { color: var(--muted); }
+.adminLinks { display: flex; flex-wrap: wrap; gap: 0 12px; margin-top: 6px; font-size: 12px; }
+.legendList { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.legendList li { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 12px; line-height: 1.5; color: var(--foreground); }
+.legendList li span { min-width: 0; overflow-wrap: anywhere; }
+.legendLayers { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
+.legendLayers > li + li { border-top: 1px solid var(--border); padding-top: 14px; }
+.legendTitle { display: block; font-size: 12px; color: var(--foreground); overflow-wrap: anywhere; }
+.legendNote { display: block; font-size: 12px; line-height: 1.5; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.notice { font-size: 12px; line-height: 1.6; color: var(--muted); margin: 12px 0 0; }

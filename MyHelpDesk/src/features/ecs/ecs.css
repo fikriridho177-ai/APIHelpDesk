@@ -1,0 +1,51 @@
+/* =========================================================
+   ECS MONITORING - gaya dasar dari dashboard-ecs (index.css),
+   dibatasi ke .ecs-root agar tidak mengubah halaman lain.
+========================================================= */
+
+.ecs-root {
+  color: #2c3e50;
+  font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.ecs-root *,
+.ecs-root *::before,
+.ecs-root *::after {
+  box-sizing: border-box;
+}
+
+.ecs-root :where(h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ecs-root :where(p) {
+  margin: 0;
+}
+
+.ecs-root :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ecs-root :where(button) {
+  font-family: inherit;
+}
+
+.ecs-root :where(img, svg) {
+  display: block;
+  max-width: 100%;
+}
+
+.ecs-root .leaflet-popup-content-wrapper {
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-family: 'Segoe UI', system-ui, sans-serif !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+.ecs-root .leaflet-popup-content {
+  margin: 12px 16px !important;
+  line-height: 1.6 !important;
+}
