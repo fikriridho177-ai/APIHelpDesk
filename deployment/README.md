@@ -1,6 +1,6 @@
 # Unified HelpDesk deployment
 
-This stack keeps `APIHelpDesk` and `MyHelpDesk` in separate Git repositories while deploying them as one system. `MyHelpDesk` is pinned as a Git submodule inside the `APIHelpDesk` checkout so Dokploy receives both source trees during a deployment:
+This deployment uses one `APIHelpDesk` repository containing the API and the bundled `MyHelpDesk` frontend. The frontend remains available in its own upstream repository, but the deployment copy is synchronized into this repository as a Git subtree so Dokploy needs access to only one repository:
 
 - `web`: React/Vite assets served by Nginx on the public port.
 - `api`: ASP.NET Core .NET 8 service on the private Compose network.
@@ -13,18 +13,17 @@ The stack does not create databases or run migrations. The API must be able to r
 
 - Git.
 - Docker Engine or Docker Desktop with Docker Compose v2 (`docker compose version`).
-- A Git provider credential that can read both `APIHelpDesk` and `MyHelpDesk` when deploying from Dokploy. For private repositories, use Dokploy's **Git** provider with an SSH key and the SSH repository URL.
+- A GitHub provider credential that can read the `APIHelpDesk` repository when deploying from Dokploy.
 - Network access from the API container to the configured databases and external ECS/weather services.
 - A free public TCP port for the frontend; the default is `8080`.
 
 ## Repository layout
 
-The deployment repository contains the frontend as a submodule:
+The deployment repository contains the frontend as a normal folder:
 
 ```text
 APIHelpDesk/
-  .gitmodules
-  MyHelpDesk/          # Git submodule, pinned to a MyHelpDesk commit
+  MyHelpDesk/          # bundled frontend subtree
   deployment/
     docker-compose.yml
 ```
@@ -33,21 +32,14 @@ The default `MYHELPDESK_CONTEXT=../MyHelpDesk` is relative to `deployment/docker
 
 ## First deployment
 
-Clone the API repository and initialize its frontend submodule:
+Clone the unified deployment repository:
 
 ```powershell
-git clone --recurse-submodules https://github.com/fikriridho177-ai/APIHelpDesk.git
+git clone https://github.com/fikriridho177-ai/APIHelpDesk.git
 Set-Location APIHelpDesk
 ```
 
-For an existing checkout, initialize or refresh the submodule before building:
-
-```powershell
-git submodule sync --recursive
-git submodule update --init --recursive
-```
-
-For Dokploy, use the **Git** provider with the SSH URL `git@github.com:fikriridho177-ai/APIHelpDesk.git`, select an SSH key that can read both repositories, enable **Enable Submodules** in the service settings, and keep the Compose path as `./deployment/docker-compose.yml`. The GitHub provider's parent-repository access does not automatically authenticate a private HTTPS submodule.
+For Dokploy, use the **GitHub** provider with repository `APIHelpDesk`, branch `main`, and Compose path `./deployment/docker-compose.yml`. Leave **Enable Submodules** disabled because the frontend is already part of this repository.
 
 Create the host-only environment file and fill in the real values for databases, JWT, ECS, and optional WebGIS settings:
 
@@ -73,17 +65,22 @@ The frontend is available at `http://localhost:8080/` by default. Set `WEB_PORT`
 
 ## Update
 
-Run the update from the `APIHelpDesk` checkout. The parent repository pins the compatible frontend commit:
+Run the update from the `APIHelpDesk` checkout:
 
 ```powershell
 git pull --ff-only
-git submodule sync --recursive
-git submodule update --init --recursive
 docker compose --env-file deployment/.env -f deployment/docker-compose.yml up -d --build --remove-orphans
 docker compose --env-file deployment/.env -f deployment/docker-compose.yml ps
 ```
 
-If the pull or submodule update reports local changes or cannot fast-forward, stop and review the checkout before rebuilding. Do not discard local changes as part of an ordinary deployment update. In Dokploy, enable **Enable Submodules** for this Compose service and ensure the selected SSH key can read `MyHelpDesk`.
+If the pull reports local changes or cannot fast-forward, stop and review the checkout before rebuilding. Do not discard local changes as part of an ordinary deployment update.
+
+To update the bundled frontend from the upstream `MyHelpDesk` repository, run this from the `APIHelpDesk` root after reviewing the incoming changes:
+
+```powershell
+git subtree pull --prefix=MyHelpDesk https://github.com/fikriridho177-ai/MyHelpDesk.git main --squash
+git push origin main
+```
 
 ## Status and logs
 
@@ -104,20 +101,17 @@ After signing in through the frontend, exercise one normal API-backed page, open
 
 ## Rollback
 
-Record the known-good parent and frontend commits before updating:
+Record the known-good unified repository commit before updating:
 
 ```powershell
 git rev-parse HEAD
-git -C MyHelpDesk rev-parse HEAD
 ```
 
-For a rollback, make sure the worktree is clean, fetch the repository, and check out the known-good parent commit. Then restore the submodule commit recorded by that parent:
+For a rollback, make sure the worktree is clean, fetch the repository, and check out the known-good commit:
 
 ```powershell
 git fetch origin
 git switch --detach <known-good-api-commit>
-git submodule sync --recursive
-git submodule update --init --recursive
 docker compose --env-file deployment/.env -f deployment/docker-compose.yml up -d --build --remove-orphans
 ```
 
@@ -136,7 +130,7 @@ There is no automatic database rollback. Check whether the selected application 
 
 ### Frontend build cannot find `MyHelpDesk`
 
-Check that the submodule is initialized and that Dokploy has **Enable Submodules** turned on. The default context is `../MyHelpDesk` relative to `deployment/docker-compose.yml`. If a custom checkout is intended, verify `MYHELPDESK_CONTEXT` in `deployment/.env`.
+Check that the `MyHelpDesk` folder exists in the APIHelpDesk checkout. The default context is `../MyHelpDesk` relative to `deployment/docker-compose.yml`. **Enable Submodules** is not required. If a custom checkout is intended, verify `MYHELPDESK_CONTEXT` in `deployment/.env`.
 
 ### Frontend loads but API calls fail
 
