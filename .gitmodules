@@ -1,4 +1,0 @@
-[submodule "MyHelpDesk"]
-	path = MyHelpDesk
-	url = git@github.com:fikriridho177-ai/MyHelpDesk.git
-	branch = main
