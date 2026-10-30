@@ -1,0 +1,242 @@
+/* =========================================================
+   TOMBOL CHAT MELAYANG (pojok kanan bawah)
+========================================================= */
+
+.floating-chat {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 3500; /* di atas navbar (1000) & dropdown (2000-3000) */
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.floating-chat-button {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  width: 60px;
+  height: 60px;
+  padding: 0;
+
+  border-radius: 50%;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  box-shadow:
+    0 10px 24px rgba(37, 99, 235, 0.45),
+    0 2px 6px rgba(15, 23, 42, 0.2);
+
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.floating-chat-button:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow:
+    0 14px 30px rgba(37, 99, 235, 0.5),
+    0 4px 10px rgba(15, 23, 42, 0.2);
+}
+
+.floating-chat-button.open {
+  background: #334155;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.3);
+}
+
+.floating-chat-close {
+  font-size: 20px;
+}
+
+.floating-chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+
+  min-width: 22px;
+  padding: 2px 6px;
+
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #ef4444;
+}
+
+/* ---------- Jendela chat (kecil) ---------- */
+
+.floating-chat-window {
+  width: min(390px, calc(100vw - 32px));
+  height: min(580px, calc(100vh - 120px));
+
+  animation: floating-chat-in 0.18s ease-out;
+}
+
+.floating-chat-window[hidden] {
+  display: none;
+}
+
+/* ---------- Jendela chat (layar penuh) ---------- */
+
+.floating-chat-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  animation: floating-chat-fade 0.18s ease-out;
+}
+
+.floating-chat-window.expanded {
+  position: fixed;
+  inset: 24px;
+  width: auto;
+  height: auto;
+}
+
+@keyframes floating-chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes floating-chat-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* =========================================================
+   TAMPILAN LIVE CHAT DI DALAM JENDELA MELAYANG
+========================================================= */
+
+.live-chat.widget {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.28);
+}
+
+/* Header daftar grup: bar biru seperti widget chat pada umumnya */
+.live-chat.widget .chat-sidebar {
+  max-height: none;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.live-chat.widget .chat-main {
+  height: 100%;
+}
+
+.live-chat.widget .chat-sidebar-header {
+  padding: 14px 14px 14px 18px;
+  color: #ffffff;
+  background: linear-gradient(120deg, #1e3a8a, #2563eb);
+}
+
+.live-chat.widget .chat-sidebar-header h2 {
+  color: #ffffff;
+}
+
+.live-chat.widget .chat-status {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.live-chat.widget .chat-status.online {
+  color: #86efac;
+}
+
+.live-chat.widget .chat-sidebar-header .chat-icon-button {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.live-chat.widget .chat-sidebar-header .chat-icon-button:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.live-chat.widget .chat-create-button {
+  width: auto;
+  margin: 12px 12px 4px;
+}
+
+.live-chat.widget .chat-group-list {
+  padding: 4px 8px 12px;
+}
+
+.chat-window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.chat-window-controls .chat-icon-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+/* Mode kecil: satu panel saja (daftar grup ATAU percakapan) */
+.live-chat.compact {
+  grid-template-columns: 1fr;
+}
+
+.live-chat.compact .chat-sidebar {
+  border-right: 0;
+}
+
+.live-chat.compact:not(.has-selection) .chat-main,
+.live-chat.compact.has-selection .chat-sidebar {
+  display: none;
+}
+
+.live-chat.compact .chat-main {
+  height: 100%;
+}
+
+.live-chat.compact .chat-main-header {
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+/* Layar penuh: 3 kolom, tinggi mengikuti jendela */
+.floating-chat-window.expanded .live-chat {
+  height: 100%;
+  border-radius: 18px;
+}
+
+.chat-main-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-main-title h3,
+.chat-main-title small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .floating-chat {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .floating-chat-window.expanded {
+    inset: 0;
+  }
+
+  .floating-chat-window.expanded .live-chat {
+    border-radius: 0;
+  }
+}

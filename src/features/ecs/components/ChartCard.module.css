@@ -1,0 +1,77 @@
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f0f4f8;
+  flex-shrink: 0;
+}
+
+.titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2b3c;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dotBlue   { background: #1565c0; }
+.dotPurple { background: #6a1b9a; }
+.dotOrange { background: #e65100; }
+.dotGreen  { background: #1a6b3c; }
+
+.unit {
+  font-size: 11px;
+  color: #aab4bd;
+}
+
+.body {
+  padding: 16px 20px 20px;
+  flex: 1;
+}
+
+.loadingWrap {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e0e7ef;
+  border-top-color: #1a6b3c;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.footer {
+  padding: 10px 20px 14px;
+  border-top: 1px solid #f0f4f8;
+}

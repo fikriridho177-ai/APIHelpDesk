@@ -1,0 +1,818 @@
+/*import './styles/layout.css'*/
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background: #f4f7fb;
+  color: #111827;
+}
+
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app-layout {
+  min-height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* =========================================================
+   TOP NAVBAR
+========================================================= */
+
+.top-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  width: 100%;
+  height: 68px;
+
+  background: #111827;
+
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.top-navbar-inner {
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 28px;
+}
+
+
+/* =========================================================
+   BRAND
+========================================================= */
+
+.navbar-brand {
+  color: #ffffff;
+
+  font-size: 21px;
+  font-weight: 700;
+
+  white-space: nowrap;
+
+  margin-right: 38px;
+}
+
+
+/* =========================================================
+   MENU
+========================================================= */
+
+.navbar-menu {
+  display: flex;
+  align-items: center;
+
+  height: 100%;
+
+  gap: 5px;
+
+  flex: 1;
+}
+
+.top-menu {
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 16px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: transparent;
+
+  color: #d1d5db;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.top-menu:hover {
+  background: #1f2937;
+  color: #ffffff;
+}
+
+.top-menu.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.dropdown-button {
+  font-family: inherit;
+}
+
+.dropdown-arrow {
+  margin-left: 7px;
+  font-size: 11px;
+}
+
+
+/* =========================================================
+   DROPDOWN
+========================================================= */
+
+.nav-dropdown {
+  position: relative;
+
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-menu {
+  position: absolute;
+
+  top: 58px;
+  left: 0;
+
+  width: 220px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.12);
+
+  padding: 7px;
+
+  z-index: 2000;
+}
+
+.dropdown-item {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  padding: 10px 12px;
+
+  border: none;
+  border-radius: 6px;
+
+  background: transparent;
+
+  color: #374151;
+
+  font-size: 14px;
+
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.dropdown-divider {
+  height: 1px;
+
+  margin: 6px 0;
+
+  background: #e5e7eb;
+}
+
+
+/* =========================================================
+   USER
+========================================================= */
+
+.navbar-user-wrapper {
+  position: relative;
+
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+}
+
+.navbar-user-button {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 7px 12px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: transparent;
+
+  color: #ffffff;
+
+  cursor: pointer;
+}
+
+.navbar-user-button:hover {
+  background: #1f2937;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-group {
+  margin-top: 2px;
+
+  font-size: 11px;
+
+  color: #9ca3af;
+}
+
+.user-dropdown {
+  position: absolute;
+
+  top: 58px;
+  right: 0;
+
+  width: 190px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.12);
+
+  padding: 7px;
+
+  z-index: 2000;
+}
+
+.logout-item {
+  color: #dc2626;
+}
+
+
+/* =========================================================
+   USER ONLINE
+========================================================= */
+
+.online-users {
+  position: relative;
+
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+
+  margin-right: 8px;
+}
+
+.online-users-button {
+  display: flex;
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 7px 12px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: transparent;
+
+  color: #ffffff;
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
+
+.online-users-button:hover {
+  background: #1f2937;
+}
+
+.online-users-dot {
+  flex-shrink: 0;
+
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+
+  background: #22c55e;
+}
+
+.online-users-dropdown {
+  position: absolute;
+
+  top: 58px;
+  right: 0;
+
+  width: 240px;
+  max-height: 360px;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.12);
+
+  padding: 7px;
+
+  z-index: 2000;
+}
+
+.online-users-title {
+  padding: 6px 8px;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  color: #6b7280;
+}
+
+.online-users-empty {
+  margin: 0;
+  padding: 6px 8px;
+
+  font-size: 13px;
+
+  color: #9ca3af;
+}
+
+.online-users-item {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 6px 8px;
+
+  border-radius: 6px;
+}
+
+.online-users-item:hover {
+  background: #f3f4f6;
+}
+
+.online-users-name {
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #111827;
+}
+
+.online-users-group {
+  font-size: 11px;
+
+  color: #6b7280;
+}
+
+
+/* =========================================================
+   CONTENT
+========================================================= */
+
+.main-content {
+  width: 100%;
+
+  padding: 28px;
+
+  flex: 1;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 6px 16px;
+
+  padding: 14px 28px;
+
+  border-top: 1px solid #e5eaf1;
+  background: #ffffff;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+
+  .navbar-brand {
+    margin-right: 15px;
+  }
+
+  .top-navbar-inner {
+    padding: 0 14px;
+  }
+
+  .top-menu {
+    padding: 0 10px;
+  }
+
+  .user-group {
+    display: none;
+  }
+}
+
+/* =========================================================
+   MULTI LEVEL DROPDOWN
+========================================================= */
+
+.submenu-item-wrapper {
+  position: relative;
+}
+
+.submenu-parent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  cursor: pointer;
+}
+
+.submenu-arrow {
+  margin-left: 18px;
+
+  color: #64748b;
+
+  font-size: 16px;
+}
+
+.submenu-dropdown {
+  position: absolute;
+
+  top: 0;
+  left: calc(100% + 4px);
+
+  min-width: 210px;
+
+  display: none;
+
+  padding: 7px;
+
+  background: #ffffff;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.12);
+
+  z-index: 3000;
+}
+
+.submenu-item-wrapper:hover
+> .submenu-dropdown {
+  display: block;
+}
+
+.submenu-item-wrapper:hover
+> .submenu-parent {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.login-password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.login-password-wrapper input {
+  width: 100%;
+  padding-right: 44px;
+  box-sizing: border-box;
+}
+
+.login-password-eye {
+  position: absolute;
+
+  right: 12px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  border: none;
+  background: transparent;
+
+  padding: 0;
+  margin: 0;
+
+  width: 28px;
+  height: 28px;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 17px;
+}
+
+.login-password-eye:hover {
+  background: transparent;
+}
+
+/* =========================================================
+   CHANGE PASSWORD
+========================================================= */
+
+.change-password-page {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 8px 0 40px;
+}
+
+
+/* HEADER */
+
+.change-password-header {
+  margin-bottom: 20px;
+}
+
+.change-password-header h1 {
+  margin: 0 0 6px;
+
+  font-size: 28px;
+  font-weight: 700;
+
+  color: #0f172a;
+}
+
+.change-password-header p {
+  margin: 0;
+
+  font-size: 14px;
+  line-height: 1.6;
+
+  color: #64748b;
+}
+
+
+/* CARD */
+
+.change-password-card {
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+
+  padding: 28px;
+
+  box-shadow:
+    0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+
+/* FIELD */
+
+.password-field {
+  margin-bottom: 18px;
+}
+
+.password-field label {
+  display: block;
+
+  margin-bottom: 7px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #334155;
+}
+
+
+/* INPUT WRAPPER */
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  height: 44px;
+
+  padding:
+    0 46px
+    0 13px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+
+  background: #ffffff;
+
+  color: #0f172a;
+
+  font-size: 14px;
+
+  outline: none;
+
+  transition:
+    border-color .2s,
+    box-shadow .2s;
+}
+
+.password-input-wrapper input:focus {
+  border-color: #2563eb;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(37, 99, 235, 0.10);
+}
+
+.password-input-wrapper input::placeholder {
+  color: #94a3b8;
+}
+
+
+/* EYE */
+
+.password-toggle {
+  position: absolute;
+
+  top: 50%;
+  right: 12px;
+
+  transform:
+    translateY(-50%);
+
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 0;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  font-size: 16px;
+
+  padding: 0;
+}
+
+.password-toggle:hover {
+  background: transparent;
+}
+
+
+/* HINT */
+
+.password-hint {
+  margin-top: -4px;
+  margin-bottom: 18px;
+
+  padding: 10px 12px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+
+  font-size: 12px;
+  line-height: 1.5;
+
+  color: #64748b;
+}
+
+
+/* MESSAGE */
+
+.password-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-bottom: 18px;
+
+  padding: 11px 13px;
+
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.password-message.success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+
+  color: #047857;
+}
+
+.password-message.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+
+  color: #b91c1c;
+}
+
+
+/* ACTION */
+
+.password-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-password-button {
+  min-width: 150px;
+
+  height: 42px;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: #2563eb;
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background .2s,
+    transform .1s;
+}
+
+.save-password-button:hover {
+  background: #1d4ed8;
+}
+
+.save-password-button:active {
+  transform: translateY(1px);
+}
+
+.save-password-button:disabled {
+  opacity: .65;
+
+  cursor: not-allowed;
+}

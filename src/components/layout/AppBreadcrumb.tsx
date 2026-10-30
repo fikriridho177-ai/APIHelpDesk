@@ -1,0 +1,136 @@
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
+type RouteItem = { label: string; path?: string };
+
+function resolveItems(pathname: string): RouteItem[] {
+  if (pathname === "/utility/users") return [{ label: "Master User" }];
+  if (pathname === "/utility/groups") return [{ label: "Hak Akses" }];
+  if (/^\/utility\/groups\/\d+\/menus$/.test(pathname))
+    return [
+      { label: "Hak Akses", path: "/utility/groups" },
+      { label: "Akses Menu" },
+    ];
+  if (/^\/utility\/groups\/\d+\/companies$/.test(pathname))
+    return [
+      { label: "Hak Akses", path: "/utility/groups" },
+      { label: "Akses Perusahaan Anak" },
+    ];
+  if (/^\/utility\/groups\/\d+\/departments$/.test(pathname))
+    return [
+      { label: "Hak Akses", path: "/utility/groups" },
+      { label: "Akses Departemen" },
+    ];
+  if (/^\/utility\/groups\/\d+\/item-sub-categories$/.test(pathname))
+    return [
+      { label: "Hak Akses", path: "/utility/groups" },
+      { label: "Akses Item Sub Kategori" },
+    ];
+  if (pathname === "/utility/security")
+    return [
+      { label: "Hak Akses", path: "/utility/groups" },
+      { label: "Master Security" },
+    ];
+  if (pathname === "/utility/menus") return [{ label: "Manajemen Menu" }];
+  if (pathname === "/change-password") return [{ label: "Ganti Password" }];
+  if (pathname === "/layanan") return [{ label: "Layanan" }];
+  if (pathname.startsWith("/layanan/"))
+    return [
+      { label: "Layanan", path: "/layanan" },
+      { label: "Detail Layanan" },
+    ];
+  if (pathname === "/pengajuan")
+    return [
+      { label: "Layanan", path: "/layanan" },
+      { label: "Daftar Pengajuan" },
+    ];
+  if (pathname === "/iot-management/dashboard-iot")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Dashboard IoT" },
+    ];
+  if (pathname === "/iot-management/peta-monitoring")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Peta Monitoring" },
+    ];
+  if (pathname === "/iot-management/prakiraan-cuaca")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Prakiraan Cuaca 10 Hari" },
+    ];
+  if (pathname === "/iot-management/daftar-perangkat")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Daftar Perangkat IoT" },
+    ];
+  if (pathname === "/iot-management/monitoring-sensor")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Monitoring Sensor IoT" },
+    ];
+  if (pathname === "/iot-management/riwayat-data-sensor")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Riwayat Data Sensor" },
+    ];
+  if (pathname === "/iot-management/iot-vendor/daftar-perangkat-vendor")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Daftar Perangkat IoT" },
+    ];
+  if (pathname === "/iot-management/iot-vendor/monitoring-sensor-vendor")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Monitoring Sensor IoT" },
+    ];
+  if (pathname === "/iot-management/logger-lokal/daftar-perangkat-internal")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Daftar Perangkat IoT" },
+    ];
+  if (pathname === "/iot-management/logger-lokal/monitoring-sensor")
+    return [
+      { label: "Manajemen IoT" },
+      { label: "Monitoring Sensor IoT" },
+    ];
+  return [{ label: "Halaman" }];
+}
+
+export default function AppBreadcrumb() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  if (location.pathname === "/") return null;
+  const items = resolveItems(location.pathname);
+
+  return (
+    <div className="breadcrumb-container">
+      <button
+        type="button"
+        className="breadcrumb-back"
+        onClick={() => navigate(-1)}
+        title="Kembali ke halaman sebelumnya"
+      >
+        ← Kembali
+      </button>
+      <div className="breadcrumb">
+        <Link to="/">Dasbor</Link>
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          return (
+            <span
+              key={`${location.pathname}-${index}`}
+              className="breadcrumb-item"
+            >
+              <span className="breadcrumb-separator">/</span>
+              {item.path && !isLast ? (
+                <Link to={item.path}>{item.label}</Link>
+              ) : (
+                <span className="breadcrumb-current">{item.label}</span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
