@@ -15,7 +15,7 @@ services:
 
   web:
     build:
-      context: ${MYHELPDESK_CONTEXT:-../../MyHelpDesk}
+      context: ${MYHELPDESK_CONTEXT:-../MyHelpDesk}
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-/api}
