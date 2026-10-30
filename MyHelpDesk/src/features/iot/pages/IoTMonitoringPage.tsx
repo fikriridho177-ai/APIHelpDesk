@@ -13,6 +13,7 @@ import {
 import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { getIoTDevices, getIoTHistory, getIoTLatest, getIoTParameters } from '../api/iotApi'
+import { adjustTmakValue } from '../lib/tmakOffset'
 import type {
   IoTDevice,
   IoTDeviceWithLatest,
@@ -157,11 +158,11 @@ function getNumericKeys(readings: IoTReading[]) {
   return [...keys]
 }
 
-function getChartPoints(readings: IoTReading[], key: string): ChartPoint[] {
+function getChartPoints(readings: IoTReading[], key: string, loggerCode: string | null | undefined): ChartPoint[] {
   const points: ChartPoint[] = []
   readings.forEach(reading => {
     const timestamp = parseTimestamp(reading.ts)
-    const value = getNumericValue(reading.data[key])
+    const value = getNumericValue(adjustTmakValue(loggerCode, key, reading.data[key]))
     if (timestamp === null || value === null) return
     points.push({ ts: timestamp, value })
   })
@@ -478,7 +479,7 @@ export default function IoTMonitoringPage({
             <span className={styles.dailyBadge}>{history ? `Agregasi per ${getAggregationLabel(historyAggregation)}` : `Agregasi ${getAggregationLabel(historyAggregation)}`}</span>
           </div>
         </div>
-        {historyLoading ? <div className={styles.panel}><StateMessage>Memuat histori pembacaan...</StateMessage></div> : historyError ? <div className={styles.panel}><StateMessage>{historyError}</StateMessage></div> : parameterGroups.length === 0 ? <div className={styles.panel}><StateMessage>{selectedDevice ? (parametersLoading ? 'Memuat metadata parameter...' : 'Belum ada nilai numerik untuk grafik histori.') : 'Pilih logger dari daftar perangkat.'}</StateMessage></div> : parameterGroups.map((group, index) => <CategorySection key={group.code} group={group} index={index} history={history?.data ?? []} latest={selectedDevice?.latest ?? null} aggregation={historyAggregation} />)}
+        {historyLoading ? <div className={styles.panel}><StateMessage>Memuat histori pembacaan...</StateMessage></div> : historyError ? <div className={styles.panel}><StateMessage>{historyError}</StateMessage></div> : parameterGroups.length === 0 ? <div className={styles.panel}><StateMessage>{selectedDevice ? (parametersLoading ? 'Memuat metadata parameter...' : 'Belum ada nilai numerik untuk grafik histori.') : 'Pilih logger dari daftar perangkat.'}</StateMessage></div> : parameterGroups.map((group, index) => <CategorySection key={group.code} group={group} index={index} history={history?.data ?? []} latest={selectedDevice?.latest ?? null} loggerCode={selectedDevice?.loggerCode} aggregation={historyAggregation} />)}
       </section>
     </main>
   )
@@ -502,16 +503,16 @@ function DeviceRow({ device, selected, onSelect }: { device: IoTDeviceWithLatest
 
 function QualityRow({ label, value, tone }: { label: string; value: string; tone: string }) { return <div className={styles.qualityRow}><span>{label}</span><strong className={styles[`quality-${tone}`]}>{value}</strong></div> }
 
-function CategorySection({ group, index, history, latest, aggregation }: { group: ParameterGroup; index: number; history: IoTReading[]; latest: IoTReading | null; aggregation?: IoTHistoryAggregation }) {
+function CategorySection({ group, index, history, latest, loggerCode, aggregation }: { group: ParameterGroup; index: number; history: IoTReading[]; latest: IoTReading | null; loggerCode: string | null | undefined; aggregation?: IoTHistoryAggregation }) {
   const color = getCategoryColor(index)
-  return <section className={styles.categorySection} style={{ '--category-color': color } as CSSProperties}><div className={styles.categoryHeading}><div><span className={styles.categoryMarker} /><span className={styles.panelEyebrow}>CATEGORY {String(index + 1).padStart(2, '0')}</span><h2>{group.name}</h2></div><span className={styles.categoryCount}>{group.parameters.length} parameter</span></div><div className={styles.sensorGrid}>{group.parameters.map((parameter, parameterIndex) => <SensorCard key={parameter.parameterCode} parameter={parameter} points={getChartPoints(history, parameter.parameterCode)} latest={latest} aggregation={aggregation} fullWidth={group.parameters.length % 2 === 1 && parameterIndex === group.parameters.length - 1} />)}</div></section>
+  return <section className={styles.categorySection} style={{ '--category-color': color } as CSSProperties}><div className={styles.categoryHeading}><div><span className={styles.categoryMarker} /><span className={styles.panelEyebrow}>CATEGORY {String(index + 1).padStart(2, '0')}</span><h2>{group.name}</h2></div><span className={styles.categoryCount}>{group.parameters.length} parameter</span></div><div className={styles.sensorGrid}>{group.parameters.map((parameter, parameterIndex) => <SensorCard key={parameter.parameterCode} parameter={parameter} points={getChartPoints(history, parameter.parameterCode, loggerCode)} latest={latest} loggerCode={loggerCode} aggregation={aggregation} fullWidth={group.parameters.length % 2 === 1 && parameterIndex === group.parameters.length - 1} />)}</div></section>
 }
 
-function SensorCard({ parameter, points, latest, aggregation = 'hour', fullWidth }: { parameter: ChartParameter; points: ChartPoint[]; latest: IoTReading | null; aggregation?: IoTHistoryAggregation; fullWidth: boolean }) {
+function SensorCard({ parameter, points, latest, loggerCode, aggregation = 'hour', fullWidth }: { parameter: ChartParameter; points: ChartPoint[]; latest: IoTReading | null; loggerCode: string | null | undefined; aggregation?: IoTHistoryAggregation; fullWidth: boolean }) {
   const label = getParameterLabel(parameter.metadata, parameter.parameterCode)
   const parameterName = parameter.metadata?.namaParameter?.trim() || parameter.parameterCode
   const unit = parameter.metadata?.satuan?.trim() || 'nilai'
-  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{parameter.parameterCode}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(latest?.data[parameter.parameterCode])}</strong><small>{unit}</small></span><span className={styles.sensorCardChart}>{points.length === 0 ? <span className={styles.noDailyData}>Belum ada pembacaan</span> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterName} unit={unit} aggregation={aggregation} />} /><Area type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity={0.1} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></AreaChart></ResponsiveContainer>}</span><span className={styles.sensorCardFooter}><span>{label}</span><span>{points.length} titik</span></span></article>
+  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{parameter.parameterCode}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode]))}</strong><small>{unit}</small></span><span className={styles.sensorCardChart}>{points.length === 0 ? <span className={styles.noDailyData}>Belum ada pembacaan</span> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterName} unit={unit} aggregation={aggregation} />} /><Area type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity={0.1} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></AreaChart></ResponsiveContainer>}</span><span className={styles.sensorCardFooter}><span>{label}</span><span>{points.length} titik</span></span></article>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour' }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation }) {
