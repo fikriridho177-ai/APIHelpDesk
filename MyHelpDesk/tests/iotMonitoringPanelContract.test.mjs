@@ -17,6 +17,12 @@ test('selected logger detail is brought into the sidebar viewport', () => {
   assert.match(panelSource, /ref=\{detailRef\}/)
 })
 
+test('closed logger detail can be reopened from the visible sidebar state', () => {
+  assert.match(panelSource, /Detail logger ditutup/)
+  assert.match(panelSource, /Buka detail/)
+  assert.match(panelSource, /state\.selectLogger\(state\.selectedLoggerId\)/)
+})
+
 test('IoT detail uses the shared ordered monitoring readings helper', () => {
   assert.match(panelSource, /getOrderedMonitoringReadings/)
   assert.match(panelSource, /priorityReadings/)
