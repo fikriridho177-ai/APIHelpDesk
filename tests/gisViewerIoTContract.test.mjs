@@ -11,12 +11,14 @@ test('GISViewer controls a closed IoT accordion and opens it from shared selecti
   assert.match(viewerSource, /onToggle=\{toggleIotPanel\}/)
 })
 
-test('logger selection opens detail without moving the map', () => {
+test('logger selection opens detail while keeping the broad logger viewport', () => {
   const selectionStart = viewerSource.indexOf('const selectIoTLogger')
   const selectionEnd = viewerSource.indexOf('const toggleIotPanel', selectionStart)
   assert.ok(selectionStart >= 0 && selectionEnd > selectionStart)
   const selectionSource = viewerSource.slice(selectionStart, selectionEnd)
-  assert.doesNotMatch(selectionSource, /setFit|getIoTMapBounds/)
+  assert.match(selectionSource, /const bounds = getIoTMapBounds\(iotDevices\)/)
+  assert.match(selectionSource, /if \(bounds\) setFit\(/)
+  assert.doesNotMatch(selectionSource, /getIoTMapBounds\(\[device\]\)/)
 })
 
 test('GISViewer gives explicit URL selection precedence over the preferred RSUP layer', () => {

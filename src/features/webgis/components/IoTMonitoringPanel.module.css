@@ -1,5 +1,8 @@
 .panel { min-width: 0; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--foreground); }
 .loading, .state, .noSelection, .closedDetail { padding: 14px 16px; color: var(--muted); font-size: 12px; }
+.closedDetail { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.closedDetail button { flex: 0 0 auto; min-height: 32px; padding: 6px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--forest); font-size: 11px; }
+.closedDetail button:hover { background: var(--brand-soft); border-color: #aac39c; }
 .header, .detailHeader, .actions, .sectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .header { align-items: stretch; border-bottom: 1px solid var(--border); }
 .toggle { display: flex; align-items: center; justify-content: space-between; flex: 1; min-width: 0; gap: 10px; padding: 12px 16px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }

@@ -12,6 +12,7 @@ import { BasemapPanel } from "./basemap-panel";
 import { MeasurementPanel } from "./measurement-panel";
 import IoTMonitoringPanel from "../IoTMonitoringPanel";
 import type { IoTMapMonitoringState } from "../../hooks/useIoTMapMonitoring";
+import { isMappableDevice } from "../../../iot/lib/monitoring";
 import type { IoTMonitoringDevice } from "../../../iot/types/iot";
 import { getIoTMapBounds } from "../../lib/iot-map";
 import {
@@ -82,9 +83,14 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
     ? (iotMonitoring.monitoring?.devices ?? [])
     : [];
   const selectIoTLogger = useCallback((loggerId: number) => {
+    const device = iotDevices.find((item) => item.loggerId === loggerId);
     setIotPanelOpen(true);
     iotMonitoring.selectLogger(loggerId);
-  }, [iotMonitoring]);
+    if (device && isMappableDevice(device)) {
+      const bounds = getIoTMapBounds(iotDevices);
+      if (bounds) setFit((previous) => ({ bounds, revision: previous.revision + 1 }));
+    }
+  }, [iotDevices, iotMonitoring]);
   const toggleIotPanel = useCallback(() => {
     setIotPanelOpen((previous) => !previous);
   }, []);
