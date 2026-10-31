@@ -1,41 +1,15 @@
-﻿# .NET build
-**/bin/
-**/obj/
-.vs/
-*.user
-*.suo
-
-# IDE
-.vscode/
-.idea/
-
-# Secrets & local configuration
+﻿node_modules/
+dist/
+build/
 .env
 .env.*
 !.env.example
-appsettings.Development.json
-appsettings.Local.json
-appsettings.Production.json
-appsettings.IoTTest.json
-**/secrets.json
-*.pfx
-*.p12
-*.pem
-*.key
-
-# Logs
-logs/
 *.log
-
-# Publish output
-publish/
-artifacts/
-
-# OS
-Thumbs.db
+*.tsbuildinfo
+*.timestamp-*.mjs
+.vite/
+.superpowers/sdd/
+.vscode/
+.idea/
 .DS_Store
-
-# Konfigurasi backend lokal
-**/appsettings.json
-**/appsettings.*.json
-!**/appsettings.example.json
+Thumbs.db
