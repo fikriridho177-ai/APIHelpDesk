@@ -10,6 +10,7 @@ import MasterLokasiPage from "../features/sensus/pages/MasterLokasiPage";
 import MasterJenisPage from "../features/sensus/pages/MasterJenisPage";
 import LayananServicePage from "../features/layanan/pages/LayananServicePage";
 import IoTDashboardPage from "../features/iot/pages/IoTDashboardPage";
+import IoTMapMonitoringPage from "../features/iot/pages/IoTMapMonitoringPage";
 import IoTMonitoringPage from "../features/iot/pages/IoTMonitoringPage";
 import IoTVendorDevicesPage from "../features/iot/pages/IoTVendorDevicesPage";
 import WeatherForecastPage from "../features/weather/pages/WeatherForecastPage";
@@ -36,8 +37,8 @@ const PAGE_BY_MENU_CODE: Record<string, () => ReactElement> = {
     <Navigate to="/iot-management/dashboard-iot" replace />
   ),
   DASHBOARD_IOT: () => <IoTDashboardPage />,
-  PETA_MONITORING: () => <Navigate to="/gis/peta" replace />,
-  'PETA-MONITORING': () => <Navigate to="/gis/peta" replace />,
+  PETA_MONITORING: () => <IoTMapMonitoringPage />,
+  'PETA-MONITORING': () => <IoTMapMonitoringPage />,
   RIWAYAT_DATA_SENSOR: () => (
     <IoTMonitoringPage
       title="Riwayat Data Sensor"
