@@ -6,38 +6,21 @@ import WeatherForecastPanel from '../../weather/components/WeatherForecastPanel'
 import type { WeatherSensorLocation } from '../../weather/types/weather'
 import { getIoTMonitoring, getIoTParameters } from '../api/iotApi'
 import IoTMonitoringMap from '../components/IoTMonitoringMap'
-import { getMonitoringSummary, hasValidCoordinates, monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
+import {
+  formatMonitoringDate as formatDate,
+  formatMonitoringNumber as formatNumber,
+  getMonitoringParameterCode as getParameterCode,
+  getMonitoringParameterName as getParameterName,
+  getMonitoringParameterUnit as getParameterUnit,
+  getMonitoringSummary,
+  hasValidCoordinates,
+  monitoringStatusLabel,
+  monitoringStatusTone,
+} from '../lib/monitoring'
 import type { IoTMonitoringDevice, IoTMonitoringResponse, IoTParameter } from '../types/iot'
 import styles from './IoTMapMonitoringPage.module.css'
 
 const MENU_CODE = 'DASHBOARD_IOT'
-
-function formatDate(value: string | null | undefined, withTime = true) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'medium',
-    ...(withTime ? { timeStyle: 'short' as const } : {}),
-  }).format(date)
-}
-
-function formatNumber(value: number | null | undefined) {
-  if (value == null || !Number.isFinite(value)) return '-'
-  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 3 }).format(value)
-}
-
-function getParameterCode(key: string) {
-  return key.split('#', 1)[0]
-}
-
-function getParameterName(parameter: IoTParameter | undefined, code: string) {
-  return parameter?.namaParameter?.trim() || parameter?.parameterCode?.trim() || code
-}
-
-function getParameterUnit(parameter: IoTParameter | undefined) {
-  return parameter?.satuan?.trim() || 'nilai'
-}
 
 export default function IoTMapMonitoringPage() {
   const { permission, loaded } = useMenuPermission(MENU_CODE)

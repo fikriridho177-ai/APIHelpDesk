@@ -9,6 +9,10 @@ import { validBounds } from "../../lib/gis/style";
 import { DEFAULT_BASEMAP_ID } from "../../lib/gis/basemaps";
 import { BasemapPanel } from "./basemap-panel";
 import { MeasurementPanel } from "./measurement-panel";
+import IoTMonitoringPanel from "../IoTMonitoringPanel";
+import type { IoTMapMonitoringState } from "../../hooks/useIoTMapMonitoring";
+import type { IoTMonitoringDevice } from "../../../iot/types/iot";
+import { getIoTMapBounds } from "../../lib/iot-map";
 import {
   formatArea,
   formatLength,
@@ -37,7 +41,12 @@ function subscribeViewport(callback: () => void) {
 const mobileSnapshot = () => window.matchMedia(mobileQuery).matches;
 const serverSnapshot = () => false;
 // preview = database WebGIS belum tersambung: peta dasar, ukur & lokasi tetap jalan, daftar layer kosong.
-export function GISViewer({ userId, isAdmin, preview = false }: { userId: string; isAdmin: boolean; preview?: boolean }) {
+export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
+  userId: string;
+  isAdmin: boolean;
+  preview?: boolean;
+  iotMonitoring: IoTMapMonitoringState;
+}) {
   const [layers, setLayers] = useState<MapLayer[]>([]),
     [basemaps, setBasemaps] = useState<Basemap[]>([]);
   const [visible, setVisible] = useState<Record<string, boolean>>({}),
@@ -67,6 +76,23 @@ export function GISViewer({ userId, isAdmin, preview = false }: { userId: string
     ? { ...layer, style: { opacity: opacity[layer.id] } } : layer), [layers, opacity]);
   const selectedLayerApplied = useRef(false);
   const storageKey = visibilityStorageKey(userId);
+  const iotDevices: IoTMonitoringDevice[] = iotMonitoring.canRead
+    ? (iotMonitoring.monitoring?.devices ?? [])
+    : [];
+  const selectIoTLogger = useCallback((loggerId: number) => {
+    const device = iotDevices.find((item) => item.loggerId === loggerId);
+    iotMonitoring.selectLogger(loggerId);
+    const bounds = device ? getIoTMapBounds([device]) : null;
+    if (bounds) setFit((previous) => ({ bounds, revision: previous.revision + 1 }));
+  }, [iotDevices, iotMonitoring]);
+  const iotPanelState = useMemo(() => ({
+    ...iotMonitoring,
+    selectLogger: selectIoTLogger,
+  }), [iotMonitoring, selectIoTLogger]);
+  const focusIoTDevices = useCallback(() => {
+    const bounds = getIoTMapBounds(iotDevices);
+    if (bounds) setFit((previous) => ({ bounds, revision: previous.revision + 1 }));
+  }, [iotDevices]);
   // Di sistem kita: akses dicabut -> tampilkan pesan (hak diatur lewat Akses Menu).
   const unauthorized = useCallback(() => {
     setRevoked(true);
@@ -279,6 +305,7 @@ export function GISViewer({ userId, isAdmin, preview = false }: { userId: string
             </div>
             <p>Pilih layer untuk ditampilkan. Klik objek vector untuk melihat atribut; gunakan detail layer untuk informasi raster.</p>
           </div>
+          <IoTMonitoringPanel state={iotPanelState} onFocusDevices={focusIoTDevices} />
           {mode !== "none" && <MeasurementPanel
             mode={mode}
             points={points}
@@ -352,6 +379,9 @@ export function GISViewer({ userId, isAdmin, preview = false }: { userId: string
               onCoordinates={setCoordinate}
               onError={setError}
               onUnauthorized={unauthorized}
+              iotDevices={iotDevices}
+              selectedIoTLoggerId={iotMonitoring.selectedLoggerId}
+              onSelectIoTLogger={selectIoTLogger}
             /></Suspense>
           )}
           {loading && (

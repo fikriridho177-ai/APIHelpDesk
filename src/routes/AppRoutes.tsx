@@ -29,7 +29,6 @@ import MasterJenisPage from '../features/sensus/pages/MasterJenisPage'
 import { ECS_MENUS, EcsPage } from '../features/ecs/ecsConfig'
 import IoTDashboardPage from '../features/iot/pages/IoTDashboardPage'
 import IoTMonitoringPage from '../features/iot/pages/IoTMonitoringPage'
-import IoTMapMonitoringPage from '../features/iot/pages/IoTMapMonitoringPage'
 import IoTVendorDevicesPage from '../features/iot/pages/IoTVendorDevicesPage'
 import WeatherForecastPage from '../features/weather/pages/WeatherForecastPage'
 
@@ -70,7 +69,7 @@ export default function AppRoutes() {
         <Route path="sensus/master/jenis" element={<MasterJenisPage />} />
         <Route path="iot-management" element={<Navigate to="/iot-management/dashboard-iot" replace />} />
         <Route path="iot-management/dashboard-iot" element={<IoTDashboardPage />} />
-        <Route path="iot-management/peta-monitoring" element={<IoTMapMonitoringPage />} />
+        <Route path="iot-management/peta-monitoring" element={<Navigate to="/gis/peta" replace />} />
         <Route path="iot-management/prakiraan-cuaca" element={<WeatherForecastPage />} />
         <Route path="iot-management/daftar-perangkat" element={<IoTVendorDevicesPage />} />
         <Route path="iot-management/monitoring-sensor" element={<IoTMonitoringPage />} />
@@ -81,7 +80,7 @@ export default function AppRoutes() {
         <Route path="managemen-iot/dashboard-iot" element={<Navigate to="/iot-management/dashboard-iot" replace />} />
         <Route path="managemen-iot/daftar-perangkat" element={<Navigate to="/iot-management/daftar-perangkat" replace />} />
         <Route path="managemen-iot/monitoring-sensor" element={<Navigate to="/iot-management/monitoring-sensor" replace />} />
-        <Route path="managemen-iot/peta-monitoring" element={<Navigate to="/iot-management/peta-monitoring" replace />} />
+        <Route path="managemen-iot/peta-monitoring" element={<Navigate to="/gis/peta" replace />} />
         <Route path="managemen-iot/prakiraan-cuaca" element={<Navigate to="/iot-management/prakiraan-cuaca" replace />} />
         <Route path="manajemen-iot/*" element={<Navigate to="/iot-management/dashboard-iot" replace />} />
         <Route

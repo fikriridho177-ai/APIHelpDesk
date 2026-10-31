@@ -1,4 +1,4 @@
-import type { IoTMonitoringDevice, IoTMonitoringResponse } from '../types/iot'
+import type { IoTMonitoringDevice, IoTMonitoringResponse, IoTParameter } from '../types/iot'
 
 export interface IoTMonitoringSummary {
   total: number
@@ -54,4 +54,31 @@ export function monitoringStatusTone(status: string | null | undefined) {
     case 'INACTIVE': return 'inactive'
     default: return 'unknown'
   }
+}
+
+export function formatMonitoringDate(value: string | null | undefined, withTime = true) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    ...(withTime ? { timeStyle: 'short' as const } : {}),
+  }).format(date)
+}
+
+export function formatMonitoringNumber(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return '-'
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 3 }).format(value)
+}
+
+export function getMonitoringParameterCode(key: string) {
+  return key.split('#', 1)[0]
+}
+
+export function getMonitoringParameterName(parameter: IoTParameter | undefined, code: string) {
+  return parameter?.namaParameter?.trim() || parameter?.parameterCode?.trim() || code
+}
+
+export function getMonitoringParameterUnit(parameter: IoTParameter | undefined) {
+  return parameter?.satuan?.trim() || 'nilai'
 }

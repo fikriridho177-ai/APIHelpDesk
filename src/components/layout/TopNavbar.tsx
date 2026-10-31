@@ -33,6 +33,8 @@ const HIDDEN_NAVBAR_MENUS = new Set([
   'IOT_INTERNAL',
   'LOGGER_LOKAL',
   'LOCAL_LOGGER',
+  'PETA_MONITORING',
+  'PETA-MONITORING',
 ])
 
 const UNIFIED_IOT_MENU_OVERRIDES: Record<string, Partial<Pick<NavigationMenuItem, 'name' | 'route'>>> = {
@@ -47,14 +49,6 @@ const UNIFIED_IOT_MENU_OVERRIDES: Record<string, Partial<Pick<NavigationMenuItem
   DASHBOARD_IOT: {
     name: 'Dashboard',
     route: '/iot-management/dashboard-iot',
-  },
-  PETA_MONITORING: {
-    name: 'Peta Monitoring',
-    route: '/iot-management/peta-monitoring',
-  },
-  'PETA-MONITORING': {
-    name: 'Peta Monitoring',
-    route: '/iot-management/peta-monitoring',
   },
   DAFTAR_PERANGKAT_VENDOR: {
     name: 'Manajemen Perangkat',
