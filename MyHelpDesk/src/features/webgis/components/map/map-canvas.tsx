@@ -325,7 +325,7 @@ export default function MapCanvas(props: Props) {
           [props.fit.bounds[0], props.fit.bounds[1]],
           [props.fit.bounds[2], props.fit.bounds[3]],
         ],
-        { padding: 55, maxZoom: 16, duration: 600 },
+        { padding: 64, maxZoom: 14, duration: 450 },
       );
   }, [ready, props.fit]);
   return (
