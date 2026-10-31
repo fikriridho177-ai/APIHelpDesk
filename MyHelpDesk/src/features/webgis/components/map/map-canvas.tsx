@@ -16,6 +16,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 // Worker MapLibre disajikan Vite dari aplikasi sendiri (pengganti public/vendor/maplibre di WebGIS).
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { gisAuthHeaders, gisBaseUrl } from "../../webgisApi";
+import { isMappableDevice, monitoringStatusLabel, monitoringStatusTone } from "../../../iot/lib/monitoring";
+import type { IoTMonitoringDevice } from "../../../iot/types/iot";
 
 type Props = {
   layers: MapLayer[];
@@ -31,6 +33,9 @@ type Props = {
   onError: (message: string) => void;
   onUnauthorized: () => void;
   showDeviceLocation?: boolean;
+  iotDevices?: IoTMonitoringDevice[];
+  selectedIoTLoggerId?: number | null;
+  onSelectIoTLogger?: (loggerId: number) => void;
 };
 function popupContent(layer: MapLayer, properties: Record<string, unknown>) {
   const content = document.createElement("div");
@@ -59,6 +64,7 @@ export default function MapCanvas(props: Props) {
     instance = useRef<LibreMap | null>(null);
   const latest = useRef(props);
   const markers = useRef<Marker[]>([]);
+  const iotMarkers = useRef<Marker[]>([]);
   const popup = useRef<maplibregl.Popup | null>(null);
   const [ready, setReady] = useState(false);
   const [locationMap, setLocationMap] = useState<LibreMap | null>(null);
@@ -204,6 +210,7 @@ export default function MapCanvas(props: Props) {
     return () => {
       resize.disconnect();
       markers.current.forEach((marker) => marker.remove());
+      iotMarkers.current.forEach((marker) => marker.remove());
       popup.current?.remove();
       map.remove();
       instance.current = null;
@@ -282,6 +289,28 @@ export default function MapCanvas(props: Props) {
       return marker;
     });
   }, [ready, props.mode, props.points]);
+  useEffect(() => {
+    const map = instance.current;
+    if (!ready || !map) return;
+    iotMarkers.current.forEach((marker) => marker.remove());
+    iotMarkers.current = (props.iotDevices ?? []).filter(isMappableDevice).map((device) => {
+      const status = monitoringStatusLabel(device.status);
+      const tone = monitoringStatusTone(device.status);
+      const identity = device.namaLogger?.trim() || device.loggerCode?.trim() || `Logger ${device.loggerId}`;
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className = `gis-iot-marker gis-iot-marker--${tone}${device.loggerId === props.selectedIoTLoggerId ? " gis-iot-marker--selected" : ""}`;
+      element.title = `${identity} — ${status}`;
+      element.setAttribute("aria-label", `${identity}; status ${status}`);
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        latest.current.onSelectIoTLogger?.(device.loggerId);
+      });
+      return new maplibregl.Marker({ element })
+        .setLngLat([device.longitude!, device.latitude!])
+        .addTo(map);
+    });
+  }, [ready, props.iotDevices, props.selectedIoTLoggerId]);
   useEffect(() => {
     if (ready && props.fit && validBounds(props.fit.bounds))
       instance.current?.fitBounds(

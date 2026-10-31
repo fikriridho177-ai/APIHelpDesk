@@ -60,7 +60,7 @@
 .gis-tool:hover { border-color: #a4b99a; color: var(--forest); background: var(--background); }
 .gis-tool.active { background: var(--brand-soft); color: var(--forest); border-color: #aac39c; font-weight: 600; }
 .gis-body { display: flex; flex: 1; min-height: 0; position: relative; }
-.gis-sidebar { width: 320px; flex: 0 0 320px; background: var(--surface); overflow-y: auto; overscroll-behavior: contain; border-right: 1px solid var(--border); z-index: 4; scrollbar-width: thin; }
+.webgis-root .gis-sidebar { width: 320px; flex: 0 0 320px; min-height: 0; background: var(--surface); overflow-y: auto; overscroll-behavior: contain; border-right: 1px solid var(--border); z-index: 4; scrollbar-width: thin; }
 .gis-sidebar[hidden] { display: none; }
 .gis-sidebar-intro { padding: 14px 18px 18px; background: var(--background); border-bottom: 1px solid var(--border); }
 .gis-sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -112,6 +112,15 @@
 .gis-measure-floating > span { font-size: 11px; color: var(--muted); }
 .gis-measure-settings { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; margin-top: 5px; padding: 7px; pointer-events: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--forest); background: var(--surface); font-size: 12px; }
 .gis-measure-point { width: 30px; height: 30px; background: var(--measurement); color: white; border: 2px solid white; border-radius: 50%; font-size: 11px; font-weight: 700; box-shadow: 0 1px 5px #163a2b33; cursor: move; }
+.webgis-root .gis-iot-marker { position: relative; z-index: 2; width: 30px; height: 30px; padding: 0; border: 3px solid var(--gis-iot-marker-color, #52665a); border-radius: 50% 50% 50% 0; background: var(--surface); color: var(--gis-iot-marker-color, #52665a); box-shadow: 0 1px 5px #163a2b4d; cursor: pointer; transform: rotate(-45deg); }
+.webgis-root .gis-iot-marker::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: currentColor; }
+.webgis-root .gis-iot-marker--online { --gis-iot-marker-color: var(--success); }
+.webgis-root .gis-iot-marker--stale { --gis-iot-marker-color: var(--warning); }
+.webgis-root .gis-iot-marker--noRecentData, .webgis-root .gis-iot-marker--inactive { --gis-iot-marker-color: var(--danger); }
+.webgis-root .gis-iot-marker--unknown { --gis-iot-marker-color: var(--muted); }
+.webgis-root .gis-iot-marker--selected { border-width: 4px; box-shadow: 0 0 0 4px #70823866, 0 1px 6px #163a2b66; }
+.webgis-root .gis-iot-marker:hover { filter: brightness(.92); }
+.webgis-root .gis-iot-marker:focus-visible { outline: 3px solid var(--olive); outline-offset: 3px; }
 .gis-point-details { margin-top: 12px; color: var(--muted); font-size: 12px; }
 .gis-point-details summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
 .gis-point-details ol { padding-left: 24px; max-height: 180px; overflow: auto; }
@@ -139,7 +148,7 @@
   .gis-toolbar-title > span { font-size: 10px; }
   .gis-tools { width: 100%; gap: 5px; }
   .gis-tools .gis-tool { flex: 1; }
-  .gis-sidebar { position: absolute; inset: 0 auto 0 0; width: min(320px, 87vw); box-shadow: 8px 0 22px #163a2b1a; }
+  .webgis-root .gis-sidebar { position: absolute; inset: 0 auto 0 0; width: min(320px, 87vw); box-shadow: 8px 0 22px #163a2b1a; }
   .gis-map-label { left: 10px; top: 10px; font-size: 11px; }
   .gis-map-notice { left: 10px; right: 62px; gap: 8px; flex-wrap: wrap; }
   .gis-coordinate-bar { font-size: 10px; padding-inline: 8px; }
