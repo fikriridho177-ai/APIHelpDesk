@@ -1,13 +1,14 @@
 services:
-  web:
+  api:
     build:
       context: .
-      args:
-        # Ditanam saat build; ubah ke alamat API yang bisa diakses browser.
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:5100/api}
-        VITE_IOT_API_URL: ${VITE_IOT_API_URL:-http://localhost:5100/api}
-    image: myhelpdesk
-    container_name: myhelpdesk-web
-    restart: unless-stopped
+      dockerfile: Dockerfile
+    image: apihelpdesk-api:local
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:8080
     ports:
-      - "8080:80"
+      - "${API_PORT:-5100}:8080"
+    restart: unless-stopped

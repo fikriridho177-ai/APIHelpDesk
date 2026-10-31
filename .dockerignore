@@ -1,11 +1,32 @@
-node_modules
-dist
-.git
-docs
-*.tsbuildinfo
-.env*
-*.backup
-.superpowers/
+# Git and IDE metadata
+.git/
+.gitignore
+.gitattributes
+.vs/
 .vscode/
 .idea/
-*.timestamp-*.mjs
+
+# .NET build output
+**/bin/
+**/obj/
+publish/
+artifacts/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+**/appsettings*.json
+**/Properties/launchSettings.json
+
+# Deployment output, probes, logs, and backups
+.deploy/
+logs/
+*.log
+*.bak
+**/.tmp-*/
+
+# Not needed to build the API image
+tests/
+docs/
+sql/
