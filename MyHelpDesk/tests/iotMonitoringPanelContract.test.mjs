@@ -15,3 +15,7 @@ test('IoT detail uses the shared ordered monitoring readings helper', () => {
   assert.match(panelSource, /getOrderedMonitoringReadings/)
   assert.match(panelSource, /priorityReadings/)
 })
+
+test('IoT panel keeps UTF-8 separators readable', () => {
+  assert.doesNotMatch(panelSource, /Â/)
+})

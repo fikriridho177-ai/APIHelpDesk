@@ -63,7 +63,7 @@ export default function IoTMonitoringPanel({ state, onFocusDevices, expanded, on
               <Summary label="Terpetakan" value={summary?.mapped ?? 0} tone="mapped" />
             </div>
             <div className={styles.actions}>
-              <span>{devices.length} logger Â· {summary?.mapped ?? 0} terpetakan</span>
+              <span>{devices.length} logger · {summary?.mapped ?? 0} terpetakan</span>
               <button type="button" onClick={onFocusDevices} disabled={!hasMappableDevices}>Pusatkan logger</button>
             </div>
             {devices.length === 0 ? <div className={styles.state}>Belum ada perangkat untuk dipantau.</div> : <div className={styles.deviceList} aria-label="Daftar logger monitoring">
@@ -85,7 +85,7 @@ function DeviceListItem({ device, selected, onSelect }: { device: IoTMonitoringD
   const tone = monitoringStatusTone(device.status)
   return <button type="button" className={`${styles.deviceItem} ${selected ? styles.selected : ''}`} onClick={onSelect} aria-pressed={selected}>
     <span className={`${styles.statusDot} ${styles[`dot-${tone}`]}`} aria-hidden="true" />
-    <span className={styles.deviceCopy}><strong>{device.namaLogger ?? device.loggerCode ?? `Logger ${device.loggerId}`}</strong><small>{device.loggerCode ?? 'Kode tidak tersedia'} Â· {device.sourceType ?? 'UNKNOWN'}</small></span>
+    <span className={styles.deviceCopy}><strong>{device.namaLogger ?? device.loggerCode ?? `Logger ${device.loggerId}`}</strong><small>{device.loggerCode ?? 'Kode tidak tersedia'} · {device.sourceType ?? 'UNKNOWN'}</small></span>
     <span className={styles.deviceStatus}>{monitoringStatusLabel(device.status)}<small>{hasValidCoordinates(device.latitude, device.longitude) ? 'Terpetakan' : 'Tanpa koordinat'}</small></span>
   </button>
 }
@@ -113,12 +113,12 @@ function LoggerDetail({ state }: { state: IoTMapMonitoringState }) {
     return <div className={styles.value} key={reading.key}>
       <span>{getMonitoringParameterName(parameter, code)}</span>
       <strong>{formatMonitoringNumber(reading.value)}</strong>
-      <small>{getMonitoringParameterUnit(parameter)} Â· {code}</small>
+      <small>{getMonitoringParameterUnit(parameter)} · {code}</small>
     </div>
   }
 
   return <section className={styles.detail} aria-label="Detail logger terpilih">
-    <div className={styles.detailHeader}><div><span className={styles.eyebrow}>LOGGER TERPILIH</span><h3>{device.namaLogger ?? device.loggerCode ?? 'Logger IoT'}</h3><p>{device.loggerCode ?? `Logger ${device.loggerId}`} Â· {device.sourceType ?? 'Sumber tidak diketahui'}</p></div><div className={styles.detailActions}><span className={`${styles.statusBadge} ${styles[`status-${monitoringStatusTone(device.status)}`]}`}>{monitoringStatusLabel(device.status)}</span><button type="button" onClick={state.closeDetail} aria-label="Tutup detail logger">Tutup</button></div></div>
+    <div className={styles.detailHeader}><div><span className={styles.eyebrow}>LOGGER TERPILIH</span><h3>{device.namaLogger ?? device.loggerCode ?? 'Logger IoT'}</h3><p>{device.loggerCode ?? `Logger ${device.loggerId}`} · {device.sourceType ?? 'Sumber tidak diketahui'}</p></div><div className={styles.detailActions}><span className={`${styles.statusBadge} ${styles[`status-${monitoringStatusTone(device.status)}`]}`}>{monitoringStatusLabel(device.status)}</span><button type="button" onClick={state.closeDetail} aria-label="Tutup detail logger">Tutup</button></div></div>
     <div className={styles.observation}><div className={styles.sectionHeading}><strong>Pembacaan terbaru</strong>{device.ageMinutes != null && <small>Usia data {formatMonitoringNumber(device.ageMinutes)} menit</small>}</div>
       {state.parametersLoading ? <div className={styles.inlineState}>Memuat metadata parameter...</div> : readings.length === 0 ? <div className={styles.inlineState}>Belum ada pembacaan sensor pada response monitoring.</div> : <>
         {priorityReadings.length > 0 && <div className={styles.priorityObservation}><div className={styles.sectionHeading}><strong>Data utama TMAK / TMAT</strong><small>Pembacaan utama sensor</small></div><div className={`${styles.values} ${styles.priorityValues}`}>{priorityReadings.map(renderReading)}</div></div>}
