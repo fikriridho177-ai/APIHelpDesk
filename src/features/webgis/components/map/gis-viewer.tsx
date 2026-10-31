@@ -7,6 +7,7 @@ import { LegendPanel } from "../../components/layers/legend-panel";
 import { parseVisibilityOverrides, visibilityStorageKey } from "../../components/layers/visibility-state";
 import { validBounds } from "../../lib/gis/style";
 import { DEFAULT_BASEMAP_ID } from "../../lib/gis/basemaps";
+import { findPreferredGisLayer } from "../../lib/gis/layer-focus";
 import { BasemapPanel } from "./basemap-panel";
 import { MeasurementPanel } from "./measurement-panel";
 import IoTMonitoringPanel from "../IoTMonitoringPanel";
@@ -56,6 +57,7 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
     [retry, setRetry] = useState(0);
   const [sidebarPreference, setSidebarOpen] = useState<boolean | null>(null),
     [coordinate, setCoordinate] = useState<Coordinate | null>(null);
+  const [iotPanelOpen, setIotPanelOpen] = useState(false);
   const mobile = useSyncExternalStore(subscribeViewport, mobileSnapshot, serverSnapshot);
   const sidebarOpen = sidebarPreference ?? !mobile;
   const sidebarToggle = useRef<HTMLButtonElement>(null);
@@ -81,10 +83,14 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
     : [];
   const selectIoTLogger = useCallback((loggerId: number) => {
     const device = iotDevices.find((item) => item.loggerId === loggerId);
+    setIotPanelOpen(true);
     iotMonitoring.selectLogger(loggerId);
     const bounds = device ? getIoTMapBounds([device]) : null;
     if (bounds) setFit((previous) => ({ bounds, revision: previous.revision + 1 }));
   }, [iotDevices, iotMonitoring]);
+  const toggleIotPanel = useCallback(() => {
+    setIotPanelOpen((previous) => !previous);
+  }, []);
   const iotPanelState = useMemo(() => ({
     ...iotMonitoring,
     selectLogger: selectIoTLogger,
@@ -133,6 +139,7 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
           }
           const selectedId = new URLSearchParams(window.location.search).get("layer");
           const selected = (catalog.layers as MapLayer[]).find((layer) => layer.id === selectedId);
+          const preferredLayer = selected ? null : findPreferredGisLayer(catalog.layers);
           if (selected) {
             // An explicit local preference survives refresh, including a deep link.
             if (overrides[selected.id] === undefined) overrides[selected.id] = true;
@@ -140,6 +147,11 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
               setFit((previous) => ({ bounds: selected.bounds, revision: previous.revision + 1 }));
             } else {
               setError("Batas wilayah layer ini belum tersedia untuk ditampilkan.");
+            }
+          } else if (preferredLayer) {
+            if (overrides[preferredLayer.id] === undefined) overrides[preferredLayer.id] = true;
+            if (overrides[preferredLayer.id] !== false && validBounds(preferredLayer.bounds)) {
+              setFit((previous) => ({ bounds: preferredLayer.bounds, revision: previous.revision + 1 }));
             }
           }
           setVisible(overrides);
@@ -305,7 +317,12 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
             </div>
             <p>Pilih layer untuk ditampilkan. Klik objek vector untuk melihat atribut; gunakan detail layer untuk informasi raster.</p>
           </div>
-          <IoTMonitoringPanel state={iotPanelState} onFocusDevices={focusIoTDevices} />
+          <IoTMonitoringPanel
+            state={iotPanelState}
+            onFocusDevices={focusIoTDevices}
+            expanded={iotPanelOpen}
+            onToggle={toggleIotPanel}
+          />
           {mode !== "none" && <MeasurementPanel
             mode={mode}
             points={points}

@@ -297,16 +297,23 @@ export default function MapCanvas(props: Props) {
       const status = monitoringStatusLabel(device.status);
       const tone = monitoringStatusTone(device.status);
       const identity = device.namaLogger?.trim() || device.loggerCode?.trim() || `Logger ${device.loggerId}`;
+      const wrapper = document.createElement("div");
+      wrapper.className = "gis-iot-marker-wrap";
       const element = document.createElement("button");
       element.type = "button";
       element.className = `gis-iot-marker gis-iot-marker--${tone}${device.loggerId === props.selectedIoTLoggerId ? " gis-iot-marker--selected" : ""}`;
       element.title = `${identity} — ${status}`;
       element.setAttribute("aria-label", `${identity}; status ${status}`);
+      const label = document.createElement("span");
+      label.className = "gis-iot-marker-label";
+      label.textContent = identity;
+      label.setAttribute("aria-hidden", "true");
+      wrapper.append(element, label);
       element.addEventListener("click", (event) => {
         event.stopPropagation();
         latest.current.onSelectIoTLogger?.(device.loggerId);
       });
-      return new maplibregl.Marker({ element })
+      return new maplibregl.Marker({ element: wrapper, anchor: "bottom" })
         .setLngLat([device.longitude!, device.latitude!])
         .addTo(map);
     });
