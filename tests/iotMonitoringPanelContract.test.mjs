@@ -11,6 +11,12 @@ test('IoT panel exposes controlled accordion props and accessible toggle markup'
   assert.match(panelSource, /aria-controls="iot-monitoring-content"/)
 })
 
+test('selected logger detail is brought into the sidebar viewport', () => {
+  assert.match(panelSource, /const detailRef = useRef<HTMLDivElement \| null>\(null\)/)
+  assert.match(panelSource, /detailRef\.current\?\.scrollIntoView\(\{ block: 'nearest' \}\)/)
+  assert.match(panelSource, /ref=\{detailRef\}/)
+})
+
 test('IoT detail uses the shared ordered monitoring readings helper', () => {
   assert.match(panelSource, /getOrderedMonitoringReadings/)
   assert.match(panelSource, /priorityReadings/)

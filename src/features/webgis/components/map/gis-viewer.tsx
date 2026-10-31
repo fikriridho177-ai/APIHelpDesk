@@ -82,12 +82,9 @@ export function GISViewer({ userId, isAdmin, preview = false, iotMonitoring }: {
     ? (iotMonitoring.monitoring?.devices ?? [])
     : [];
   const selectIoTLogger = useCallback((loggerId: number) => {
-    const device = iotDevices.find((item) => item.loggerId === loggerId);
     setIotPanelOpen(true);
     iotMonitoring.selectLogger(loggerId);
-    const bounds = device ? getIoTMapBounds([device]) : null;
-    if (bounds) setFit((previous) => ({ bounds, revision: previous.revision + 1 }));
-  }, [iotDevices, iotMonitoring]);
+  }, [iotMonitoring]);
   const toggleIotPanel = useCallback(() => {
     setIotPanelOpen((previous) => !previous);
   }, []);

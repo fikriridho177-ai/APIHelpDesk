@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import WeatherForecastPanel from '../../weather/components/WeatherForecastPanel'
 import type { WeatherSensorLocation } from '../../weather/types/weather'
@@ -25,6 +25,12 @@ export interface IoTMonitoringPanelProps {
 }
 
 export default function IoTMonitoringPanel({ state, onFocusDevices, expanded, onToggle }: IoTMonitoringPanelProps) {
+  const detailRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!expanded || !state.detailOpen || !state.selectedDevice) return
+    detailRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [expanded, state.detailOpen, state.selectedDevice?.loggerId])
+
   if (!state.permissionLoaded) return <div className={styles.loading} role="status">Memuat akses monitoring IoT...</div>
   if (!state.canRead) return null
 
@@ -69,7 +75,7 @@ export default function IoTMonitoringPanel({ state, onFocusDevices, expanded, on
             {devices.length === 0 ? <div className={styles.state}>Belum ada perangkat untuk dipantau.</div> : <div className={styles.deviceList} aria-label="Daftar logger monitoring">
               {devices.map(device => <DeviceListItem key={device.loggerId} device={device} selected={device.loggerId === state.selectedLoggerId} onSelect={() => state.selectLogger(device.loggerId)} />)}
             </div>}
-            {state.selectedDevice && state.detailOpen ? <LoggerDetail state={state} /> : state.selectedDevice ? <div className={styles.closedDetail} role="status">Detail logger ditutup. Pilih logger lagi untuk membuka detail.</div> : <div className={styles.noSelection}>Pilih logger untuk melihat detail sensor dan prakiraan cuaca.</div>}
+            {state.selectedDevice && state.detailOpen ? <div ref={detailRef}><LoggerDetail state={state} /></div> : state.selectedDevice ? <div className={styles.closedDetail} role="status">Detail logger ditutup. Pilih logger lagi untuk membuka detail.</div> : <div className={styles.noSelection}>Pilih logger untuk melihat detail sensor dan prakiraan cuaca.</div>}
           </>
         )}
       </div>
