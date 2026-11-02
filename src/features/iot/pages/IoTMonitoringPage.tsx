@@ -5,7 +5,12 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -606,11 +611,11 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
     : kind === 'direction'
       ? 'PERSEBARAN ARAH'
       : kind === 'level'
-        ? 'LEVEL + HISTORI'
+        ? 'LINE LEVEL HISTORI'
         : kind === 'gauge'
-          ? 'GAUGE + HISTORI'
+          ? 'BAR NILAI PER INTERVAL'
           : kind === 'heat'
-            ? 'INTENSITAS PERIODE'
+            ? 'INTENSITAS PER INTERVAL'
             : 'TREN PEMBACAAN'
   const summary = kind === 'direction'
     ? `Arah ${getDirectionLabel(chartLatestValue)}`
@@ -622,13 +627,13 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
     : kind === 'rainfall'
       ? <RainfallChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
       : kind === 'direction'
-        ? <DirectionChart points={points} aggregation={aggregation} />
+        ? <DirectionChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
         : kind === 'level'
-          ? <LevelVisual value={chartLatestValue} points={points} stats={stats} unit={unit} aggregation={aggregation} />
+          ? <LevelVisual points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
           : kind === 'gauge'
-            ? <GaugeVisual value={chartLatestValue} points={points} stats={stats} unit={unit} aggregation={aggregation} />
+            ? <GaugeVisual points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
             : kind === 'heat'
-              ? <HeatVisual points={points} stats={stats} unit={unit} aggregation={aggregation} />
+              ? <HeatVisual points={points} stats={stats} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
               : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
 
   return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{visualizationLabel}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(latestValue)}</strong><small>{unit}</small></span><span className={`${styles.sensorCardChart} ${styles[`chart-${kind}`]}`}>{chart}</span><span className={styles.sensorCardFooter}><span>{summary}</span><span>{points.length} titik</span></span></article>
@@ -642,59 +647,30 @@ function RainfallChart({ points, parameterLabel, unit, aggregation }: { points: 
   return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" fill="currentColor" radius={[4, 4, 0, 0]} maxBarSize={18} isAnimationActive={false} /></BarChart></ResponsiveContainer>
 }
 
-function DirectionChart({ points, aggregation }: { points: ChartPoint[]; aggregation: IoTHistoryAggregation }) {
-  const latest = points[points.length - 1]?.value ?? null
-  const direction = getDirectionLabel(latest)
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const plottedPoints = points.map((point, index) => {
-    const radians = (point.value * Math.PI) / 180
-    const radius = 27 + ((index * 13) % 14)
-    return {
-      point,
-      left: 50 + Math.sin(radians) * radius,
-      top: 50 - Math.cos(radians) * radius,
-      isLatest: index === points.length - 1,
-    }
-  })
-  const hoveredPoint = hoveredIndex === null ? null : plottedPoints[hoveredIndex]
-  return <div className={styles.directionChart} aria-label={`Persebaran arah angin, arah terakhir ${formatSensorValue(latest)} derajat, ${direction}`}><div className={styles.directionScatter} onMouseLeave={() => setHoveredIndex(null)}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassRing} />{plottedPoints.map(({ point, left, top, isLatest }, index) => <span key={`${point.ts}-${index}`} className={`${styles.directionPoint} ${isLatest ? styles.directionPointLatest : ''}`} style={{ left: `${left}%`, top: `${top}%` }} onMouseEnter={() => setHoveredIndex(index)} />)}{hoveredPoint && <HistoryHover point={hoveredPoint.point} unit="°" note={getDirectionLabel(hoveredPoint.point.value)} aggregation={aggregation} style={{ left: `${hoveredPoint.left}%`, top: `${hoveredPoint.top}%` }} />}<span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(latest)}<small>°</small></strong><em>{direction}</em><small className={styles.directionHint}>Arahkan pointer ke titik histori</small></div></div>
+function DirectionChart({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
+  return <ResponsiveContainer width="100%" height="100%"><ScatterChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" /><XAxis type="number" dataKey="ts" domain={['dataMin', 'dataMax']} axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} /><YAxis type="number" dataKey="value" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]} axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => ({ 0: 'U', 90: 'T', 180: 'S', 270: 'B', 360: 'U' }[Number(value)] ?? `${value}°`)} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} directional />} /><Scatter data={points} dataKey="value" fill="currentColor" line={false} isAnimationActive={false} /></ScatterChart></ResponsiveContainer>
 }
 
-function LevelVisual({ value, points, stats, unit, aggregation }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
-  const min = stats.min ?? value ?? 0
-  const max = stats.max ?? value ?? 0
-  const range = max - min
-  const percentage = value === null ? 0 : range > 0 ? Math.min(100, Math.max(0, ((value - min) / range) * 100)) : 50
-  const historyPoints = points.slice(-24)
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const hoveredPoint = hoveredIndex === null ? null : historyPoints[hoveredIndex]
-  return <div className={styles.levelVisual} aria-label={`Level terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.levelScale}><span>{formatSensorValue(max)}</span><div className={styles.levelTank}><span className={styles.levelFill} style={{ height: `${percentage}%` }} /><span className={styles.levelTankLine} /></div><span>{formatSensorValue(min)}</span></div><div className={styles.levelHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.levelHistoryBars} onMouseLeave={() => setHoveredIndex(null)}>{historyPoints.map((point, index) => { const barHeight = range > 0 ? Math.max(8, ((point.value - min) / range) * 100) : 50; return <span key={`${point.ts}-${index}`} className={styles.levelHistoryBar} style={{ height: `${barHeight}%` }} onMouseEnter={() => setHoveredIndex(index)} /> })}{hoveredPoint && <HistoryHover point={hoveredPoint} unit={unit} aggregation={aggregation} style={{ left: `${((hoveredIndex ?? 0) + 0.5) / historyPoints.length * 100}%` }} />}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.levelReadout}><span>POSISI TERKINI</span><strong>{formatSensorValue(value)}<small>{unit}</small></strong><em>Rentang {formatSensorValue(min)} – {formatSensorValue(max)}</em></div></div></div>
+function LevelVisual({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
+  return <ResponsiveContainer width="100%" height="100%"><LineChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Line type="stepAfter" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" dot={{ r: 2, fill: 'currentColor' }} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></LineChart></ResponsiveContainer>
 }
 
-function GaugeVisual({ value, points, stats, unit, aggregation }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
-  const maximum = Math.max(stats.max ?? 0, value ?? 0, 1)
-  const percentage = value === null ? 0 : Math.min(100, Math.max(0, (value / maximum) * 100))
-  const historyPoints = points.slice(-24)
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const hoveredPoint = hoveredIndex === null ? null : historyPoints[hoveredIndex]
-  return <div className={styles.gaugeVisual} aria-label={`Nilai terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.gaugeRing} style={{ background: `conic-gradient(currentColor 0 ${percentage}%, #e3eff1 ${percentage}% 100%)` }}><div className={styles.gaugeHole}><strong>{formatSensorValue(value)}</strong><small>{unit}</small></div></div><div className={styles.gaugeHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.gaugeHistoryBars} onMouseLeave={() => setHoveredIndex(null)}>{historyPoints.map((point, index) => <span key={`${point.ts}-${index}`} className={styles.gaugeHistoryBar} style={{ height: `${Math.max(8, Math.min(100, (point.value / maximum) * 100))}%` }} onMouseEnter={() => setHoveredIndex(index)} />)}{hoveredPoint && <HistoryHover point={hoveredPoint} unit={unit} aggregation={aggregation} style={{ left: `${((hoveredIndex ?? 0) + 0.5) / historyPoints.length * 100}%` }} />}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.gaugeReadout}><span>SKALA HISTORI</span><strong>Maks {formatSensorValue(maximum)}</strong><em>Nilai terakhir {formatSensorValue(value)} {unit}</em></div></div></div>
+function GaugeVisual({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
+  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" fill="currentColor" radius={[3, 3, 0, 0]} maxBarSize={14} isAnimationActive={false} /></BarChart></ResponsiveContainer>
 }
 
-function HeatVisual({ points, stats, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
-  const visiblePoints = points.slice(-48)
+function HeatVisual({ points, stats, parameterLabel, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
   const range = (stats.max ?? 0) - (stats.min ?? 0)
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
-  const hoveredPoint = hoveredIndex === null ? null : visiblePoints[hoveredIndex]
-  return <div className={styles.heatVisual} aria-label={`Intensitas ${visiblePoints.length} pembacaan terakhir`}><div className={styles.heatStrip} onMouseLeave={() => setHoveredIndex(null)}>{visiblePoints.map((point, index) => { const ratio = range > 0 ? ((point.value - (stats.min ?? 0)) / range) : 1; const hue = 205 - ratio * 155; return <span key={`${point.ts}-${index}`} className={styles.heatCell} style={{ background: `hsl(${hue} 78% 56%)`, opacity: 0.38 + ratio * 0.62 }} onMouseEnter={() => setHoveredIndex(index)} /> })}{hoveredPoint && <HistoryHover point={hoveredPoint} unit={unit} aggregation={aggregation} style={{ left: `${((hoveredIndex ?? 0) + 0.5) / visiblePoints.length * 100}%` }} />}</div><div className={styles.heatLegend}><span>Rendah {formatSensorValue(stats.min)}</span><i /><span>Tinggi {formatSensorValue(stats.max)}</span></div></div>
+  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={14} isAnimationActive={false}>{points.map((point, index) => { const ratio = range > 0 ? (point.value - (stats.min ?? 0)) / range : 1; return <Cell key={`${point.ts}-${index}`} fill={`hsl(${205 - ratio * 155} 78% 56%)`} fillOpacity={0.45 + ratio * 0.55} /> })}</Bar></BarChart></ResponsiveContainer>
 }
 
-function HistoryHover({ point, unit, aggregation, note, style }: { point: ChartPoint; unit: string; aggregation: IoTHistoryAggregation; note?: string; style?: CSSProperties }) {
-  return <span className={styles.historyHoverTip} style={style}><strong>{formatSensorValue(point.value)}<small>{unit}</small></strong><em>{note ? `${note} · ` : ''}{formatChartTime(point.ts, aggregation)}</em></span>
-}
-
-function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour' }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation }) {
+function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour', directional = false }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation; directional?: boolean }) {
   if (!active || !payload?.length) return null
-  const value = payload[0]?.value
-  const tooltipTime = typeof label === 'number' || typeof label === 'string' ? formatChartTime(label, aggregation) : '-'
-  return <div className={styles.chartTooltip}><span className={styles.chartTooltipTime}>{tooltipTime}</span><strong>{parameterLabel}</strong><span className={styles.chartTooltipValue}>{formatSensorValue(value)} <small>{unit}</small></span></div>
+  const sourcePoint = payload[0]?.payload as Partial<ChartPoint> | undefined
+  const rawValue = payload[0]?.value
+  const value = typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : sourcePoint?.value
+  const numericValue = getNumericValue(value)
+  const timestamp = sourcePoint?.ts ?? label
+  const tooltipTime = typeof timestamp === 'number' || typeof timestamp === 'string' ? formatChartTime(timestamp, aggregation) : '-'
+  return <div className={styles.chartTooltip}><span className={styles.chartTooltipTime}>{tooltipTime}</span><strong>{parameterLabel}</strong><span className={styles.chartTooltipValue}>{formatSensorValue(value)} <small>{directional && numericValue !== null ? `${getDirectionLabel(numericValue)} · ` : ''}{unit}</small></span></div>
 }
