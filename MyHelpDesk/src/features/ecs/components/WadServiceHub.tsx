@@ -24,7 +24,7 @@ function ServiceContent({ item, index }: { item: WadServiceItem; index: number }
         <small>{item.description}</small>
       </span>
       <span className={styles.serviceFooter}>
-        <span className={styles.serviceAction}>{isAvailable ? 'Buka layanan' : 'Modul disiapkan'}</span>
+        <span className={styles.serviceAction}>{isAvailable ? 'Monitoring aktif' : 'Modul disiapkan'}</span>
         <span className={styles.serviceArrow} aria-hidden="true">
           <DashboardIcon name="arrow" />
         </span>
@@ -44,42 +44,27 @@ export default function WadServiceHub() {
             <DashboardIcon name="water" />
           </span>
           <div>
-            <span className={styles.eyebrow}>WAD / WATER MANAGEMENT</span>
-            <h2 id="wad-service-hub-title">Ruang kerja layanan</h2>
-            <p>Pilih pemantauan atau pemeriksaan yang ingin Anda buka.</p>
+            <span className={styles.eyebrow}>MENU WAD</span>
+            <h2 id="wad-service-hub-title">Layanan pemantauan</h2>
+            <p>Pilih data sensor atau pemeriksaan lapangan yang ingin Anda buka.</p>
           </div>
         </div>
-        <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari 6 layanan`}>
+        <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari ${WAD_SERVICE_ITEMS.length} layanan`}>
           <strong>{availableCount}</strong>
           <span>aktif</span>
-          <i aria-hidden="true" />
+          <span className={styles.countDivider} aria-hidden="true">/</span>
           <strong>{WAD_SERVICE_ITEMS.length}</strong>
-          <span>layanan</span>
+          <span>total</span>
         </div>
       </div>
 
       <ul className={styles.serviceGrid}>
         {WAD_SERVICE_ITEMS.map((item, index) => {
-            const isAvailable = item.available && !!item.route
+          const isAvailable = item.available && !!item.route
 
-            if (!isAvailable) {
-              return (
-                <li
-                  key={item.code}
-                  className={styles.serviceItem}
-                >
-                  <div className={`${styles.serviceTile} ${styles.serviceTileDisabled}`} aria-disabled="true">
-                    <ServiceContent item={item} index={index} />
-                  </div>
-                </li>
-              )
-            }
-
-            return (
-              <li
-                key={item.code}
-                className={styles.serviceItem}
-              >
+          return (
+            <li key={item.code} className={styles.serviceItem}>
+              {isAvailable ? (
                 <Link
                   className={styles.serviceTile}
                   to={item.route!}
@@ -87,16 +72,21 @@ export default function WadServiceHub() {
                 >
                   <ServiceContent item={item} index={index} />
                 </Link>
-              </li>
-            )
-          })}
+              ) : (
+                <div className={`${styles.serviceTile} ${styles.serviceTileDisabled}`} aria-disabled="true">
+                  <ServiceContent item={item} index={index} />
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
 
       <div className={styles.sectionNote}>
         <span className={styles.noteIcon}>
           <DashboardIcon name="info" />
         </span>
-        <span>Data sensor akan tampil setelah memilih layanan pemantauan yang tersedia.</span>
+        <span>Data sensor terbaru diambil dari endpoint monitoring IoT ringkas.</span>
       </div>
     </section>
   )
