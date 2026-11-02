@@ -606,9 +606,9 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
     : kind === 'direction'
       ? 'PERSEBARAN ARAH'
       : kind === 'level'
-        ? 'LEVEL DALAM RENTANG'
+        ? 'LEVEL + HISTORI'
         : kind === 'gauge'
-          ? 'GAUGE NILAI TERAKHIR'
+          ? 'GAUGE + HISTORI'
           : kind === 'heat'
             ? 'INTENSITAS PERIODE'
             : 'TREN PEMBACAAN'
@@ -624,9 +624,9 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
       : kind === 'direction'
         ? <DirectionChart points={points} />
         : kind === 'level'
-          ? <LevelVisual value={chartLatestValue} stats={stats} unit={unit} />
+          ? <LevelVisual value={chartLatestValue} points={points} stats={stats} unit={unit} />
           : kind === 'gauge'
-            ? <GaugeVisual value={chartLatestValue} stats={stats} unit={unit} />
+            ? <GaugeVisual value={chartLatestValue} points={points} stats={stats} unit={unit} />
             : kind === 'heat'
               ? <HeatVisual points={points} stats={stats} unit={unit} aggregation={aggregation} />
               : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
@@ -658,18 +658,20 @@ function DirectionChart({ points }: { points: ChartPoint[] }) {
   return <div className={styles.directionChart} aria-label={`Persebaran arah angin, arah terakhir ${formatSensorValue(latest)} derajat, ${direction}`}><div className={styles.directionScatter}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassRing} />{plottedPoints.map(({ point, left, top, isLatest }, index) => <span key={`${point.ts}-${index}`} className={`${styles.directionPoint} ${isLatest ? styles.directionPointLatest : ''}`} style={{ left: `${left}%`, top: `${top}%` }} title={`${formatSensorValue(point.value)}° · ${getDirectionLabel(point.value)}`} />)}<span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(latest)}<small>°</small></strong><em>{direction}</em><small className={styles.directionHint}>Titik menunjukkan persebaran histori</small></div></div>
 }
 
-function LevelVisual({ value, stats, unit }: { value: number | null; stats: ChartStats; unit: string }) {
+function LevelVisual({ value, points, stats, unit }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string }) {
   const min = stats.min ?? value ?? 0
   const max = stats.max ?? value ?? 0
   const range = max - min
   const percentage = value === null ? 0 : range > 0 ? Math.min(100, Math.max(0, ((value - min) / range) * 100)) : 50
-  return <div className={styles.levelVisual} aria-label={`Level terakhir ${formatSensorValue(value)} ${unit}`}><div className={styles.levelScale}><span>{formatSensorValue(max)}</span><div className={styles.levelTank}><span className={styles.levelFill} style={{ height: `${percentage}%` }} /><span className={styles.levelTankLine} /></div><span>{formatSensorValue(min)}</span></div><div className={styles.levelReadout}><span>POSISI TERKINI</span><strong>{formatSensorValue(value)}<small>{unit}</small></strong><em>Rentang histori {formatSensorValue(min)} – {formatSensorValue(max)}</em></div></div>
+  const historyPoints = points.slice(-24)
+  return <div className={styles.levelVisual} aria-label={`Level terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.levelScale}><span>{formatSensorValue(max)}</span><div className={styles.levelTank}><span className={styles.levelFill} style={{ height: `${percentage}%` }} /><span className={styles.levelTankLine} /></div><span>{formatSensorValue(min)}</span></div><div className={styles.levelHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.levelHistoryBars}>{historyPoints.map((point, index) => { const barHeight = range > 0 ? Math.max(8, ((point.value - min) / range) * 100) : 50; return <span key={`${point.ts}-${index}`} className={styles.levelHistoryBar} style={{ height: `${barHeight}%` }} title={`${formatSensorValue(point.value)} ${unit} · ${formatChartTime(point.ts)}`} /> })}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.levelReadout}><span>POSISI TERKINI</span><strong>{formatSensorValue(value)}<small>{unit}</small></strong><em>Rentang {formatSensorValue(min)} – {formatSensorValue(max)}</em></div></div></div>
 }
 
-function GaugeVisual({ value, stats, unit }: { value: number | null; stats: ChartStats; unit: string }) {
+function GaugeVisual({ value, points, stats, unit }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string }) {
   const maximum = Math.max(stats.max ?? 0, value ?? 0, 1)
   const percentage = value === null ? 0 : Math.min(100, Math.max(0, (value / maximum) * 100))
-  return <div className={styles.gaugeVisual} aria-label={`Nilai terakhir ${formatSensorValue(value)} ${unit}`}><div className={styles.gaugeRing} style={{ background: `conic-gradient(currentColor 0 ${percentage}%, #e3eff1 ${percentage}% 100%)` }}><div className={styles.gaugeHole}><strong>{formatSensorValue(value)}</strong><small>{unit}</small></div></div><div className={styles.gaugeReadout}><span>SKALA HISTORI</span><strong>Maks {formatSensorValue(maximum)}</strong><em>Posisi nilai terakhir</em></div></div>
+  const historyPoints = points.slice(-24)
+  return <div className={styles.gaugeVisual} aria-label={`Nilai terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.gaugeRing} style={{ background: `conic-gradient(currentColor 0 ${percentage}%, #e3eff1 ${percentage}% 100%)` }}><div className={styles.gaugeHole}><strong>{formatSensorValue(value)}</strong><small>{unit}</small></div></div><div className={styles.gaugeHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.gaugeHistoryBars}>{historyPoints.map((point, index) => <span key={`${point.ts}-${index}`} className={styles.gaugeHistoryBar} style={{ height: `${Math.max(8, Math.min(100, (point.value / maximum) * 100))}%` }} title={`${formatSensorValue(point.value)} ${unit} · ${formatChartTime(point.ts)}`} />)}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.gaugeReadout}><span>SKALA HISTORI</span><strong>Maks {formatSensorValue(maximum)}</strong><em>Nilai terakhir {formatSensorValue(value)} {unit}</em></div></div></div>
 }
 
 function HeatVisual({ points, stats, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
