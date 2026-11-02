@@ -22,7 +22,7 @@ import './ecs.css'
 type EcsMenu = { code: string; route: string; label: string; page: () => ReactElement }
 
 export const ECS_MENUS: EcsMenu[] = [
-  { code: 'WAD_ECS_DASHBOARD', route: '/ecs', label: 'Dashboard Sensor', page: () => <OverviewPage /> },
+  { code: 'WAD_ECS_DASHBOARD', route: '/ecs', label: 'Pusat Layanan WAD', page: () => <OverviewPage /> },
   { code: 'WAD_ECS_STASIUN', route: '/ecs/stasiun-monitoring', label: 'Stasiun Monitoring', page: () => <StasiunMonitoringPage /> },
   { code: 'WAD_ECS_MONITOR_CH', route: '/ecs/monitor-curahhujan', label: 'Monitor Curah Hujan', page: () => <CurahHujanMonitorPage /> },
   { code: 'WAD_ECS_DATA_HISTORIS', route: '/ecs/data-historis', label: 'Data Historis', page: () => <DataHistorisPage /> },
