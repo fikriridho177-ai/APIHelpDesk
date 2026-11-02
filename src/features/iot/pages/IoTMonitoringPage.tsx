@@ -35,10 +35,10 @@ import styles from './IoTMonitoringPage.module.css'
 type Freshness = 'fresh' | 'late' | 'none' | 'unknown'
 type AutoRefreshSeconds = 0 | 30 | 60 | 300
 
-interface ChartPoint { ts: number; value: number | null }
+interface ChartPoint { ts: number; value: number }
 interface ChartParameter { parameterCode: string; metadata?: IoTParameter }
 interface ParameterGroup { code: string; name: string; order: number; parameters: ChartParameter[] }
-type VisualizationKind = 'trend' | 'rainfall' | 'direction'
+type VisualizationKind = 'trend' | 'rainfall' | 'direction' | 'level' | 'gauge' | 'heat'
 
 interface ChartStats {
   min: number | null
@@ -215,6 +215,9 @@ function getVisualizationKind(parameter: ChartParameter): VisualizationKind {
   const searchable = `${parameter.parameterCode} ${parameter.metadata?.namaParameter ?? ''}`.toLocaleUpperCase('id-ID')
   if (/RAIN|RAINFALL|CURAH|HUJAN|PRECIP/.test(searchable)) return 'rainfall'
   if (/WIND_DIRECTION|WIND_DIR|WIND_DEGREE|DIRECTION|ARAH.*ANGIN|ANGIN.*ARAH/.test(searchable)) return 'direction'
+  if (/TMAK|TMAT|TINGGI MUKA AIR|WATER LEVEL|LEVEL AIR/.test(searchable)) return 'level'
+  if (/KELEMBAPAN|HUMIDITY|WIND_SPEED|WIND VELOCITY|KECEPATAN ANGIN/.test(searchable)) return 'gauge'
+  if (/RADIASI|RADIATION|PENYINARAN|EVAPOTRANSPIRASI|SOLAR/.test(searchable)) return 'heat'
   return 'trend'
 }
 
@@ -598,6 +601,17 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
   const stats = getChartStats(points)
   const latestValue = getNumericValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName)) ?? points[points.length - 1]?.value ?? null
   const chartLatestValue = points[points.length - 1]?.value ?? latestValue
+  const visualizationLabel = kind === 'rainfall'
+    ? 'AKUMULASI PER INTERVAL'
+    : kind === 'direction'
+      ? 'PERSEBARAN ARAH'
+      : kind === 'level'
+        ? 'LEVEL DALAM RENTANG'
+        : kind === 'gauge'
+          ? 'GAUGE NILAI TERAKHIR'
+          : kind === 'heat'
+            ? 'INTENSITAS PERIODE'
+            : 'TREN PEMBACAAN'
   const summary = kind === 'direction'
     ? `Arah ${getDirectionLabel(chartLatestValue)}`
     : stats.min === null || stats.max === null
@@ -608,10 +622,16 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
     : kind === 'rainfall'
       ? <RainfallChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
       : kind === 'direction'
-        ? <DirectionChart value={chartLatestValue} points={points} />
-        : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
+        ? <DirectionChart points={points} />
+        : kind === 'level'
+          ? <LevelVisual value={chartLatestValue} stats={stats} unit={unit} />
+          : kind === 'gauge'
+            ? <GaugeVisual value={chartLatestValue} stats={stats} unit={unit} />
+            : kind === 'heat'
+              ? <HeatVisual points={points} stats={stats} unit={unit} aggregation={aggregation} />
+              : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
 
-  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{kind === 'rainfall' ? 'AKUMULASI PER INTERVAL' : kind === 'direction' ? 'ARAH TERAKHIR' : 'TREN PEMBACAAN'}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName))}</strong><small>{unit}</small></span><span className={`${styles.sensorCardChart} ${styles[`chart-${kind}`]}`}>{chart}</span><span className={styles.sensorCardFooter}><span>{summary}</span><span>{points.length} titik</span></span></article>
+  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{visualizationLabel}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(latestValue)}</strong><small>{unit}</small></span><span className={`${styles.sensorCardChart} ${styles[`chart-${kind}`]}`}>{chart}</span><span className={styles.sensorCardFooter}><span>{summary}</span><span>{points.length} titik</span></span></article>
 }
 
 function TrendChart({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
@@ -622,10 +642,40 @@ function RainfallChart({ points, parameterLabel, unit, aggregation }: { points: 
   return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" fill="currentColor" radius={[4, 4, 0, 0]} maxBarSize={18} isAnimationActive={false} /></BarChart></ResponsiveContainer>
 }
 
-function DirectionChart({ value, points }: { value: number | null; points: ChartPoint[] }) {
-  const direction = getDirectionLabel(value)
-  const rotation = value ?? points[points.length - 1]?.value ?? 0
-  return <div className={styles.directionChart} aria-label={`Arah angin terakhir ${formatSensorValue(value)} derajat, ${direction}`}><div className={styles.compass}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassNeedle} style={{ transform: `translate(-50%, -100%) rotate(${rotation}deg)` }} /><span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(value)}<small>°</small></strong><em>{direction}</em></div></div>
+function DirectionChart({ points }: { points: ChartPoint[] }) {
+  const latest = points[points.length - 1]?.value ?? null
+  const direction = getDirectionLabel(latest)
+  const plottedPoints = points.map((point, index) => {
+    const radians = (point.value * Math.PI) / 180
+    const radius = 27 + ((index * 13) % 14)
+    return {
+      point,
+      left: 50 + Math.sin(radians) * radius,
+      top: 50 - Math.cos(radians) * radius,
+      isLatest: index === points.length - 1,
+    }
+  })
+  return <div className={styles.directionChart} aria-label={`Persebaran arah angin, arah terakhir ${formatSensorValue(latest)} derajat, ${direction}`}><div className={styles.directionScatter}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassRing} />{plottedPoints.map(({ point, left, top, isLatest }, index) => <span key={`${point.ts}-${index}`} className={`${styles.directionPoint} ${isLatest ? styles.directionPointLatest : ''}`} style={{ left: `${left}%`, top: `${top}%` }} title={`${formatSensorValue(point.value)}° · ${getDirectionLabel(point.value)}`} />)}<span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(latest)}<small>°</small></strong><em>{direction}</em><small className={styles.directionHint}>Titik menunjukkan persebaran histori</small></div></div>
+}
+
+function LevelVisual({ value, stats, unit }: { value: number | null; stats: ChartStats; unit: string }) {
+  const min = stats.min ?? value ?? 0
+  const max = stats.max ?? value ?? 0
+  const range = max - min
+  const percentage = value === null ? 0 : range > 0 ? Math.min(100, Math.max(0, ((value - min) / range) * 100)) : 50
+  return <div className={styles.levelVisual} aria-label={`Level terakhir ${formatSensorValue(value)} ${unit}`}><div className={styles.levelScale}><span>{formatSensorValue(max)}</span><div className={styles.levelTank}><span className={styles.levelFill} style={{ height: `${percentage}%` }} /><span className={styles.levelTankLine} /></div><span>{formatSensorValue(min)}</span></div><div className={styles.levelReadout}><span>POSISI TERKINI</span><strong>{formatSensorValue(value)}<small>{unit}</small></strong><em>Rentang histori {formatSensorValue(min)} – {formatSensorValue(max)}</em></div></div>
+}
+
+function GaugeVisual({ value, stats, unit }: { value: number | null; stats: ChartStats; unit: string }) {
+  const maximum = Math.max(stats.max ?? 0, value ?? 0, 1)
+  const percentage = value === null ? 0 : Math.min(100, Math.max(0, (value / maximum) * 100))
+  return <div className={styles.gaugeVisual} aria-label={`Nilai terakhir ${formatSensorValue(value)} ${unit}`}><div className={styles.gaugeRing} style={{ background: `conic-gradient(currentColor 0 ${percentage}%, #e3eff1 ${percentage}% 100%)` }}><div className={styles.gaugeHole}><strong>{formatSensorValue(value)}</strong><small>{unit}</small></div></div><div className={styles.gaugeReadout}><span>SKALA HISTORI</span><strong>Maks {formatSensorValue(maximum)}</strong><em>Posisi nilai terakhir</em></div></div>
+}
+
+function HeatVisual({ points, stats, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
+  const visiblePoints = points.slice(-48)
+  const range = (stats.max ?? 0) - (stats.min ?? 0)
+  return <div className={styles.heatVisual} aria-label={`Intensitas ${visiblePoints.length} pembacaan terakhir`}><div className={styles.heatStrip}>{visiblePoints.map((point, index) => { const ratio = range > 0 ? ((point.value - (stats.min ?? 0)) / range) : 1; const hue = 205 - ratio * 155; return <span key={`${point.ts}-${index}`} className={styles.heatCell} style={{ background: `hsl(${hue} 78% 56%)`, opacity: 0.38 + ratio * 0.62 }} title={`${formatSensorValue(point.value)} ${unit} · ${formatChartTime(point.ts, aggregation)}`} /> })}</div><div className={styles.heatLegend}><span>Rendah {formatSensorValue(stats.min)}</span><i /><span>Tinggi {formatSensorValue(stats.max)}</span></div></div>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour' }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation }) {
