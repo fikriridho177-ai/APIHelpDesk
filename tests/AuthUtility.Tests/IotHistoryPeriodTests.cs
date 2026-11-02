@@ -216,4 +216,63 @@ public sealed class IotHistoryPeriodTests
         Assert.Equal(5, bucket.Data["RAIN"]);
         Assert.Equal(2, bucket.RawId);
     }
+
+    [Fact]
+    public void Aggregate_sums_numeric_values_when_sum_mode_is_requested()
+    {
+        var definition = IotHistoryPeriodDefinition.TryCreate(
+            "month",
+            out var period)
+            ? period
+            : throw new InvalidOperationException();
+
+        var points = new[]
+        {
+            new IotHistoryPoint(
+                1,
+                7,
+                new DateTime(2026, 10, 26, 8, 10, 0),
+                new DateTime(2026, 10, 26, 8, 11, 0),
+                new Dictionary<string, decimal?> { ["RAIN_TIP"] = 2 }),
+            new IotHistoryPoint(
+                2,
+                7,
+                new DateTime(2026, 10, 26, 8, 40, 0),
+                new DateTime(2026, 10, 26, 8, 41, 0),
+                new Dictionary<string, decimal?> { ["RAIN_TIP"] = 3 })
+        };
+
+        var result = IotHistoryAggregator.Aggregate(
+            points,
+            period,
+            IotHistoryAggregationMode.Sum);
+
+        var bucket = Assert.Single(result);
+        Assert.Equal(5, bucket.Data["RAIN_TIP"]);
+    }
+
+    [Fact]
+    public void TryParseAggregationMode_accepts_sum_and_defaults_are_average()
+    {
+        Assert.True(
+            IotHistoryAggregationMode.TryParse(
+                "sum",
+                out var sumMode));
+        Assert.Equal(IotHistoryAggregationMode.Sum, sumMode);
+
+        Assert.True(
+            IotHistoryAggregationMode.TryParse(
+                null,
+                out var defaultMode));
+        Assert.Equal(IotHistoryAggregationMode.Average, defaultMode);
+    }
+
+    [Fact]
+    public void TryParseAggregationMode_rejects_unknown_mode()
+    {
+        Assert.False(
+            IotHistoryAggregationMode.TryParse(
+                "latest",
+                out _));
+    }
 }

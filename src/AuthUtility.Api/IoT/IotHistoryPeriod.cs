@@ -138,12 +138,42 @@ public sealed record IotHistoryPoint(
     DateTime? ReceivedAt,
     IReadOnlyDictionary<string, decimal?> Data);
 
+public sealed record IotHistoryAggregationMode(string Code)
+{
+    public static readonly IotHistoryAggregationMode Average = new("average");
+    public static readonly IotHistoryAggregationMode Sum = new("sum");
+
+    public static bool TryParse(
+        string? value,
+        out IotHistoryAggregationMode mode)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            string.Equals(value.Trim(), "average", StringComparison.OrdinalIgnoreCase))
+        {
+            mode = Average;
+            return true;
+        }
+
+        if (string.Equals(value.Trim(), "sum", StringComparison.OrdinalIgnoreCase))
+        {
+            mode = Sum;
+            return true;
+        }
+
+        mode = Average;
+        return false;
+    }
+}
+
 public static class IotHistoryAggregator
 {
     public static IReadOnlyList<IotHistoryPoint> Aggregate(
         IEnumerable<IotHistoryPoint> points,
-        IotHistoryPeriodDefinition period)
+        IotHistoryPeriodDefinition period,
+        IotHistoryAggregationMode? aggregationMode = null)
     {
+        var mode = aggregationMode ?? IotHistoryAggregationMode.Average;
+
         if (period.AggregationCode == "sample")
         {
             return points
@@ -187,7 +217,9 @@ public static class IotHistoryAggregator
 
                     data[key] = values.Length == 0
                         ? null
-                        : values.Average();
+                        : mode == IotHistoryAggregationMode.Sum
+                            ? values.Sum()
+                            : values.Average();
                 }
 
                 return new IotHistoryPoint(

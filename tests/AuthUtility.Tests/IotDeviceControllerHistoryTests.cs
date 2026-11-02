@@ -58,4 +58,21 @@ public sealed class IotDeviceControllerHistoryTests
         var badRequest = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Contains("yyyy-MM-ddTHH:mm", badRequest.Value?.ToString());
     }
+
+    [Fact]
+    public async Task GetHistory_rejects_unknown_aggregation_mode_before_database_access()
+    {
+        var controller = new IotDeviceController(
+            null!,
+            null!,
+            NullLogger<IotDeviceController>.Instance);
+
+        var result = await controller.GetHistory(
+            7,
+            period: "month",
+            aggregationMode: "latest");
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Contains("aggregationMode", badRequest.Value?.ToString());
+    }
 }

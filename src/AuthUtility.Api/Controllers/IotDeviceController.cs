@@ -145,6 +145,7 @@ public class IotDeviceController(
     // GET /api/iot/devices/3/history?period=day|week|month|year
     // GET /api/iot/devices/3/history?period=day|week|month|year&anchorDate=yyyy-MM-dd
     // GET /api/iot/devices/3/history?period=week&from=yyyy-MM-ddTHH:mm&to=yyyy-MM-ddTHH:mm
+    // GET /api/iot/devices/3/history?period=month&aggregationMode=sum
     // =====================================================
     [HttpGet("{loggerId:int}/history")]
     public async Task<IActionResult> GetHistory(
@@ -154,7 +155,8 @@ public class IotDeviceController(
         [FromQuery] string? period = null,
         [FromQuery] string? anchorDate = null,
         [FromQuery(Name = "from")] string? fromValue = null,
-        [FromQuery(Name = "to")] string? toValue = null)
+        [FromQuery(Name = "to")] string? toValue = null,
+        [FromQuery] string? aggregationMode = null)
     {
         if (!string.IsNullOrWhiteSpace(period))
         {
@@ -165,6 +167,16 @@ public class IotDeviceController(
                 return BadRequest(new
                 {
                     message = "period harus day, week, month, atau year."
+                });
+            }
+
+            if (!IotHistoryAggregationMode.TryParse(
+                    aggregationMode,
+                    out var requestedAggregationMode))
+            {
+                return BadRequest(new
+                {
+                    message = "aggregationMode harus average atau sum."
                 });
             }
 
@@ -236,7 +248,8 @@ public class IotDeviceController(
                 periodDefinition,
                 parsedAnchorDate,
                 parsedFrom,
-                parsedTo);
+                parsedTo,
+                requestedAggregationMode);
         }
 
         return await GetPayloads(loggerId, take, format, false);
@@ -468,7 +481,8 @@ public class IotDeviceController(
         IotHistoryPeriodDefinition period,
         DateOnly? anchorDate,
         DateTime? rangeFrom,
-        DateTime? rangeTo)
+        DateTime? rangeTo,
+        IotHistoryAggregationMode aggregationMode)
     {
         if (!await HasAccess()) return Forbid();
 
@@ -551,7 +565,7 @@ public class IotDeviceController(
                 .ToArray();
 
             var data = IotHistoryAggregator
-                .Aggregate(points, period)
+                .Aggregate(points, period, aggregationMode)
                 .Select(point => new CompactPayloadDto
                 {
                     RawId = point.RawId,
@@ -570,6 +584,7 @@ public class IotDeviceController(
                 loggerId,
                 period = period.Code,
                 aggregation = period.AggregationCode,
+                aggregationMode = aggregationMode.Code,
                 from = window.From,
                 to = window.To,
                 total = data.Count,
