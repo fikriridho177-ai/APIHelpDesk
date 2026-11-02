@@ -23,7 +23,7 @@ export const WAD_SERVICE_ITEMS = [
     description: 'Lihat sebaran logger, status, dan titik pembacaan sensor di lapangan.',
     icon: 'map',
     available: true,
-    route: '/ecs/peta',
+    route: '/ecs/peta-monitoring',
   },
   {
     order: 2,

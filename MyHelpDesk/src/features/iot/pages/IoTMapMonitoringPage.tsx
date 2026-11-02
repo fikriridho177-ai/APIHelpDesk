@@ -22,8 +22,12 @@ import styles from './IoTMapMonitoringPage.module.css'
 
 const MENU_CODE = 'DASHBOARD_IOT'
 
-export default function IoTMapMonitoringPage() {
-  const { permission, loaded } = useMenuPermission(MENU_CODE)
+interface IoTMapMonitoringPageProps {
+  permissionCode?: string
+}
+
+export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoTMapMonitoringPageProps) {
+  const { permission, loaded } = useMenuPermission(permissionCode)
   const canRead = !!permission?.canRead
   const [monitoring, setMonitoring] = useState<IoTMonitoringResponse | null>(null)
   const [selectedLoggerId, setSelectedLoggerId] = useState<number | null>(null)
