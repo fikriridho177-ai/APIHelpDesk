@@ -4,6 +4,7 @@ type RouteItem = { label: string; path?: string };
 
 const ECS_BREADCRUMB_LABELS: Record<string, string> = {
   "/ecs/stasiun-monitoring": "Monitoring Sensor",
+  "/ecs/monitoring-perangkat": "Status Perangkat IoT",
   "/ecs/monitor-curahhujan": "Monitor Curah Hujan",
   "/ecs/data-historis": "Data Historis",
   "/ecs/kalender-curah-hujan": "Kalender Curah Hujan",
