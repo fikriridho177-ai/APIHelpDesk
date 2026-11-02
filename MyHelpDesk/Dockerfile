@@ -1,5 +1,5 @@
 # Build context: folder MyHelpDesk
-FROM node:22-alpine AS build
+FROM public.ecr.aws/docker/library/node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -19,7 +19,7 @@ RUN : > .env.production \
     && if [ -n "$VITE_IOT_API_URL" ]; then echo "VITE_IOT_API_URL=$VITE_IOT_API_URL" >> .env.production; fi \
     && npm run build
 
-FROM nginx:alpine AS final
+FROM public.ecr.aws/docker/library/nginx:alpine AS final
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
