@@ -6,6 +6,7 @@ const ECS_BREADCRUMB_LABELS: Record<string, string> = {
   "/ecs/stasiun-monitoring": "Monitoring Sensor",
   "/ecs/sensor-detail": "Detail Sensor",
   "/ecs/monitoring-perangkat": "Status Perangkat IoT",
+  "/ecs/peta-monitoring": "Peta Monitoring Sensor",
   "/ecs/prakiraan-hujan": "Prediksi Hujan 14 Hari",
   "/ecs/monitor-curahhujan": "Monitor Curah Hujan",
   "/ecs/data-historis": "Data Historis",
