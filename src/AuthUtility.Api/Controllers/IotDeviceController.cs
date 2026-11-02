@@ -21,17 +21,30 @@ public class IotDeviceController(
     ILogger<IotDeviceController> logger
 ) : ControllerBase
 {
-    // IoT Management adalah area admin read-only.
-    // User biasa tetap mengakses monitoring melalui menu-menu WAD.
-    private const string SuperAdminGateMenuCode = "DASHBOARD_IOT";
+    // IoT Management adalah area admin read-only, sedangkan menu WAD juga
+    // membutuhkan data logger dan histori melalui endpoint yang sama.
+    private static readonly string[] ReadMenuCodes =
+    {
+        "DASHBOARD_IOT",
+        "WAD_ECS_DASHBOARD",
+        "WAD_ECS_STASIUN",
+        "WAD_ECS_MONITOR_CH",
+        "WAD_ECS_DATA_HISTORIS",
+        "WAD_ECS_KALENDER_CH",
+        "WAD_ECS_PETA",
+        "WAD_ECS_CURAH_HUJAN",
+        "WAD_ECS_TMAK",
+        "WAD_ECS_KELEMBAPAN",
+    };
 
     private async Task<bool> HasAccess()
     {
-        var permission = await permissions.GetPermissionsAsync(
-            User,
-            SuperAdminGateMenuCode);
+        foreach (var code in ReadMenuCodes)
+        {
+            if (await permissions.HasPermissionAsync(User, code, MenuPermission.Read)) return true;
+        }
 
-        return permission?.IsSuperAdmin == true;
+        return false;
     }
 
     // =====================================================
