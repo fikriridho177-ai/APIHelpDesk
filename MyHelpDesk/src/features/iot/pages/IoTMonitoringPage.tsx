@@ -49,6 +49,7 @@ const HISTORY_PERIOD_OPTIONS: Array<{ value: IoTHistoryPeriod; label: string }> 
 interface IoTMonitoringPageProps {
   sourceType?: IoTSourceType
   menuCode?: string
+  permissionCode?: string
   title?: string
   subtitle?: string
   eyebrow?: string
@@ -248,11 +249,12 @@ function getDefaultHistoryAggregation(period: IoTHistoryPeriod): IoTHistoryAggre
 export default function IoTMonitoringPage({
   sourceType,
   menuCode = MENU_CODE,
+  permissionCode,
   title = 'Monitoring Sensor IoT',
   subtitle = 'Pantau logger Vendor dan Internal dalam satu halaman dengan histori pembacaan bertimestamp.',
   eyebrow = 'IOT MONITORING / UNIFIED TELEMETRY',
 }: IoTMonitoringPageProps = {}) {
-  const { permission, loaded: permissionLoaded } = useMenuPermission(menuCode)
+  const { permission, loaded: permissionLoaded } = useMenuPermission(permissionCode ?? menuCode)
   const [searchParams] = useSearchParams()
   const requestedLoggerId = Number(searchParams.get('loggerId'))
   const canRead = !!permission?.canRead
