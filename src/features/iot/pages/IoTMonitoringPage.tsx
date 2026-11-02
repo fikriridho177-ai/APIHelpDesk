@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Rea
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -36,6 +38,13 @@ type AutoRefreshSeconds = 0 | 30 | 60 | 300
 interface ChartPoint { ts: number; value: number | null }
 interface ChartParameter { parameterCode: string; metadata?: IoTParameter }
 interface ParameterGroup { code: string; name: string; order: number; parameters: ChartParameter[] }
+type VisualizationKind = 'trend' | 'rainfall' | 'direction'
+
+interface ChartStats {
+  min: number | null
+  max: number | null
+  average: number | null
+}
 
 const MENU_CODE = 'DASHBOARD_IOT'
 const CHART_COLORS = ['#30d5c8', '#54a8ff', '#f5b84b', '#b88cff', '#ff7b8b', '#72d572']
@@ -200,6 +209,30 @@ function getChartPoints(readings: IoTReading[], key: string, loggerCode: string 
     points.push({ ts: timestamp, value })
   })
   return points.sort((left, right) => left.ts - right.ts)
+}
+
+function getVisualizationKind(parameter: ChartParameter): VisualizationKind {
+  const searchable = `${parameter.parameterCode} ${parameter.metadata?.namaParameter ?? ''}`.toLocaleUpperCase('id-ID')
+  if (/RAIN|RAINFALL|CURAH|HUJAN|PRECIP/.test(searchable)) return 'rainfall'
+  if (/WIND_DIRECTION|WIND_DIR|WIND_DEGREE|DIRECTION|ARAH.*ANGIN|ANGIN.*ARAH/.test(searchable)) return 'direction'
+  return 'trend'
+}
+
+function getChartStats(points: ChartPoint[]): ChartStats {
+  const values = points.map(point => point.value).filter((value): value is number => value !== null && Number.isFinite(value))
+  if (values.length === 0) return { min: null, max: null, average: null }
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+    average: values.reduce((total, value) => total + value, 0) / values.length,
+  }
+}
+
+function getDirectionLabel(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return 'Belum ada arah'
+  const normalized = ((value % 360) + 360) % 360
+  const directions = ['Utara', 'Timur Laut', 'Timur', 'Tenggara', 'Selatan', 'Barat Daya', 'Barat', 'Barat Laut']
+  return directions[Math.round(normalized / 45) % directions.length]
 }
 
 function formatSensorValue(value: SensorValue | undefined) {
@@ -561,7 +594,38 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
   const label = getParameterLabel(parameter.metadata)
   const parameterName = parameter.metadata?.namaParameter?.trim() || 'Parameter sensor'
   const unit = parameter.metadata?.satuan?.trim() || 'nilai'
-  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong></span><span className={styles.sensorValue}><strong>{formatSensorValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName))}</strong><small>{unit}</small></span><span className={styles.sensorCardChart}>{points.length === 0 ? <span className={styles.noDailyData}>Belum ada pembacaan</span> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterName} unit={unit} aggregation={aggregation} />} /><Area type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity={0.1} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></AreaChart></ResponsiveContainer>}</span><span className={styles.sensorCardFooter}><span>{label}</span><span>{points.length} titik</span></span></article>
+  const kind = getVisualizationKind(parameter)
+  const stats = getChartStats(points)
+  const latestValue = getNumericValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName)) ?? points[points.length - 1]?.value ?? null
+  const chartLatestValue = points[points.length - 1]?.value ?? latestValue
+  const summary = kind === 'direction'
+    ? `Arah ${getDirectionLabel(chartLatestValue)}`
+    : stats.min === null || stats.max === null
+      ? label
+      : `Min ${formatSensorValue(stats.min)} · Maks ${formatSensorValue(stats.max)}`
+  const chart = points.length === 0
+    ? <span className={styles.noDailyData}>Belum ada pembacaan</span>
+    : kind === 'rainfall'
+      ? <RainfallChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
+      : kind === 'direction'
+        ? <DirectionChart value={chartLatestValue} points={points} />
+        : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
+
+  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{kind === 'rainfall' ? 'AKUMULASI PER INTERVAL' : kind === 'direction' ? 'ARAH TERAKHIR' : 'TREN PEMBACAAN'}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName))}</strong><small>{unit}</small></span><span className={`${styles.sensorCardChart} ${styles[`chart-${kind}`]}`}>{chart}</span><span className={styles.sensorCardFooter}><span>{summary}</span><span>{points.length} titik</span></span></article>
+}
+
+function TrendChart({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
+  return <ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Area type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity={0.1} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></AreaChart></ResponsiveContainer>
+}
+
+function RainfallChart({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
+  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" fill="currentColor" radius={[4, 4, 0, 0]} maxBarSize={18} isAnimationActive={false} /></BarChart></ResponsiveContainer>
+}
+
+function DirectionChart({ value, points }: { value: number | null; points: ChartPoint[] }) {
+  const direction = getDirectionLabel(value)
+  const rotation = value ?? points[points.length - 1]?.value ?? 0
+  return <div className={styles.directionChart} aria-label={`Arah angin terakhir ${formatSensorValue(value)} derajat, ${direction}`}><div className={styles.compass}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassNeedle} style={{ transform: `translate(-50%, -100%) rotate(${rotation}deg)` }} /><span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(value)}<small>°</small></strong><em>{direction}</em></div></div>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour' }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation }) {
