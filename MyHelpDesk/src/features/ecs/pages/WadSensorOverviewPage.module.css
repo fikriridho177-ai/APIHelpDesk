@@ -651,53 +651,98 @@
   letter-spacing: .07em;
 }
 
-.metricGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.metric {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-  padding: 7px 5px;
-  border: 1px solid #d5eae8;
-  border-radius: 7px;
+.primaryMetric {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 9px 9px;
+  border: 1px solid #cfe9e5;
+  border-radius: 8px;
   background: #ffffff;
-  text-align: center;
 }
 
-.metric span,
-.metric small {
-  color: #7d9aa0;
-  font-size: .49rem;
+.primaryMetric div {
+  display: grid;
+  gap: 2px;
+}
+
+.primaryMetric span {
+  color: #67929a;
+  font-size: .5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.primaryMetric strong {
+  color: #087e78;
+  font-size: 1.14rem;
+  letter-spacing: -.03em;
+}
+
+.primaryMetric > small {
+  padding-bottom: 2px;
+  color: #70939a;
+  font-size: .59rem;
   font-weight: 800;
 }
 
-.metric strong {
-  overflow: hidden;
+.secondaryMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.secondaryMetric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #d5eae8;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .8);
+}
+
+.secondaryMetric span {
+  color: #7d9aa0;
+  font-size: .5rem;
+  font-weight: 800;
+}
+
+.secondaryMetric strong {
   color: #087e78;
-  font-size: .77rem;
-  line-height: 1.1;
-  text-overflow: ellipsis;
+  font-size: .67rem;
   white-space: nowrap;
 }
 
-.metric small {
+.secondaryMetric small {
   color: #9aaeb2;
+  font-size: .47rem;
   font-weight: 600;
 }
 
-.metricEmpty {
-  border-color: #e2ecee;
-  background: #f8fbfb;
+.metricListEmpty {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 53px;
+  margin-top: 17px;
+  padding: 10px;
+  border: 1px dashed #cbdfe1;
+  border-radius: 10px;
+  background: #f7fbfb;
+  color: #78949d;
+  font-size: .57rem;
 }
 
-.metricEmpty strong,
-.metricEmpty span,
-.metricEmpty small {
-  color: #a4b4b8;
+.metricListEmpty svg {
+  flex: 0 0 auto;
+  color: #5d9ba1;
+  font-size: .9rem;
 }
 
 .cardMeta {
@@ -752,6 +797,14 @@
 .cardFooter a:hover {
   color: #075c67;
   text-decoration: underline;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  min-width: 0;
 }
 
 .state {
