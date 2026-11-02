@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -23,6 +22,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { getIoTHistory, getIoTMonitoring, getIoTParameters } from '../api/iotApi'
 import { getHistoryTooltipValue } from '../lib/historyChart'
+import { getVisualizationKind, type VisualizationKind } from '../lib/historyVisualization'
 import { adjustTmakValue } from '../lib/tmakOffset'
 import type {
   IoTDeviceWithLatest,
@@ -44,8 +44,6 @@ type AutoRefreshSeconds = 0 | 30 | 60 | 300
 interface ChartPoint { ts: number; value: number }
 interface ChartParameter { parameterCode: string; metadata?: IoTParameter }
 interface ParameterGroup { code: string; name: string; order: number; parameters: ChartParameter[] }
-type VisualizationKind = 'trend' | 'rainfall' | 'direction' | 'level' | 'gauge' | 'heat'
-
 interface ChartStats {
   min: number | null
   max: number | null
@@ -215,16 +213,6 @@ function getChartPoints(readings: IoTReading[], key: string, loggerCode: string 
     points.push({ ts: timestamp, value })
   })
   return points.sort((left, right) => left.ts - right.ts)
-}
-
-function getVisualizationKind(parameter: ChartParameter): VisualizationKind {
-  const searchable = `${parameter.parameterCode} ${parameter.metadata?.namaParameter ?? ''}`.toLocaleUpperCase('id-ID')
-  if (/RAIN|RAINFALL|CURAH|HUJAN|PRECIP/.test(searchable)) return 'rainfall'
-  if (/WIND_DIRECTION|WIND_DIR|WIND_DEGREE|DIRECTION|ARAH.*ANGIN|ANGIN.*ARAH/.test(searchable)) return 'direction'
-  if (/TMAK|TMAT|TINGGI MUKA AIR|WATER LEVEL|LEVEL AIR/.test(searchable)) return 'level'
-  if (/KELEMBAPAN|HUMIDITY|WIND_SPEED|WIND VELOCITY|KECEPATAN ANGIN/.test(searchable)) return 'gauge'
-  if (/RADIASI|RADIATION|PENYINARAN|EVAPOTRANSPIRASI|SOLAR/.test(searchable)) return 'heat'
-  return 'trend'
 }
 
 function getChartStats(points: ChartPoint[]): ChartStats {
@@ -603,7 +591,7 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
   const label = getParameterLabel(parameter.metadata)
   const parameterName = parameter.metadata?.namaParameter?.trim() || 'Parameter sensor'
   const unit = parameter.metadata?.satuan?.trim() || 'nilai'
-  const kind = getVisualizationKind(parameter)
+  const kind = getVisualizationKind(parameter.parameterCode, parameter.metadata?.namaParameter ?? '')
   const stats = getChartStats(points)
   const latestValue = getNumericValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName)) ?? points[points.length - 1]?.value ?? null
   const chartLatestValue = points[points.length - 1]?.value ?? latestValue
@@ -612,11 +600,9 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
     : kind === 'direction'
       ? 'PERSEBARAN ARAH'
       : kind === 'level'
-        ? 'LINE LEVEL HISTORI'
-        : kind === 'gauge'
-          ? 'BAR NILAI PER INTERVAL'
-          : kind === 'heat'
-            ? 'INTENSITAS PER INTERVAL'
+          ? 'LINE LEVEL HISTORI'
+          : kind === 'intensity'
+            ? 'TREN INTENSITAS'
             : 'TREN PEMBACAAN'
   const summary = kind === 'direction'
     ? `Arah ${getDirectionLabel(chartLatestValue)}`
@@ -631,11 +617,9 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
         ? <DirectionChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
         : kind === 'level'
           ? <LevelVisual points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
-          : kind === 'gauge'
-            ? <GaugeVisual points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
-            : kind === 'heat'
-              ? <HeatVisual points={points} stats={stats} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
-              : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
+          : kind === 'intensity'
+            ? <IntensityChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
+            : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
 
   return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{visualizationLabel}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(latestValue)}</strong><small>{unit}</small></span><span className={`${styles.sensorCardChart} ${styles[`chart-${kind}`]}`}>{chart}</span><span className={styles.sensorCardFooter}><span>{summary}</span><span>{points.length} titik</span></span></article>
 }
@@ -656,13 +640,8 @@ function LevelVisual({ points, parameterLabel, unit, aggregation }: { points: Ch
   return <ResponsiveContainer width="100%" height="100%"><LineChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Line type="stepAfter" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" dot={{ r: 2, fill: 'currentColor' }} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></LineChart></ResponsiveContainer>
 }
 
-function GaugeVisual({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
-  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" fill="currentColor" radius={[3, 3, 0, 0]} maxBarSize={14} isAnimationActive={false} /></BarChart></ResponsiveContainer>
-}
-
-function HeatVisual({ points, stats, parameterLabel, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
-  const range = (stats.max ?? 0) - (stats.min ?? 0)
-  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={14} isAnimationActive={false}>{points.map((point, index) => { const ratio = range > 0 ? (point.value - (stats.min ?? 0)) / range : 1; return <Cell key={`${point.ts}-${index}`} fill="currentColor" fillOpacity={0.45 + ratio * 0.55} /> })}</Bar></BarChart></ResponsiveContainer>
+function IntensityChart({ points, parameterLabel, unit, aggregation }: { points: ChartPoint[]; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
+  return <ResponsiveContainer width="100%" height="100%"><LineChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Line type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" dot={false} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></LineChart></ResponsiveContainer>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour', directional = false }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation; directional?: boolean }) {
