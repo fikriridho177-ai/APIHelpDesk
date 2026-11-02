@@ -1,6 +1,6 @@
 .detailGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr);
+  grid-template-columns: minmax(0, 1.9fr) minmax(280px, .72fr);
   gap: 20px;
   align-items: start;
 }
@@ -12,7 +12,7 @@
 
 .categoryStack {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   align-content: start;
   gap: 10px;
   padding: 12px 20px 18px;
