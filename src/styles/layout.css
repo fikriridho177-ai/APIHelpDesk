@@ -465,6 +465,41 @@ body {
   flex: 0 0 auto;
 }
 
+/* Sensor detail is a focused realtime workspace. Keep the shell fixed to the
+   viewport while allowing the page to use the space between the navbar and
+   footer without an unnecessary document-level scroll. */
+.app-layout-sensor-detail {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-layout-sensor-detail .main-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  padding: 14px 28px 10px;
+}
+
+.app-layout-sensor-detail .breadcrumb-container {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.app-layout-sensor-detail .main-content > main {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-layout-sensor-detail .app-footer {
+  flex: 0 0 auto;
+}
+
 /* =========================================================
    FOOTER
 ========================================================= */
@@ -518,6 +553,17 @@ body {
 
   .app-layout-overview .main-content,
   .app-layout-overview .main-content > .ecs-root {
+    overflow: visible;
+  }
+
+  .app-layout-sensor-detail {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-layout-sensor-detail .main-content,
+  .app-layout-sensor-detail .main-content > main {
     overflow: visible;
   }
 

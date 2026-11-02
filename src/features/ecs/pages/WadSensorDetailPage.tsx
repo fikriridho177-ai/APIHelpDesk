@@ -152,7 +152,7 @@ export default function WadSensorDetailPage() {
 
   if (!hasLoggerId) {
     return (
-      <main className={common.page}>
+      <main className={`${common.page} ${styles.detailPage}`}>
         <section className={common.state}>
           <DashboardIcon name="info" />
           <strong>Logger belum dipilih</strong>
@@ -164,7 +164,7 @@ export default function WadSensorDetailPage() {
   }
 
   return (
-    <main className={common.page}>
+    <main className={`${common.page} ${styles.detailPage}`}>
       {error && (
         <section className={common.alert} role="alert">
           <span>{error}</span>
@@ -187,7 +187,7 @@ export default function WadSensorDetailPage() {
         </section>
       ) : (
         <>
-          <header className={common.hero}>
+          <header className={`${common.hero} ${styles.detailHero}`}>
             <div className={common.heroCopy}>
               <div className={common.heroHeading}>
                 <span className={common.heroIcon}><DashboardIcon name="water" /></span>
@@ -216,7 +216,7 @@ export default function WadSensorDetailPage() {
 
           <div className={styles.detailGrid}>
             <section className={`${common.sensorPanel} ${styles.readingPanel}`} aria-label="Pembacaan realtime logger">
-              <div className={common.panelHeading}>
+              <div className={`${common.panelHeading} ${styles.detailPanelHeading}`}>
                 <div>
                   <span className={common.panelEyebrow}>REALTIME SNAPSHOT</span>
                   <h2>Pembacaan terbaru</h2>

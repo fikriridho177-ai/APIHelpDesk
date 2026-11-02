@@ -8,9 +8,15 @@ import FloatingChat from '../../features/chat/components/FloatingChat'
 export default function MainLayout() {
   const location = useLocation()
   const isWadOverview = location.pathname === '/ecs'
+  const isSensorDetail = location.pathname === '/ecs/sensor-detail'
+  const layoutClass = [
+    'app-layout',
+    isWadOverview ? 'app-layout-overview' : '',
+    isSensorDetail ? 'app-layout-sensor-detail' : '',
+  ].filter(Boolean).join(' ')
 
   return (
-    <div className={`app-layout${isWadOverview ? ' app-layout-overview' : ''}`}>
+    <div className={layoutClass}>
       <TopNavbar />
 
       <main className="main-content">

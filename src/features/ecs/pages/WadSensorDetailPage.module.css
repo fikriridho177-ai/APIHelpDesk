@@ -1,18 +1,40 @@
+.detailPage {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 0;
+}
+
+.detailHero {
+  padding: 20px 26px;
+}
+
+.detailPanelHeading {
+  padding-top: 14px;
+  padding-bottom: 11px;
+}
+
 .detailGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.9fr) minmax(280px, .72fr);
   gap: 20px;
+  min-height: 0;
+  flex: 1;
   align-items: start;
 }
 
 .readingPanel {
   display: flex;
+  min-height: 0;
   flex-direction: column;
 }
 
 .categoryStack {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  min-height: 0;
   align-content: start;
   gap: 10px;
   padding: 12px 20px 18px;
