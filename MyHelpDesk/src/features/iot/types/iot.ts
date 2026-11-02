@@ -3,10 +3,11 @@ export type IoTSourceType = 'INTERNAL' | 'VENDOR'
 export type IoTMonitoringStatus = 'ONLINE' | 'STALE' | 'NO_RECENT_DATA' | 'INACTIVE' | 'UNKNOWN'
 export type IoTHistoryPeriod = 'day' | 'week' | 'month' | 'year'
 export type IoTHistoryAggregation = 'sample' | 'hour' | 'day' | 'month'
+export type IoTHistoryAggregationMode = 'average' | 'sum'
 
 export type IoTHistoryQuery =
-    | { anchorDate?: string; from?: never; to?: never }
-    | { anchorDate?: never; from: string; to: string }
+    | { anchorDate?: string; from?: never; to?: never; aggregationMode?: IoTHistoryAggregationMode }
+    | { anchorDate?: never; from: string; to: string; aggregationMode?: IoTHistoryAggregationMode }
 
 export interface IoTDevice {
     loggerId: number
@@ -63,6 +64,7 @@ export interface IoTHistoryResponse {
     data: IoTReading[]
     period?: IoTHistoryPeriod
     aggregation?: IoTHistoryAggregation
+    aggregationMode?: IoTHistoryAggregationMode
     from?: string
     to?: string
     rawTotal?: number
