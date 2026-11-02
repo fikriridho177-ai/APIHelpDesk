@@ -622,11 +622,11 @@ function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggrega
     : kind === 'rainfall'
       ? <RainfallChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
       : kind === 'direction'
-        ? <DirectionChart points={points} />
+        ? <DirectionChart points={points} aggregation={aggregation} />
         : kind === 'level'
-          ? <LevelVisual value={chartLatestValue} points={points} stats={stats} unit={unit} />
+          ? <LevelVisual value={chartLatestValue} points={points} stats={stats} unit={unit} aggregation={aggregation} />
           : kind === 'gauge'
-            ? <GaugeVisual value={chartLatestValue} points={points} stats={stats} unit={unit} />
+            ? <GaugeVisual value={chartLatestValue} points={points} stats={stats} unit={unit} aggregation={aggregation} />
             : kind === 'heat'
               ? <HeatVisual points={points} stats={stats} unit={unit} aggregation={aggregation} />
               : <TrendChart points={points} parameterLabel={parameterName} unit={unit} aggregation={aggregation} />
@@ -642,9 +642,10 @@ function RainfallChart({ points, parameterLabel, unit, aggregation }: { points: 
   return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" fill="currentColor" radius={[4, 4, 0, 0]} maxBarSize={18} isAnimationActive={false} /></BarChart></ResponsiveContainer>
 }
 
-function DirectionChart({ points }: { points: ChartPoint[] }) {
+function DirectionChart({ points, aggregation }: { points: ChartPoint[]; aggregation: IoTHistoryAggregation }) {
   const latest = points[points.length - 1]?.value ?? null
   const direction = getDirectionLabel(latest)
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const plottedPoints = points.map((point, index) => {
     const radians = (point.value * Math.PI) / 180
     const radius = 27 + ((index * 13) % 14)
@@ -655,29 +656,40 @@ function DirectionChart({ points }: { points: ChartPoint[] }) {
       isLatest: index === points.length - 1,
     }
   })
-  return <div className={styles.directionChart} aria-label={`Persebaran arah angin, arah terakhir ${formatSensorValue(latest)} derajat, ${direction}`}><div className={styles.directionScatter}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassRing} />{plottedPoints.map(({ point, left, top, isLatest }, index) => <span key={`${point.ts}-${index}`} className={`${styles.directionPoint} ${isLatest ? styles.directionPointLatest : ''}`} style={{ left: `${left}%`, top: `${top}%` }} title={`${formatSensorValue(point.value)}° · ${getDirectionLabel(point.value)}`} />)}<span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(latest)}<small>°</small></strong><em>{direction}</em><small className={styles.directionHint}>Titik menunjukkan persebaran histori</small></div></div>
+  const hoveredPoint = hoveredIndex === null ? null : plottedPoints[hoveredIndex]
+  return <div className={styles.directionChart} aria-label={`Persebaran arah angin, arah terakhir ${formatSensorValue(latest)} derajat, ${direction}`}><div className={styles.directionScatter} onMouseLeave={() => setHoveredIndex(null)}><span className={`${styles.compassLabel} ${styles.compassNorth}`}>U</span><span className={`${styles.compassLabel} ${styles.compassEast}`}>T</span><span className={`${styles.compassLabel} ${styles.compassSouth}`}>S</span><span className={`${styles.compassLabel} ${styles.compassWest}`}>B</span><span className={styles.compassRing} />{plottedPoints.map(({ point, left, top, isLatest }, index) => <span key={`${point.ts}-${index}`} className={`${styles.directionPoint} ${isLatest ? styles.directionPointLatest : ''}`} style={{ left: `${left}%`, top: `${top}%` }} onMouseEnter={() => setHoveredIndex(index)} />)}{hoveredPoint && <HistoryHover point={hoveredPoint.point} unit="°" note={getDirectionLabel(hoveredPoint.point.value)} aggregation={aggregation} style={{ left: `${hoveredPoint.left}%`, top: `${hoveredPoint.top}%` }} />}<span className={styles.compassCenter} /></div><div className={styles.directionReadout}><span>ARAH TERAKHIR</span><strong>{formatSensorValue(latest)}<small>°</small></strong><em>{direction}</em><small className={styles.directionHint}>Arahkan pointer ke titik histori</small></div></div>
 }
 
-function LevelVisual({ value, points, stats, unit }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string }) {
+function LevelVisual({ value, points, stats, unit, aggregation }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
   const min = stats.min ?? value ?? 0
   const max = stats.max ?? value ?? 0
   const range = max - min
   const percentage = value === null ? 0 : range > 0 ? Math.min(100, Math.max(0, ((value - min) / range) * 100)) : 50
   const historyPoints = points.slice(-24)
-  return <div className={styles.levelVisual} aria-label={`Level terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.levelScale}><span>{formatSensorValue(max)}</span><div className={styles.levelTank}><span className={styles.levelFill} style={{ height: `${percentage}%` }} /><span className={styles.levelTankLine} /></div><span>{formatSensorValue(min)}</span></div><div className={styles.levelHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.levelHistoryBars}>{historyPoints.map((point, index) => { const barHeight = range > 0 ? Math.max(8, ((point.value - min) / range) * 100) : 50; return <span key={`${point.ts}-${index}`} className={styles.levelHistoryBar} style={{ height: `${barHeight}%` }} title={`${formatSensorValue(point.value)} ${unit} · ${formatChartTime(point.ts)}`} /> })}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.levelReadout}><span>POSISI TERKINI</span><strong>{formatSensorValue(value)}<small>{unit}</small></strong><em>Rentang {formatSensorValue(min)} – {formatSensorValue(max)}</em></div></div></div>
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const hoveredPoint = hoveredIndex === null ? null : historyPoints[hoveredIndex]
+  return <div className={styles.levelVisual} aria-label={`Level terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.levelScale}><span>{formatSensorValue(max)}</span><div className={styles.levelTank}><span className={styles.levelFill} style={{ height: `${percentage}%` }} /><span className={styles.levelTankLine} /></div><span>{formatSensorValue(min)}</span></div><div className={styles.levelHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.levelHistoryBars} onMouseLeave={() => setHoveredIndex(null)}>{historyPoints.map((point, index) => { const barHeight = range > 0 ? Math.max(8, ((point.value - min) / range) * 100) : 50; return <span key={`${point.ts}-${index}`} className={styles.levelHistoryBar} style={{ height: `${barHeight}%` }} onMouseEnter={() => setHoveredIndex(index)} /> })}{hoveredPoint && <HistoryHover point={hoveredPoint} unit={unit} aggregation={aggregation} style={{ left: `${((hoveredIndex ?? 0) + 0.5) / historyPoints.length * 100}%` }} />}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.levelReadout}><span>POSISI TERKINI</span><strong>{formatSensorValue(value)}<small>{unit}</small></strong><em>Rentang {formatSensorValue(min)} – {formatSensorValue(max)}</em></div></div></div>
 }
 
-function GaugeVisual({ value, points, stats, unit }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string }) {
+function GaugeVisual({ value, points, stats, unit, aggregation }: { value: number | null; points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
   const maximum = Math.max(stats.max ?? 0, value ?? 0, 1)
   const percentage = value === null ? 0 : Math.min(100, Math.max(0, (value / maximum) * 100))
   const historyPoints = points.slice(-24)
-  return <div className={styles.gaugeVisual} aria-label={`Nilai terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.gaugeRing} style={{ background: `conic-gradient(currentColor 0 ${percentage}%, #e3eff1 ${percentage}% 100%)` }}><div className={styles.gaugeHole}><strong>{formatSensorValue(value)}</strong><small>{unit}</small></div></div><div className={styles.gaugeHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.gaugeHistoryBars}>{historyPoints.map((point, index) => <span key={`${point.ts}-${index}`} className={styles.gaugeHistoryBar} style={{ height: `${Math.max(8, Math.min(100, (point.value / maximum) * 100))}%` }} title={`${formatSensorValue(point.value)} ${unit} · ${formatChartTime(point.ts)}`} />)}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.gaugeReadout}><span>SKALA HISTORI</span><strong>Maks {formatSensorValue(maximum)}</strong><em>Nilai terakhir {formatSensorValue(value)} {unit}</em></div></div></div>
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const hoveredPoint = hoveredIndex === null ? null : historyPoints[hoveredIndex]
+  return <div className={styles.gaugeVisual} aria-label={`Nilai terakhir ${formatSensorValue(value)} ${unit} dengan ${historyPoints.length} titik histori`}><div className={styles.gaugeRing} style={{ background: `conic-gradient(currentColor 0 ${percentage}%, #e3eff1 ${percentage}% 100%)` }}><div className={styles.gaugeHole}><strong>{formatSensorValue(value)}</strong><small>{unit}</small></div></div><div className={styles.gaugeHistory}><div className={styles.historyMiniHeading}><span>URUTAN HISTORI</span><small>{historyPoints.length} titik</small></div><div className={styles.gaugeHistoryBars} onMouseLeave={() => setHoveredIndex(null)}>{historyPoints.map((point, index) => <span key={`${point.ts}-${index}`} className={styles.gaugeHistoryBar} style={{ height: `${Math.max(8, Math.min(100, (point.value / maximum) * 100))}%` }} onMouseEnter={() => setHoveredIndex(index)} />)}{hoveredPoint && <HistoryHover point={hoveredPoint} unit={unit} aggregation={aggregation} style={{ left: `${((hoveredIndex ?? 0) + 0.5) / historyPoints.length * 100}%` }} />}</div><div className={styles.historyMiniAxis}><span>awal</span><span>terbaru</span></div><div className={styles.gaugeReadout}><span>SKALA HISTORI</span><strong>Maks {formatSensorValue(maximum)}</strong><em>Nilai terakhir {formatSensorValue(value)} {unit}</em></div></div></div>
 }
 
 function HeatVisual({ points, stats, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; unit: string; aggregation: IoTHistoryAggregation }) {
   const visiblePoints = points.slice(-48)
   const range = (stats.max ?? 0) - (stats.min ?? 0)
-  return <div className={styles.heatVisual} aria-label={`Intensitas ${visiblePoints.length} pembacaan terakhir`}><div className={styles.heatStrip}>{visiblePoints.map((point, index) => { const ratio = range > 0 ? ((point.value - (stats.min ?? 0)) / range) : 1; const hue = 205 - ratio * 155; return <span key={`${point.ts}-${index}`} className={styles.heatCell} style={{ background: `hsl(${hue} 78% 56%)`, opacity: 0.38 + ratio * 0.62 }} title={`${formatSensorValue(point.value)} ${unit} · ${formatChartTime(point.ts, aggregation)}`} /> })}</div><div className={styles.heatLegend}><span>Rendah {formatSensorValue(stats.min)}</span><i /><span>Tinggi {formatSensorValue(stats.max)}</span></div></div>
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const hoveredPoint = hoveredIndex === null ? null : visiblePoints[hoveredIndex]
+  return <div className={styles.heatVisual} aria-label={`Intensitas ${visiblePoints.length} pembacaan terakhir`}><div className={styles.heatStrip} onMouseLeave={() => setHoveredIndex(null)}>{visiblePoints.map((point, index) => { const ratio = range > 0 ? ((point.value - (stats.min ?? 0)) / range) : 1; const hue = 205 - ratio * 155; return <span key={`${point.ts}-${index}`} className={styles.heatCell} style={{ background: `hsl(${hue} 78% 56%)`, opacity: 0.38 + ratio * 0.62 }} onMouseEnter={() => setHoveredIndex(index)} /> })}{hoveredPoint && <HistoryHover point={hoveredPoint} unit={unit} aggregation={aggregation} style={{ left: `${((hoveredIndex ?? 0) + 0.5) / visiblePoints.length * 100}%` }} />}</div><div className={styles.heatLegend}><span>Rendah {formatSensorValue(stats.min)}</span><i /><span>Tinggi {formatSensorValue(stats.max)}</span></div></div>
+}
+
+function HistoryHover({ point, unit, aggregation, note, style }: { point: ChartPoint; unit: string; aggregation: IoTHistoryAggregation; note?: string; style?: CSSProperties }) {
+  return <span className={styles.historyHoverTip} style={style}><strong>{formatSensorValue(point.value)}<small>{unit}</small></strong><em>{note ? `${note} · ` : ''}{formatChartTime(point.ts, aggregation)}</em></span>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour' }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation }) {
