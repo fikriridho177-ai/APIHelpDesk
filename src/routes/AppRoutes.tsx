@@ -32,6 +32,7 @@ import IoTMonitoringPage from '../features/iot/pages/IoTMonitoringPage'
 import IoTMapMonitoringPage from '../features/iot/pages/IoTMapMonitoringPage'
 import IoTVendorDevicesPage from '../features/iot/pages/IoTVendorDevicesPage'
 import WeatherForecastPage from '../features/weather/pages/WeatherForecastPage'
+import WadSensorDetailPage from '../features/ecs/pages/WadSensorDetailPage'
 
 const Private = ({ children }: { children: React.ReactNode }) =>
   localStorage.getItem('token') ? <>{children}</> : <Navigate to="/login" replace />
@@ -100,6 +101,7 @@ export default function AppRoutes() {
           path="iot-management/logger-lokal/monitoring-sensor"
           element={<Navigate to="/iot-management/monitoring-sensor" replace />}
         />
+        <Route path="ecs/sensor-detail" element={<WadSensorDetailPage />} />
         {/* ECS Monitoring (akses WAD) */}
         {ECS_MENUS.map(m => (
           <Route key={m.code} path={m.route.slice(1)} element={<EcsPage code={m.code} />} />

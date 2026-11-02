@@ -72,6 +72,11 @@ const SENSOR_DEFINITIONS: Record<WadSensorKind, SensorDefinition> = {
 
 const SENSOR_KINDS = Object.keys(SENSOR_DEFINITIONS) as WadSensorKind[]
 
+// TMAK/TMAT are the primary WAD readings. Rainfall is useful as a fallback
+// when a logger does not expose either water-level parameter.
+const PRIMARY_SENSOR_ORDER: WadSensorKind[] = ['tmak', 'tmat', 'curah-hujan']
+const SENSOR_REFRESH_INTERVAL_MS = 60_000
+
 const FILTER_OPTIONS: Array<{
   key: WadSensorFilter
   label: string
@@ -180,7 +185,15 @@ export default function WadSensorOverviewPage({
   }, [])
 
   useEffect(() => {
-    if (loaded && canRead) void loadMonitoring()
+    if (!loaded || !canRead) return
+
+    void loadMonitoring()
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void loadMonitoring()
+    }, SENSOR_REFRESH_INTERVAL_MS)
+
+    return () => window.clearInterval(intervalId)
   }, [canRead, loaded, loadMonitoring, refreshKey])
 
   const rows = useMemo(() => sensorRows(activeFilter, monitoring), [activeFilter, monitoring])
@@ -346,13 +359,16 @@ export default function WadSensorOverviewPage({
                 )}
 
                 <div className={styles.cardMeta}>
-                  <span>Data terakhir<strong>{formatMonitoringDate(device.lastSensorAt ?? device.lastReceivedAt)}</strong></span>
+                  <span>Payload terakhir<strong>{formatMonitoringDate(device.lastReceivedAt ?? device.lastSensorAt)}</strong></span>
                   <span>{activeFilter === 'all' ? 'Parameter tersedia' : 'Parameter'}<strong>{activeFilter === 'all' ? availableParameters(readings) : reading?.[0] ?? 'Belum tersedia'}</strong></span>
                 </div>
 
                 <div className={styles.cardFooter}>
                   <span>{device.lokasi || 'Lokasi belum diatur'}</span>
-                  <Link to={'/ecs/data-historis?loggerId=' + device.loggerId}>Lihat histori <span aria-hidden="true">→</span></Link>
+                  <div className={styles.cardActions}>
+                    <Link to={'/ecs/sensor-detail?loggerId=' + device.loggerId}>Detail sensor <span aria-hidden="true">→</span></Link>
+                    <Link to={'/ecs/data-historis?loggerId=' + device.loggerId}>Histori <span aria-hidden="true">→</span></Link>
+                  </div>
                 </div>
               </article>
             ))}
@@ -371,23 +387,46 @@ function availableParameters(readings: SensorReadings) {
 }
 
 function MetricList({ device, readings }: { device: IoTMonitoringDevice; readings: SensorReadings }) {
+  const availableKinds = PRIMARY_SENSOR_ORDER.filter(kind => !!readings[kind])
+  const primaryKind = availableKinds[0]
+
+  if (!primaryKind) {
+    return (
+      <div className={styles.metricListEmpty}>
+        <DashboardIcon name="info" />
+        <span>Belum ada pembacaan pada payload terbaru.</span>
+      </div>
+    )
+  }
+
+  const primaryDefinition = SENSOR_DEFINITIONS[primaryKind]
+  const primaryValue = displayValue(primaryKind, device, readings[primaryKind])
+
   return (
     <div className={styles.metricList}>
       <small className={styles.metricListLabel}>PEMBACAAN TERBARU</small>
-      <div className={styles.metricGrid}>
-        {SENSOR_KINDS.map(kind => {
+      <div className={styles.primaryMetric}>
+        <div>
+          <span>{primaryDefinition.valueLabel}</span>
+          <strong>{primaryValue == null ? '—' : formatMonitoringNumber(primaryValue)}</strong>
+        </div>
+        <small>{primaryDefinition.unit}</small>
+      </div>
+      {availableKinds.length > 1 && (
+        <div className={styles.secondaryMetrics}>
+          {availableKinds.slice(1).map(kind => {
           const definition = SENSOR_DEFINITIONS[kind]
           const reading = readings[kind]
           const value = displayValue(kind, device, reading)
           return (
-            <div className={`${styles.metric} ${reading ? styles.metricAvailable : styles.metricEmpty}`} key={kind}>
+            <div className={styles.secondaryMetric} key={kind}>
               <span>{definition.shortLabel}</span>
-              <strong>{value == null ? '—' : formatMonitoringNumber(value)}</strong>
-              <small>{definition.unit}</small>
+              <strong>{value == null ? '—' : formatMonitoringNumber(value)} <small>{definition.unit}</small></strong>
             </div>
           )
-        })}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   )
 }
