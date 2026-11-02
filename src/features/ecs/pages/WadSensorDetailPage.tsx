@@ -16,16 +16,9 @@ import { adjustTmakValue } from '../../iot/lib/tmakOffset'
 import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import type { IoTMonitoringDevice, IoTParameter } from '../../iot/types/iot'
+import { groupLiveParameters, type LiveParameter } from '../utils/wadSensorDetail'
 import common from './WadSensorOverviewPage.module.css'
 import styles from './WadSensorDetailPage.module.css'
-
-interface LiveParameter {
-  code: string
-  label: string
-  unit: string
-  value: number | null
-  categoryOrder: number
-}
 
 function normalizeParameter(value: string) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -70,6 +63,7 @@ function getLiveParameters(device: IoTMonitoringDevice, parameters: IoTParameter
         label: getMonitoringParameterName(parameter),
         unit: getMonitoringParameterUnit(parameter),
         value: getNumber(adjustedValue),
+        categoryName: parameter?.categoryName?.trim() || parameter?.kategoriNama?.trim() || '',
         categoryOrder: parameter?.categoryOrder ?? parameter?.kategoriUrutan ?? Number.MAX_SAFE_INTEGER,
       }
     })
@@ -152,12 +146,13 @@ export default function WadSensorDetailPage() {
     () => device ? getLiveParameters(device, parameters) : [],
     [device, parameters],
   )
+  const liveParameterGroups = useMemo(() => groupLiveParameters(liveParameters), [liveParameters])
 
   if (!loaded || !canRead) return <NoAccess loaded={loaded} />
 
   if (!hasLoggerId) {
     return (
-      <main className={common.page}>
+      <main className={`${common.page} ${styles.page}`}>
         <section className={common.state}>
           <DashboardIcon name="info" />
           <strong>Logger belum dipilih</strong>
@@ -169,7 +164,7 @@ export default function WadSensorDetailPage() {
   }
 
   return (
-    <main className={common.page}>
+    <main className={`${common.page} ${styles.page}`}>
       {error && (
         <section className={common.alert} role="alert">
           <span>{error}</span>
@@ -220,7 +215,7 @@ export default function WadSensorDetailPage() {
           </header>
 
           <div className={styles.detailGrid}>
-            <section className={common.sensorPanel} aria-label="Pembacaan realtime logger">
+            <section className={`${common.sensorPanel} ${styles.readingPanel}`} aria-label="Pembacaan realtime logger">
               <div className={common.panelHeading}>
                 <div>
                   <span className={common.panelEyebrow}>REALTIME SNAPSHOT</span>
@@ -231,13 +226,27 @@ export default function WadSensorDetailPage() {
               </div>
 
               {liveParameters.length > 0 ? (
-                <div className={styles.parameterGrid}>
-                  {liveParameters.map(parameter => (
-                    <article className={styles.parameterCard} key={parameter.code}>
-                      <span className={styles.parameterLabel}>{parameter.label}</span>
-                      <strong>{parameter.value == null ? '—' : formatMonitoringNumber(parameter.value)}</strong>
-                      <small>{parameter.unit}</small>
-                    </article>
+                <div className={styles.categoryStack}>
+                  {liveParameterGroups.map((group, index) => (
+                    <section className={styles.parameterSection} key={group.key} aria-labelledby={`sensor-category-${group.key}`}>
+                      <div className={styles.categoryHeading}>
+                        <div className={styles.categoryHeadingCopy}>
+                          <span className={styles.categoryMarker} />
+                          <span className={styles.categoryEyebrow}>CATEGORY {String(index + 1).padStart(2, '0')}</span>
+                          <h3 id={`sensor-category-${group.key}`}>{group.name}</h3>
+                        </div>
+                        <span className={styles.categoryCount}>{group.parameters.length} parameter</span>
+                      </div>
+                      <div className={styles.parameterGrid}>
+                        {group.parameters.map(parameter => (
+                          <article className={styles.parameterCard} key={parameter.code}>
+                            <span className={styles.parameterLabel}>{parameter.label}</span>
+                            <strong>{parameter.value == null ? '—' : formatMonitoringNumber(parameter.value)}</strong>
+                            <small>{parameter.unit}</small>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
                   ))}
                 </div>
               ) : (

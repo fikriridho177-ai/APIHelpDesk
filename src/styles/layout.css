@@ -465,6 +465,40 @@ body {
   flex: 0 0 auto;
 }
 
+/* Sensor detail is also an operational workspace: keep the realtime view in
+   the viewport while history remains available as a separate page. */
+.app-layout-sensor-detail {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-layout-sensor-detail .main-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 18px 28px 14px;
+}
+
+.app-layout-sensor-detail .breadcrumb-container {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.app-layout-sensor-detail .main-content > .ecs-root {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-layout-sensor-detail .app-footer {
+  flex: 0 0 auto;
+}
+
 
 /* =========================================================
    FOOTER
@@ -519,6 +553,17 @@ body {
 
   .app-layout-overview .main-content,
   .app-layout-overview .main-content > .ecs-root {
+    overflow: visible;
+  }
+
+  .app-layout-sensor-detail {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-layout-sensor-detail .main-content,
+  .app-layout-sensor-detail .main-content > .ecs-root {
     overflow: visible;
   }
 }

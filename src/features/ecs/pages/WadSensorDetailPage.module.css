@@ -1,22 +1,110 @@
+.page {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
 .detailGrid {
   display: grid;
+  min-height: 0;
   grid-template-columns: minmax(0, 1.65fr) minmax(270px, .85fr);
   gap: 20px;
   align-items: start;
+  overflow: hidden;
+}
+
+.readingPanel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.categoryStack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px 20px 18px;
+  overflow: hidden;
+}
+
+.parameterSection {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #d5e9e8;
+  border-radius: 12px;
+  background: #fbfefe;
+}
+
+.categoryHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #dceceb;
+  background: linear-gradient(110deg, #ffffff, #effaf9);
+}
+
+.categoryHeadingCopy {
+  position: relative;
+  min-width: 0;
+  padding-left: 12px;
+}
+
+.categoryMarker {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #16a69d;
+  box-shadow: 0 0 0 4px rgba(22, 166, 157, .13);
+}
+
+.categoryEyebrow {
+  color: #15938e;
+  font-size: .5rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.categoryHeading h3 {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: #174b57;
+  font-size: .76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.categoryCount {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid #bfe4df;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #178e88;
+  font-size: .52rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .parameterGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 18px 20px 20px;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 8px;
+  padding: 10px;
 }
 
 .parameterCard {
   display: grid;
   min-width: 0;
   gap: 4px;
-  padding: 16px;
+  padding: 12px;
   border: 1px solid #d3ebe8;
   border-radius: 13px;
   background: linear-gradient(145deg, #f9fffe, #e9f8f6);
@@ -25,7 +113,7 @@
 .parameterLabel {
   overflow: hidden;
   color: #52818a;
-  font-size: .62rem;
+  font-size: .58rem;
   font-weight: 800;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -35,14 +123,14 @@
 
 .parameterCard strong {
   color: #087e78;
-  font-size: clamp(1.35rem, 3vw, 2rem);
+  font-size: clamp(1.2rem, 2.5vw, 1.7rem);
   letter-spacing: -.04em;
   line-height: 1.05;
 }
 
 .parameterCard > small {
   color: #75939a;
-  font-size: .62rem;
+  font-size: .58rem;
   font-weight: 700;
 }
 
