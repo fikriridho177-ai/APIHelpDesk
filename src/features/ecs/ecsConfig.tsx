@@ -35,7 +35,9 @@ export const ECS_MENUS: EcsMenu[] = [
   // permission stasiun sebagai fallback agar akses WAD yang sudah ada tetap berlaku.
   { code: 'WAD_ECS_PERANGKAT', permissionCode: 'WAD_ECS_STASIUN', route: '/ecs/monitoring-perangkat', label: 'Status Perangkat IoT', page: () => <WadDeviceMonitoringPage /> },
   { code: 'WAD_ECS_MONITOR_CH', route: '/ecs/monitor-curahhujan', label: 'Monitor Curah Hujan', page: () => <CurahHujanMonitorPage /> },
-  { code: 'WAD_ECS_DATA_HISTORIS', route: '/ecs/data-historis', label: 'Data Historis', page: () => <DataHistorisPage /> },
+  // Histori dibuka dari detail sensor, jadi gunakan hak akses monitoring sensor
+  // yang sudah menjadi pintu utama WAD. Tidak perlu permission baru terpisah.
+  { code: 'WAD_ECS_DATA_HISTORIS', permissionCode: 'WAD_ECS_STASIUN', route: '/ecs/data-historis', label: 'Data Historis', page: () => <DataHistorisPage /> },
   { code: 'WAD_ECS_KALENDER_CH', route: '/ecs/kalender-curah-hujan', label: 'Kalender Curah Hujan', page: () => <KalenderCurahHujanPage /> },
   { code: 'WAD_ECS_PETA', route: '/ecs/peta', label: 'Peta Sensor', page: () => <PetaPage /> },
   { code: 'WAD_ECS_CURAH_HUJAN', route: '/ecs/curahhujan', label: 'Curah Hujan', page: () => <CurahHujanPage /> },
