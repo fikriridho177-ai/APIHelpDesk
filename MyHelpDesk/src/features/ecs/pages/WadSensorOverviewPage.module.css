@@ -2,6 +2,7 @@
   display: grid;
   gap: 20px;
   min-height: 100%;
+  width: 100%;
   padding: 0 0 54px;
   color: #123a4e;
 }
@@ -11,7 +12,7 @@
 .sensorPanel,
 .alert,
 .state {
-  width: min(1180px, 100%);
+  width: 100%;
   margin-right: auto;
   margin-left: auto;
   box-sizing: border-box;
