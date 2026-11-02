@@ -21,4 +21,12 @@ public sealed class IotMonitoringControllerTests
         Assert.Equal("ONLINE", IotMonitoringRules.DetermineStatus(true, 5, 10));
         Assert.Equal("INACTIVE", IotMonitoringRules.DetermineStatus(false, 5, 1));
     }
+
+    [Fact]
+    public void Latest_payload_order_uses_server_receive_time()
+    {
+        Assert.Equal(
+            "RH.ReceivedAt DESC, RH.RawID DESC",
+            IotMonitoringSql.LatestPayloadOrderBy);
+    }
 }

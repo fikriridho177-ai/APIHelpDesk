@@ -72,7 +72,7 @@ public class IotMonitoringController(
             });
         }
 
-        const string sql = """
+        var sql = $"""
             SELECT
                 L.LoggerID,
                 L.LoggerCode,
@@ -111,8 +111,7 @@ public class IotMonitoringController(
                 FROM dbo.TrnLoggerRawHdr AS RH
                 WHERE RH.LoggerID = L.LoggerID
                 ORDER BY
-                    RH.TanggalSensor DESC,
-                    RH.RawID DESC
+                    {IotMonitoringSql.LatestPayloadOrderBy}
             ) AS H
 
             LEFT JOIN dbo.TrnLoggerRawDtl AS D
