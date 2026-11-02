@@ -9,8 +9,12 @@ import type { WeatherSensorLocation } from '../types/weather'
 
 const MENU_CODE = 'DASHBOARD_IOT'
 
-export default function WeatherForecastPage() {
-  const { permission, loaded } = useMenuPermission(MENU_CODE)
+interface WeatherForecastPageProps {
+  permissionCode?: string
+}
+
+export default function WeatherForecastPage({ permissionCode = MENU_CODE }: WeatherForecastPageProps) {
+  const { permission, loaded } = useMenuPermission(permissionCode)
   const [devices, setDevices] = useState<IoTDevice[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +57,7 @@ export default function WeatherForecastPage() {
       {loading && <div style={{ padding: 24, color: '#78949d' }}>Memuat daftar logger...</div>}
       {!loading && error && <div role="alert" style={{ padding: 16, color: '#9f2525' }}>{error}</div>}
       {!loading && !error && devices.length === 0 && <div style={{ padding: 24, color: '#78949d' }}>Belum ada logger yang dapat dipakai untuk prakiraan.</div>}
-      {!loading && !error && devices.length > 0 && <WeatherForecastPanel sensorLocations={sensorLocations} />}
+      {!loading && !error && devices.length > 0 && <WeatherForecastPanel sensorLocations={sensorLocations} comfortable />}
     </main>
   )
 }

@@ -6,6 +6,7 @@ const ECS_BREADCRUMB_LABELS: Record<string, string> = {
   "/ecs/stasiun-monitoring": "Monitoring Sensor",
   "/ecs/sensor-detail": "Detail Sensor",
   "/ecs/monitoring-perangkat": "Status Perangkat IoT",
+  "/ecs/prakiraan-hujan": "Prediksi Hujan 14 Hari",
   "/ecs/monitor-curahhujan": "Monitor Curah Hujan",
   "/ecs/data-historis": "Data Historis",
   "/ecs/kalender-curah-hujan": "Kalender Curah Hujan",
@@ -75,7 +76,7 @@ function resolveItems(pathname: string): RouteItem[] {
   if (pathname === "/iot-management/prakiraan-cuaca")
     return [
       { label: "Pusat Layanan WAD", path: "/ecs" },
-      { label: "Prakiraan Cuaca 10 Hari" },
+      { label: "Prediksi Hujan 14 Hari" },
     ];
   if (pathname === "/iot-management/daftar-perangkat")
     return [

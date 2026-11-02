@@ -101,6 +101,7 @@ export default function AppRoutes() {
           path="iot-management/logger-lokal/monitoring-sensor"
           element={<Navigate to="/iot-management/monitoring-sensor" replace />}
         />
+        <Route path="ecs/prakiraan-hujan" element={<WeatherForecastPage permissionCode="WAD_ECS_STASIUN" />} />
         <Route path="ecs/sensor-detail" element={<WadSensorDetailPage />} />
         {/* ECS Monitoring (akses WAD) */}
         {ECS_MENUS.map(m => (
