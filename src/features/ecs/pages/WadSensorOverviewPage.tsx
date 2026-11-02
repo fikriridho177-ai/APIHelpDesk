@@ -138,12 +138,11 @@ function sensorRows(filter: WadSensorFilter, response: IoTMonitoringResponse | n
         value: filter === 'all' ? null : displayValue(filter, device, readings[filter]),
       }
     })
+    .filter(row => filter === 'all' || !!row.reading)
     .sort((left, right) => {
-      const leftMatch = filter === 'all' || left.reading ? 0 : 1
-      const rightMatch = filter === 'all' || right.reading ? 0 : 1
       const leftStatus = left.device.status === 'ONLINE' ? 0 : 1
       const rightStatus = right.device.status === 'ONLINE' ? 0 : 1
-      return leftMatch - rightMatch || leftStatus - rightStatus || (left.device.namaLogger ?? '').localeCompare(right.device.namaLogger ?? '', 'id-ID')
+      return leftStatus - rightStatus || (left.device.namaLogger ?? '').localeCompare(right.device.namaLogger ?? '', 'id-ID')
     })
 }
 
@@ -185,9 +184,16 @@ export default function WadSensorOverviewPage({
   }, [canRead, loaded, loadMonitoring, refreshKey])
 
   const rows = useMemo(() => sensorRows(activeFilter, monitoring), [activeFilter, monitoring])
+  const allRows = useMemo(() => sensorRows('all', monitoring), [monitoring])
+  const availableCounts = useMemo<Record<WadSensorFilter, number>>(() => ({
+    all: allRows.length,
+    tmat: allRows.filter(row => !!row.readings.tmat).length,
+    tmak: allRows.filter(row => !!row.readings.tmak).length,
+    'curah-hujan': allRows.filter(row => !!row.readings['curah-hujan']).length,
+  }), [allRows])
   const onlineCount = rows.filter(row => row.device.status === 'ONLINE').length
   const mappedCount = rows.filter(row => row.device.latitude != null && row.device.longitude != null).length
-  const readingCount = rows.filter(row => activeFilter !== 'all' && row.reading).length
+  const readingCount = activeFilter === 'all' ? 0 : rows.length
   const pageTitle = activeDefinition?.title ?? 'Monitoring Sensor WAD'
   const pageDescription = activeDefinition?.description ?? 'Pantau seluruh pembacaan logger dalam satu layar dan fokuskan tampilan dengan filter parameter.'
 
@@ -260,7 +266,7 @@ export default function WadSensorOverviewPage({
                 <span className={styles.filterIcon}><DashboardIcon name={option.icon} /></span>
                 <span>
                   <strong>{option.label}</strong>
-                  <small>{option.description}</small>
+                  <small>{option.description} · {availableCounts[option.key]} logger</small>
                 </span>
               </button>
             ))}
@@ -289,8 +295,16 @@ export default function WadSensorOverviewPage({
       ) : rows.length === 0 ? (
         <section className={styles.state}>
           <DashboardIcon name="info" />
-          <strong>Belum ada logger pada snapshot ini</strong>
-          <small>Refresh data atau tunggu pembacaan sensor terbaru.</small>
+          <strong>
+            {activeFilter === 'all'
+              ? 'Belum ada logger pada snapshot ini'
+              : `Belum ada logger dengan parameter ${activeDefinition?.shortLabel}`}
+          </strong>
+          <small>
+            {activeFilter === 'all'
+              ? 'Refresh data atau tunggu pembacaan sensor terbaru.'
+              : 'Parameter ini belum tersedia pada payload logger terbaru.'}
+          </small>
         </section>
       ) : (
         <section className={styles.sensorPanel} aria-label="Daftar pembacaan sensor">
