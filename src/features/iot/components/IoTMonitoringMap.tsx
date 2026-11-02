@@ -25,6 +25,7 @@ export default function IoTMonitoringMap({
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<LibreMap | null>(null)
   const markersRef = useRef<Marker[]>([])
+  const markerElementsRef = useRef<Map<number, HTMLButtonElement>>(new Map())
   const latestSelectRef = useRef(onSelectLogger)
   const latestErrorRef = useRef(onMapError)
   const fitSignatureRef = useRef<string | null>(null)
@@ -96,6 +97,7 @@ export default function IoTMonitoringMap({
       resizeObserver?.disconnect()
       markersRef.current.forEach(marker => marker.remove())
       markersRef.current = []
+      markerElementsRef.current.clear()
       map.remove()
       mapRef.current = null
       setReady(false)
@@ -116,21 +118,30 @@ export default function IoTMonitoringMap({
     if (!ready || !map) return
 
     markersRef.current.forEach(marker => marker.remove())
+    markerElementsRef.current.clear()
+    const markerElements = new Map<number, HTMLButtonElement>()
     markersRef.current = mappableDevices.map(device => {
       const element = document.createElement('button')
+      const visual = document.createElement('span')
       const tone = monitoringStatusTone(device.status)
       element.type = 'button'
-      element.className = `${styles.marker} ${styles[tone]} ${device.loggerId === selectedLoggerId ? styles.selected : ''}`
+      element.className = `${styles.marker} ${styles[tone]}`
+      element.dataset.loggerId = String(device.loggerId)
+      visual.className = styles.markerVisual
+      visual.setAttribute('aria-hidden', 'true')
+      element.appendChild(visual)
       element.title = `${device.loggerCode ?? device.loggerId} · ${monitoringStatusLabel(device.status)}`
       element.setAttribute('aria-label', `Pilih ${device.namaLogger ?? device.loggerCode ?? 'logger'}; status ${monitoringStatusLabel(device.status)}`)
       element.addEventListener('click', event => {
         event.stopPropagation()
         latestSelectRef.current(device.loggerId)
       })
+      markerElements.set(device.loggerId, element)
       return new maplibregl.Marker({ element, anchor: 'center' })
         .setLngLat([device.longitude!, device.latitude!])
         .addTo(map)
     })
+    markerElementsRef.current = markerElements
 
     if (fitSignature && fitSignature !== fitSignatureRef.current) {
       const bounds = new maplibregl.LngLatBounds()
@@ -138,7 +149,13 @@ export default function IoTMonitoringMap({
       map.fitBounds(bounds, { padding: 64, maxZoom: 14, duration: 450 })
       fitSignatureRef.current = fitSignature
     }
-  }, [fitSignature, mappableDevices, ready, selectedLoggerId])
+  }, [fitSignature, mappableDevices, ready])
+
+  useEffect(() => {
+    markerElementsRef.current.forEach((element, loggerId) => {
+      element.classList.toggle(styles.selected, loggerId === selectedLoggerId)
+    })
+  }, [ready, selectedLoggerId])
 
   return (
     <div className={styles.frame}>
