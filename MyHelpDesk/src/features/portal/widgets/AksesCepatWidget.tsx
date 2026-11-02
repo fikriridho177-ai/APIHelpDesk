@@ -1,12 +1,19 @@
 import { useNavigate } from 'react-router-dom'
 
 import { DashboardIcon, pickIconName } from '../../dashboard/components/DashboardIcon'
+import { IOT_NAVIGATION_CODES } from '../../iot/iotNavigation'
 import type { NavigationMenuItem } from '../../menus/types/menu'
 import { WidgetFrame } from '../components/WidgetFrame'
 import type { WidgetProps } from '../types/portal'
 
 // Menu level atas yang tidak dijadikan pintasan (sudah ada di portal / punya tombol sendiri).
-const EXCLUDED_CODES = new Set(['LAYANAN', 'PORTAL', 'LIVE_CHAT', 'SNS_MOBILE'])
+const EXCLUDED_CODES = new Set([
+  'LAYANAN',
+  'PORTAL',
+  'LIVE_CHAT',
+  'SNS_MOBILE',
+  ...IOT_NAVIGATION_CODES,
+])
 
 const bySortOrder = (a: NavigationMenuItem, b: NavigationMenuItem) => a.sortOrder - b.sortOrder
 

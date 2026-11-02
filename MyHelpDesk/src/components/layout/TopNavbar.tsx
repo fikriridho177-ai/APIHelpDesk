@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { getNavigationMenus } from '../../features/menus/api/menuApi'
 import type { NavigationMenuItem } from '../../features/menus/types/menu'
 import OnlineUsers from '../../features/presence/components/OnlineUsers'
+import { IOT_NAVIGATION_CODES } from '../../features/iot/iotNavigation'
 
 type AuthInfo = {
   name?: string
@@ -33,46 +34,8 @@ const HIDDEN_NAVBAR_MENUS = new Set([
   'IOT_INTERNAL',
   'LOGGER_LOKAL',
   'LOCAL_LOGGER',
+  ...IOT_NAVIGATION_CODES,
 ])
-
-const UNIFIED_IOT_MENU_OVERRIDES: Record<string, Partial<Pick<NavigationMenuItem, 'name' | 'route'>>> = {
-  MANAGEMEN_IOT: {
-    name: 'Manajemen IoT',
-    route: '/iot-management',
-  },
-  IOT_MANAGEMENT: {
-    name: 'Manajemen IoT',
-    route: '/iot-management',
-  },
-  DASHBOARD_IOT: {
-    name: 'Dashboard',
-    route: '/iot-management/dashboard-iot',
-  },
-  PETA_MONITORING: {
-    name: 'Peta Monitoring',
-    route: '/iot-management/peta-monitoring',
-  },
-  'PETA-MONITORING': {
-    name: 'Peta Monitoring',
-    route: '/iot-management/peta-monitoring',
-  },
-  DAFTAR_PERANGKAT_VENDOR: {
-    name: 'Manajemen Perangkat',
-    route: '/iot-management/daftar-perangkat',
-  },
-  DAFTAR_PERANGKAT: {
-    name: 'Manajemen Perangkat',
-    route: '/iot-management/daftar-perangkat',
-  },
-  MONITORING_SENSOR_VENDOR: {
-    name: 'Monitoring Sensor',
-    route: '/iot-management/monitoring-sensor',
-  },
-  RIWAYAT_DATA_SENSOR: {
-    name: 'Riwayat Data Sensor',
-    route: '/iot-management/riwayat-data-sensor',
-  },
-}
 
 function normalizeNavigationMenus(data: NavigationMenuItem[]) {
   return data
@@ -82,10 +45,6 @@ function normalizeNavigationMenus(data: NavigationMenuItem[]) {
         menu.menuType !== 'WIDGET' &&
         menu.route !== '/iot-management/logger-lokal',
     )
-    .map(menu => {
-      const override = UNIFIED_IOT_MENU_OVERRIDES[menu.code]
-      return override ? { ...menu, ...override } : menu
-    })
 }
 
 const bySortOrder =(a: NavigationMenuItem, b: NavigationMenuItem) => a.sortOrder - b.sortOrder

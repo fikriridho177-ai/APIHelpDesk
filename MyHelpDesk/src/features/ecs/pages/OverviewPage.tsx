@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom'
+
+import EnvironmentalMonitoringMenu from '../components/EnvironmentalMonitoringMenu'
 import styles from './OverviewPage.module.css'
 
 export default function OverviewPage() {
@@ -32,6 +34,8 @@ export default function OverviewPage() {
               Lihat Stasiun
             </button>
           </div>
+
+          <EnvironmentalMonitoringMenu />
         </div>
       </section>
     </div>

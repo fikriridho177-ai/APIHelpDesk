@@ -2,6 +2,17 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 type RouteItem = { label: string; path?: string };
 
+const ECS_BREADCRUMB_LABELS: Record<string, string> = {
+  "/ecs/stasiun-monitoring": "Stasiun Monitoring",
+  "/ecs/monitor-curahhujan": "Monitor Curah Hujan",
+  "/ecs/data-historis": "Data Historis",
+  "/ecs/kalender-curah-hujan": "Kalender Curah Hujan",
+  "/ecs/peta": "Peta Sensor",
+  "/ecs/curahhujan": "Curah Hujan",
+  "/ecs/tmak": "Tinggi Muka Air Kanal (TMAK)",
+  "/ecs/kelembapan": "Kelembaban Tanah",
+};
+
 function resolveItems(pathname: string): RouteItem[] {
   if (pathname === "/utility/users") return [{ label: "Master User" }];
   if (pathname === "/utility/groups") return [{ label: "Hak Akses" }];
@@ -43,54 +54,60 @@ function resolveItems(pathname: string): RouteItem[] {
       { label: "Layanan", path: "/layanan" },
       { label: "Daftar Pengajuan" },
     ];
+  if (pathname === "/ecs") return [{ label: "Environmental Monitoring" }];
+  if (pathname.startsWith("/ecs/"))
+    return [
+      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: ECS_BREADCRUMB_LABELS[pathname] ?? "Detail Monitoring" },
+    ];
   if (pathname === "/iot-management/dashboard-iot")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Dashboard IoT" },
     ];
   if (pathname === "/iot-management/peta-monitoring")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Peta Monitoring" },
     ];
   if (pathname === "/iot-management/prakiraan-cuaca")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Prakiraan Cuaca 10 Hari" },
     ];
   if (pathname === "/iot-management/daftar-perangkat")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Daftar Perangkat IoT" },
     ];
   if (pathname === "/iot-management/monitoring-sensor")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Monitoring Sensor IoT" },
     ];
   if (pathname === "/iot-management/riwayat-data-sensor")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Riwayat Data Sensor" },
     ];
   if (pathname === "/iot-management/iot-vendor/daftar-perangkat-vendor")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Daftar Perangkat IoT" },
     ];
   if (pathname === "/iot-management/iot-vendor/monitoring-sensor-vendor")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Monitoring Sensor IoT" },
     ];
   if (pathname === "/iot-management/logger-lokal/daftar-perangkat-internal")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Daftar Perangkat IoT" },
     ];
   if (pathname === "/iot-management/logger-lokal/monitoring-sensor")
     return [
-      { label: "Manajemen IoT" },
+      { label: "Environmental Monitoring", path: "/ecs" },
       { label: "Monitoring Sensor IoT" },
     ];
   return [{ label: "Halaman" }];
