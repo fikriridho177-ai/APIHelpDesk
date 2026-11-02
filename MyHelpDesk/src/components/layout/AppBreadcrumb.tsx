@@ -57,57 +57,57 @@ function resolveItems(pathname: string): RouteItem[] {
   if (pathname === "/ecs") return [{ label: "Pusat Layanan WAD" }];
   if (pathname.startsWith("/ecs/"))
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: ECS_BREADCRUMB_LABELS[pathname] ?? "Detail Monitoring" },
     ];
   if (pathname === "/iot-management/dashboard-iot")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Dashboard IoT" },
     ];
   if (pathname === "/iot-management/peta-monitoring")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Peta Monitoring" },
     ];
   if (pathname === "/iot-management/prakiraan-cuaca")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Prakiraan Cuaca 10 Hari" },
     ];
   if (pathname === "/iot-management/daftar-perangkat")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Daftar Perangkat IoT" },
     ];
   if (pathname === "/iot-management/monitoring-sensor")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Monitoring Sensor IoT" },
     ];
   if (pathname === "/iot-management/riwayat-data-sensor")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Riwayat Data Sensor" },
     ];
   if (pathname === "/iot-management/iot-vendor/daftar-perangkat-vendor")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Daftar Perangkat IoT" },
     ];
   if (pathname === "/iot-management/iot-vendor/monitoring-sensor-vendor")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Monitoring Sensor IoT" },
     ];
   if (pathname === "/iot-management/logger-lokal/daftar-perangkat-internal")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Daftar Perangkat IoT" },
     ];
   if (pathname === "/iot-management/logger-lokal/monitoring-sensor")
     return [
-      { label: "Environmental Monitoring", path: "/ecs" },
+      { label: "Pusat Layanan WAD", path: "/ecs" },
       { label: "Monitoring Sensor IoT" },
     ];
   return [{ label: "Halaman" }];
