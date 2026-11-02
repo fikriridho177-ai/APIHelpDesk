@@ -24,7 +24,9 @@ function ServiceContent({ item }: { item: WadServiceItem }) {
         <small>{item.description}</small>
       </span>
       <span className={styles.serviceFooter}>
-        <span className={styles.serviceAction}>{isAvailable ? 'Monitoring aktif' : 'Modul disiapkan'}</span>
+        <span className={styles.serviceAction}>
+          {item.code === 'WAD_MONITORING_SENSOR' ? 'Lihat data sensor' : isAvailable ? 'Monitoring aktif' : 'Modul disiapkan'}
+        </span>
         <span className={styles.serviceArrow} aria-hidden="true">
           <DashboardIcon name="arrow" />
         </span>
@@ -33,11 +35,11 @@ function ServiceContent({ item }: { item: WadServiceItem }) {
   )
 }
 
-export default function WadServiceHub() {
+export default function WadServiceHub({ compact = false }: { compact?: boolean }) {
   const availableCount = WAD_SERVICE_ITEMS.filter(item => item.available && item.route).length
 
   return (
-    <section className={styles.section} aria-labelledby="wad-service-hub-title">
+    <section className={`${styles.section} ${compact ? styles.sectionCompact : ''}`} aria-labelledby="wad-service-hub-title">
       <div className={styles.heading}>
         <div className={styles.headingTitle}>
           <span className={styles.sectionIcon}>

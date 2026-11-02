@@ -3,6 +3,13 @@
   gap: 14px;
 }
 
+.sectionCompact {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
 .heading {
   display: flex;
   align-items: flex-end;
@@ -110,6 +117,13 @@
   list-style: none;
 }
 
+.sectionCompact .serviceGrid {
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  align-content: stretch;
+  gap: 10px;
+}
+
 .serviceItem {
   min-width: 0;
 }
@@ -130,6 +144,13 @@
   text-align: left;
   text-decoration: none;
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.sectionCompact .serviceTile,
+.sectionCompact .serviceTileDisabled {
+  min-height: 0;
+  padding: 12px;
+  gap: 9px;
 }
 
 .serviceTile::before {
@@ -310,6 +331,10 @@
 
 @media (max-width: 900px) {
   .serviceGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .sectionCompact .serviceGrid {
+    grid-template-rows: none;
+  }
 }
 
 @media (max-width: 620px) {
@@ -326,4 +351,12 @@
   }
 
   .serviceGrid { grid-template-columns: 1fr; }
+
+  .sectionCompact {
+    height: auto;
+  }
+
+  .sectionCompact .serviceGrid {
+    grid-template-rows: none;
+  }
 }

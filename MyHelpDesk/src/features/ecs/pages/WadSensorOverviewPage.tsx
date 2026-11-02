@@ -208,7 +208,7 @@ export default function WadSensorOverviewPage({
   const mappedCount = rows.filter(row => row.device.latitude != null && row.device.longitude != null).length
   const readingCount = activeFilter === 'all' ? 0 : rows.length
   const pageTitle = activeDefinition?.title ?? 'Monitoring Sensor WAD'
-  const pageDescription = activeDefinition?.description ?? 'Pantau seluruh pembacaan logger dalam satu layar dan fokuskan tampilan dengan filter parameter.'
+  const pageDescription = activeDefinition?.description ?? 'Pantau seluruh pembacaan logger dalam satu layar, gunakan filter parameter, lalu buka detail untuk melihat data sensor lengkap.'
 
   const changeFilter = (filter: WadSensorFilter) => {
     setSearchParams({ filter }, { replace: true })
@@ -325,7 +325,7 @@ export default function WadSensorOverviewPage({
             <div>
               <span className={styles.panelEyebrow}>LOGGER &amp; PEMBACAAN</span>
               <h2>{activeFilter === 'all' ? 'Semua logger' : `Logger dengan ${activeDefinition?.shortLabel}`}</h2>
-              <p>{activeFilter === 'all' ? 'Semua parameter terbaru diringkas di setiap kartu sensor.' : `${activeDefinition?.valueLabel} dibuat paling menonjol pada kartu sensor.`}</p>
+              <p>{activeFilter === 'all' ? 'Semua parameter terbaru diringkas di setiap kartu; buka detail untuk melihat payload sensor lengkap.' : `${activeDefinition?.valueLabel} dibuat paling menonjol pada kartu sensor.`}</p>
             </div>
             <span className={styles.panelStamp}>{rows.length} stasiun</span>
           </div>

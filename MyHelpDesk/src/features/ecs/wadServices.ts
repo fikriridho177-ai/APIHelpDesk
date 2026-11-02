@@ -18,6 +18,15 @@ export const WAD_SENSOR_FOCUS_COUNT = 3
 export const WAD_SERVICE_ITEMS = [
   {
     order: 1,
+    code: 'WAD_MONITORING_SENSOR',
+    label: 'Monitoring Sensor',
+    description: 'Pantau TMAT, TMAK, dan curah hujan dalam satu tampilan dengan filter.',
+    icon: 'water',
+    available: true,
+    route: '/ecs/stasiun-monitoring?filter=all',
+  },
+  {
+    order: 2,
     code: 'WAD_PETA_SENSOR',
     label: 'Peta Monitoring Sensor',
     description: 'Lihat sebaran logger, status, dan titik pembacaan sensor di lapangan.',
@@ -26,7 +35,7 @@ export const WAD_SERVICE_ITEMS = [
     route: '/ecs/peta-monitoring',
   },
   {
-    order: 2,
+    order: 3,
     code: 'WAD_PERANGKAT',
     label: 'Status Perangkat IoT',
     description: 'Cek keaktifan logger dan waktu payload terakhir diterima.',
@@ -35,7 +44,7 @@ export const WAD_SERVICE_ITEMS = [
     route: '/ecs/monitoring-perangkat',
   },
   {
-    order: 3,
+    order: 4,
     code: 'WAD_PREDIKSI_HUJAN',
     label: 'Prediksi Hujan 14 Hari',
     description: 'Lihat peluang hujan 14 hari berdasarkan koordinat logger terpilih.',
@@ -44,7 +53,7 @@ export const WAD_SERVICE_ITEMS = [
     route: '/ecs/prakiraan-hujan',
   },
   {
-    order: 4,
+    order: 5,
     code: 'WAD_KALENDER_HUJAN',
     label: 'Kalender Curah Hujan',
     description: 'Telusuri pola curah hujan harian per logger dan tahun.',
@@ -53,7 +62,7 @@ export const WAD_SERVICE_ITEMS = [
     route: '/ecs/kalender-curah-hujan',
   },
   {
-    order: 5,
+    order: 6,
     code: 'WAD_PINTU_AIR',
     label: 'Kondisi Pintu Air',
     description: 'Pantau kondisi dan kesiapan pintu air di lapangan.',
@@ -61,7 +70,7 @@ export const WAD_SERVICE_ITEMS = [
     available: false,
   },
   {
-    order: 6,
+    order: 7,
     code: 'WAD_SIPHON_GORONG',
     label: 'Kondisi Siphon / Gorong-gorong',
     description: 'Periksa aliran dan kondisi titik lintasan air.',
@@ -69,7 +78,7 @@ export const WAD_SERVICE_ITEMS = [
     available: false,
   },
   {
-    order: 7,
+    order: 8,
     code: 'WAD_SUBSIDEN_GAMBUT',
     label: 'Pengecekan Subsiden Gambut',
     description: 'Pantau perubahan elevasi dan indikasi penurunan lahan gambut.',
