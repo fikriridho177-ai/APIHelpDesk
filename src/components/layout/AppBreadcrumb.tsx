@@ -54,7 +54,7 @@ function resolveItems(pathname: string): RouteItem[] {
       { label: "Layanan", path: "/layanan" },
       { label: "Daftar Pengajuan" },
     ];
-  if (pathname === "/ecs") return [{ label: "Environmental Monitoring" }];
+  if (pathname === "/ecs") return [{ label: "Pusat Layanan WAD" }];
   if (pathname.startsWith("/ecs/"))
     return [
       { label: "Environmental Monitoring", path: "/ecs" },
