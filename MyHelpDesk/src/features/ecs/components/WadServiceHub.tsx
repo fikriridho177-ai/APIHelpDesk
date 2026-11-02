@@ -45,17 +45,17 @@ export default function WadServiceHub() {
           </span>
           <div>
             <span className={styles.eyebrow}>MENU WAD</span>
-            <h2 id="wad-service-hub-title">Monitoring sensor</h2>
-            <p>Pilih fokus parameter atau buka seluruh pembacaan dalam satu halaman.</p>
+            <h2 id="wad-service-hub-title">Layanan pemantauan</h2>
+            <p>Pilih fokus sensor, cek perangkat, atau buka seluruh pembacaan dalam satu halaman.</p>
           </div>
         </div>
         <div className={styles.headingAside}>
           <Link className={styles.allSensorsLink} to="/ecs/stasiun-monitoring?filter=all">
             Semua sensor <DashboardIcon name="arrow" />
           </Link>
-          <div className={styles.serviceCount} aria-label={`${availableCount} fokus sensor aktif dari ${WAD_SERVICE_ITEMS.length} layanan`}>
+          <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari ${WAD_SERVICE_ITEMS.length} modul`}>
             <strong>{availableCount}</strong>
-            <span>fokus aktif</span>
+            <span>layanan aktif</span>
             <span className={styles.countDivider} aria-hidden="true">/</span>
             <strong>{WAD_SERVICE_ITEMS.length}</strong>
             <span>modul</span>

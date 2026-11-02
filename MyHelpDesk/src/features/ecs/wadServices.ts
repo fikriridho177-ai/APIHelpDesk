@@ -13,7 +13,7 @@ export const WAD_SERVICE_ITEMS = [
   {
     code: 'WAD_TMAT',
     label: 'Pantauan TMAT',
-    description: 'Buka monitoring sensor dengan fokus tinggi muka air tanah.',
+    description: 'Fokuskan pembacaan logger pada tinggi muka air tanah.',
     icon: 'water',
     available: true,
     route: '/ecs/stasiun-monitoring?filter=tmat',
@@ -21,10 +21,26 @@ export const WAD_SERVICE_ITEMS = [
   {
     code: 'WAD_TMAK',
     label: 'Pantauan TMAK',
-    description: 'Buka monitoring sensor dengan fokus tinggi muka air kanal.',
+    description: 'Fokuskan pembacaan logger pada tinggi muka air kanal.',
     icon: 'water',
     available: true,
     route: '/ecs/stasiun-monitoring?filter=tmak',
+  },
+  {
+    code: 'WAD_PERANGKAT',
+    label: 'Status Perangkat IoT',
+    description: 'Cek keaktifan logger dan waktu payload terakhir diterima.',
+    icon: 'desktop',
+    available: true,
+    route: '/ecs/monitoring-perangkat',
+  },
+  {
+    code: 'WAD_CURAH_HUJAN',
+    label: 'Pengecekan Curah Hujan',
+    description: 'Fokuskan pembacaan logger pada curah hujan terbaru.',
+    icon: 'water',
+    available: true,
+    route: '/ecs/stasiun-monitoring?filter=curah-hujan',
   },
   {
     code: 'WAD_PINTU_AIR',
@@ -46,13 +62,5 @@ export const WAD_SERVICE_ITEMS = [
     description: 'Pantau perubahan elevasi dan indikasi penurunan lahan gambut.',
     icon: 'chart',
     available: false,
-  },
-  {
-    code: 'WAD_CURAH_HUJAN',
-    label: 'Pengecekan Curah Hujan',
-    description: 'Buka monitoring sensor dengan fokus curah hujan.',
-    icon: 'water',
-    available: true,
-    route: '/ecs/stasiun-monitoring?filter=curah-hujan',
   },
 ] satisfies readonly WadServiceItem[]

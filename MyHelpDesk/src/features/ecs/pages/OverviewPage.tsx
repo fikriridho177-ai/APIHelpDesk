@@ -1,8 +1,11 @@
 import { DashboardIcon } from '../../dashboard/components/DashboardIcon'
 import WadServiceHub from '../components/WadServiceHub'
+import { WAD_SERVICE_ITEMS } from '../wadServices'
 import styles from './OverviewPage.module.css'
 
 export default function OverviewPage() {
+  const sensorFocusCount = WAD_SERVICE_ITEMS.filter(item => ['WAD_TMAT', 'WAD_TMAK', 'WAD_CURAH_HUJAN'].includes(item.code)).length
+
   return (
     <div className={styles.page}>
       <section className={styles.hero}>
@@ -15,8 +18,8 @@ export default function OverviewPage() {
           </p>
           <div className={styles.heroMeta} aria-label="Ringkasan WAD">
             <span><i className={styles.liveDot} aria-hidden="true" /> Data monitoring terbaru</span>
-            <span><strong>03</strong> fokus sensor</span>
-            <span><strong>06</strong> modul WAD</span>
+            <span><strong>{String(sensorFocusCount).padStart(2, '0')}</strong> fokus sensor</span>
+            <span><strong>{String(WAD_SERVICE_ITEMS.length).padStart(2, '0')}</strong> modul WAD</span>
           </div>
         </div>
 
