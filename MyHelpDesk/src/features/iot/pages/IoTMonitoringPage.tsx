@@ -207,8 +207,8 @@ function formatSensorValue(value: SensorValue | undefined) {
   return '—'
 }
 
-function getParameterLabel(parameter: IoTParameter | undefined, parameterCode: string) {
-  const name = parameter?.namaParameter?.trim() || parameterCode
+function getParameterLabel(parameter: IoTParameter | undefined) {
+  const name = parameter?.namaParameter?.trim() || 'Parameter sensor'
   const unit = parameter?.satuan?.trim()
   if (!unit || name.toLocaleLowerCase('id-ID').includes(unit.toLocaleLowerCase('id-ID'))) return name
   return `${name} (${unit})`
@@ -473,7 +473,7 @@ export default function IoTMonitoringPage({
             <QualityRow label="Status logger" value={selectedDevice ? freshnessLabel(selectedFreshness) : '—'} tone={selectedFreshness} />
             <QualityRow label="Pembacaan terakhir" value={selectedDevice?.latest ? formatDate(selectedDevice.latest.ts, true) : 'Belum tersedia'} tone={selectedDevice?.latest ? 'fresh' : 'none'} />
             <QualityRow label="Interval sampling" value={selectedDevice ? `${selectedDevice.intervalMenit || '—'} menit` : '—'} tone="neutral" />
-            <QualityRow label="Metadata parameter" value={parametersLoading ? 'Memuat...' : parametersError ? 'Fallback ParameterCode' : `${parameters.length} metadata`} tone={parametersError ? 'late' : 'fresh'} />
+            <QualityRow label="Metadata parameter" value={parametersLoading ? 'Memuat...' : parametersError ? 'Nama umum' : `${parameters.length} metadata`} tone={parametersError ? 'late' : 'fresh'} />
             <QualityRow label="Nilai non-numerik" value={history ? `${invalidCount} terdeteksi` : '—'} tone={invalidCount > 0 ? 'warning' : 'fresh'} />
           </div>
           <div className={styles.qualityNote}>Threshold belum dikonfigurasi oleh API. Dashboard tidak menebak batas normal atau bahaya.</div>
@@ -546,10 +546,10 @@ function CategorySection({ group, index, history, latest, loggerCode, loggerName
 }
 
 function SensorCard({ parameter, points, latest, loggerCode, loggerName, aggregation = 'hour', fullWidth }: { parameter: ChartParameter; points: ChartPoint[]; latest: IoTReading | null; loggerCode: string | null | undefined; loggerName: string | null | undefined; aggregation?: IoTHistoryAggregation; fullWidth: boolean }) {
-  const label = getParameterLabel(parameter.metadata, parameter.parameterCode)
-  const parameterName = parameter.metadata?.namaParameter?.trim() || parameter.parameterCode
+  const label = getParameterLabel(parameter.metadata)
+  const parameterName = parameter.metadata?.namaParameter?.trim() || 'Parameter sensor'
   const unit = parameter.metadata?.satuan?.trim() || 'nilai'
-  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong><small>{parameter.parameterCode}</small></span><span className={styles.sensorValue}><strong>{formatSensorValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName))}</strong><small>{unit}</small></span><span className={styles.sensorCardChart}>{points.length === 0 ? <span className={styles.noDailyData}>Belum ada pembacaan</span> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterName} unit={unit} aggregation={aggregation} />} /><Area type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity={0.1} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></AreaChart></ResponsiveContainer>}</span><span className={styles.sensorCardFooter}><span>{label}</span><span>{points.length} titik</span></span></article>
+  return <article className={`${styles.sensorCard} ${fullWidth ? styles.sensorCardFull : ''}`}><span className={styles.sensorCardTop}><strong>{parameterName}</strong></span><span className={styles.sensorValue}><strong>{formatSensorValue(adjustTmakValue(loggerCode, parameter.parameterCode, latest?.data[parameter.parameterCode], loggerName))}</strong><small>{unit}</small></span><span className={styles.sensorCardChart}>{points.length === 0 ? <span className={styles.noDailyData}>Belum ada pembacaan</span> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={['auto', 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterName} unit={unit} aggregation={aggregation} />} /><Area type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity={0.1} activeDot={{ r: 5, fill: '#fff', stroke: 'currentColor', strokeWidth: 2 }} isAnimationActive={false} connectNulls={false} /></AreaChart></ResponsiveContainer>}</span><span className={styles.sensorCardFooter}><span>{label}</span><span>{points.length} titik</span></span></article>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour' }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation }) {

@@ -75,8 +75,8 @@ export function getMonitoringParameterCode(key: string) {
   return key.split('#', 1)[0]
 }
 
-export function getMonitoringParameterName(parameter: IoTParameter | undefined, code: string) {
-  return parameter?.namaParameter?.trim() || parameter?.parameterCode?.trim() || code
+export function getMonitoringParameterName(parameter: IoTParameter | undefined) {
+  return parameter?.namaParameter?.trim() || 'Parameter sensor'
 }
 
 export function getMonitoringParameterUnit(parameter: IoTParameter | undefined) {
