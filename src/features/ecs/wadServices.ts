@@ -13,18 +13,18 @@ export const WAD_SERVICE_ITEMS = [
   {
     code: 'WAD_TMAT',
     label: 'Pantauan TMAT',
-    description: 'Pilih stasiun untuk memantau pembacaan tinggi muka air tanah.',
+    description: 'Buka monitoring sensor dengan fokus tinggi muka air tanah.',
     icon: 'water',
     available: true,
-    route: '/ecs/stasiun-monitoring',
+    route: '/ecs/stasiun-monitoring?filter=tmat',
   },
   {
     code: 'WAD_TMAK',
     label: 'Pantauan TMAK',
-    description: 'Lihat tinggi muka air kanal dan perubahan pembacaannya.',
+    description: 'Buka monitoring sensor dengan fokus tinggi muka air kanal.',
     icon: 'water',
     available: true,
-    route: '/ecs/tmak',
+    route: '/ecs/stasiun-monitoring?filter=tmak',
   },
   {
     code: 'WAD_PINTU_AIR',
@@ -50,9 +50,9 @@ export const WAD_SERVICE_ITEMS = [
   {
     code: 'WAD_CURAH_HUJAN',
     label: 'Pengecekan Curah Hujan',
-    description: 'Lihat pembacaan curah hujan per stasiun dan periode.',
+    description: 'Buka monitoring sensor dengan fokus curah hujan.',
     icon: 'water',
     available: true,
-    route: '/ecs/curahhujan',
+    route: '/ecs/stasiun-monitoring?filter=curah-hujan',
   },
 ] satisfies readonly WadServiceItem[]

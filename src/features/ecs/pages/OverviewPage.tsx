@@ -15,8 +15,8 @@ export default function OverviewPage() {
           </p>
           <div className={styles.heroMeta} aria-label="Ringkasan WAD">
             <span><i className={styles.liveDot} aria-hidden="true" /> Data monitoring terbaru</span>
-            <span><strong>03</strong> layanan aktif</span>
-            <span><strong>06</strong> layanan WAD</span>
+            <span><strong>03</strong> fokus sensor</span>
+            <span><strong>06</strong> modul WAD</span>
           </div>
         </div>
 
