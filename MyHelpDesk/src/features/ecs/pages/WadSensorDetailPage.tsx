@@ -152,7 +152,7 @@ export default function WadSensorDetailPage() {
 
   if (!hasLoggerId) {
     return (
-      <main className={`${common.page} ${styles.page}`}>
+      <main className={common.page}>
         <section className={common.state}>
           <DashboardIcon name="info" />
           <strong>Logger belum dipilih</strong>
@@ -164,7 +164,7 @@ export default function WadSensorDetailPage() {
   }
 
   return (
-    <main className={`${common.page} ${styles.page}`}>
+    <main className={common.page}>
       {error && (
         <section className={common.alert} role="alert">
           <span>{error}</span>
@@ -293,9 +293,6 @@ export default function WadSensorDetailPage() {
             </aside>
           </div>
 
-          <div className={styles.backRow}>
-            <Link to="/ecs/stasiun-monitoring?filter=all">← Kembali ke semua sensor</Link>
-          </div>
         </>
       )}
     </main>
