@@ -144,6 +144,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
     getIoTHistory(selectedDevice.loggerId, 'month', {
       from: `${year}-01-01T00:00`,
       to: `${year + 1}-01-01T00:00`,
+      aggregationMode: 'sum',
     })
       .then(result => {
         if (active) setHistory(result)
@@ -167,7 +168,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
       const rain = getRainReading(reading.data)
       const dateKey = getDateKey(reading.ts)
       if (!rain || !dateKey) return
-      values.set(dateKey, (values.get(dateKey) ?? 0) + rain.value)
+      values.set(dateKey, rain.value)
     })
     return values
   }, [history])
@@ -248,7 +249,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
         <SummaryCard label="Hari dengan hujan" value={summary.rainyDays} hint={`Ambang ≥ 0,5 mm pada ${year}`} tone="rain" />
         <SummaryCard label="Akumulasi terbaca" value={formatNumber(summary.total)} hint="Nilai parameter hujan (mm)" tone="total" />
         <SummaryCard label="Pembacaan tertinggi" value={formatNumber(summary.maximum)} hint="Nilai harian tertinggi (mm)" tone="peak" />
-        <SummaryCard label="Data harian" value={history?.total ?? 0} hint={history?.aggregation === 'day' ? 'Agregasi dari API IoT' : 'Menunggu snapshot'} tone="days" />
+        <SummaryCard label="Data harian" value={history?.total ?? 0} hint={history?.aggregationMode === 'sum' ? 'Total interval per hari dari API IoT' : 'Menunggu snapshot'} tone="days" />
       </section>
 
       {historyError && <section className={styles.alert} role="alert"><span>{historyError}</span><button type="button" onClick={() => setRefreshKey(key => key + 1)}>Coba lagi</button></section>}
