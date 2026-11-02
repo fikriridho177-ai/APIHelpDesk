@@ -32,6 +32,7 @@ import IoTMonitoringPage from '../features/iot/pages/IoTMonitoringPage'
 import IoTMapMonitoringPage from '../features/iot/pages/IoTMapMonitoringPage'
 import IoTVendorDevicesPage from '../features/iot/pages/IoTVendorDevicesPage'
 import WeatherForecastPage from '../features/weather/pages/WeatherForecastPage'
+import IoTRainCalendarPage from '../features/iot/pages/IoTRainCalendarPage'
 import WadSensorDetailPage from '../features/ecs/pages/WadSensorDetailPage'
 
 const Private = ({ children }: { children: React.ReactNode }) =>
@@ -103,6 +104,7 @@ export default function AppRoutes() {
         />
         <Route path="ecs/peta-monitoring" element={<IoTMapMonitoringPage permissionCode="WAD_ECS_STASIUN" />} />
         <Route path="ecs/prakiraan-hujan" element={<WeatherForecastPage permissionCode="WAD_ECS_STASIUN" />} />
+        <Route path="ecs/kalender-curah-hujan" element={<IoTRainCalendarPage permissionCode="WAD_ECS_STASIUN" />} />
         <Route path="ecs/sensor-detail" element={<WadSensorDetailPage />} />
         {/* ECS Monitoring (akses WAD) */}
         {ECS_MENUS.map(m => (
