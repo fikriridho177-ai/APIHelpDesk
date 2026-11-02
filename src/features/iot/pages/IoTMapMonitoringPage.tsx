@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
-import WeatherForecastPanel from '../../weather/components/WeatherForecastPanel'
-import type { WeatherSensorLocation } from '../../weather/types/weather'
 import { getIoTMonitoring, getIoTParameters } from '../api/iotApi'
 import { adjustTmakValue } from '../lib/tmakOffset'
 import IoTMonitoringMap from '../components/IoTMonitoringMap'
@@ -14,11 +12,10 @@ import {
   getMonitoringParameterName as getParameterName,
   getMonitoringParameterUnit as getParameterUnit,
   getMonitoringSummary,
-  hasValidCoordinates,
   monitoringStatusLabel,
   monitoringStatusTone,
 } from '../lib/monitoring'
-import type { IoTMonitoringDevice, IoTMonitoringResponse, IoTParameter } from '../types/iot'
+import type { IoTMonitoringResponse, IoTParameter } from '../types/iot'
 import styles from './IoTMapMonitoringPage.module.css'
 
 const MENU_CODE = 'DASHBOARD_IOT'
@@ -26,7 +23,6 @@ const MENU_CODE = 'DASHBOARD_IOT'
 interface IoTMapMonitoringPageProps {
   permissionCode?: string
 }
-
 export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoTMapMonitoringPageProps) {
   const { permission, loaded } = useMenuPermission(permissionCode)
   const canRead = !!permission?.canRead
@@ -124,16 +120,6 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
     () => new Map(parameters.filter(parameter => parameter.parameterCode).map(parameter => [parameter.parameterCode!, parameter])),
     [parameters],
   )
-  const weatherLocation = useMemo<WeatherSensorLocation[]>(() => selectedDevice ? [{
-    loggerId: selectedDevice.loggerId,
-    loggerCode: selectedDevice.loggerCode ?? `LOGGER-${selectedDevice.loggerId}`,
-    namaLogger: selectedDevice.namaLogger ?? 'Logger IoT',
-    lokasi: selectedDevice.lokasi,
-    sourceType: selectedDevice.sourceType ?? 'UNKNOWN',
-    latitude: selectedDevice.latitude,
-    longitude: selectedDevice.longitude,
-  }] : [], [selectedDevice])
-
   if (!loaded || !canRead) return <NoAccess loaded={loaded} />
 
   return (
@@ -142,7 +128,7 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
         <div>
           <p className={styles.eyebrow}><span className={styles.liveDot} /> IOT MANAGEMENT / MAP OPERATIONS</p>
           <h1>Peta Monitoring IoT</h1>
-          <p className={styles.subtitle}>Pantau posisi, status, pembacaan terakhir, dan konteks cuaca setiap logger dari satu layar.</p>
+          <p className={styles.subtitle}>Pantau posisi, status, dan pembacaan terbaru setiap logger dari satu layar.</p>
           <div className={styles.heroMeta}><span>SUMBER VENDOR + INTERNAL</span><span>{monitoring ? `UPDATE ${formatDate(new Date().toISOString())}` : 'DATA BELUM DIMUAT'}</span></div>
         </div>
         <button type="button" className={styles.refreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading}>
@@ -169,29 +155,33 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
 
           <section className={styles.workspace}>
             <section className={styles.mapPanel} aria-label="Peta posisi logger IoT">
-              <div className={styles.panelHeader}>
-                <div><span className={styles.panelEyebrow}>LIVE FLEET MAP</span><h2>Posisi perangkat</h2><p>Klik marker atau pilih perangkat dari daftar untuk membuka detail.</p></div>
-                <div className={styles.legend} aria-label="Legenda status"><span><i className={styles.legendOnline} /> Online</span><span><i className={styles.legendStale} /> Stale</span><span><i className={styles.legendIssue} /> Issue</span></div>
+              <div className={`${styles.panelHeader} ${styles.mapPanelHeader}`}>
+                <div><span className={styles.panelEyebrow}>LIVE SENSOR MAP</span><h2>Posisi perangkat</h2><p>Klik marker atau gunakan filter logger untuk membaca data terbaru.</p></div>
+                <div className={styles.mapTools}>
+                  <label className={styles.loggerSelect}>
+                    <span>PILIH LOGGER</span>
+                    <select aria-label="Pilih logger pada peta" value={selectedLoggerId ?? ''} onChange={event => {
+                      const loggerId = Number(event.target.value)
+                      if (loggerId > 0) selectLogger(loggerId)
+                    }}>
+                      <option value="">Semua marker</option>
+                      {monitoring.devices.map(device => <option key={device.loggerId} value={device.loggerId}>{device.loggerCode ?? device.namaLogger ?? `Logger ${device.loggerId}`}</option>)}
+                    </select>
+                  </label>
+                  <div className={styles.legend} aria-label="Legenda status"><span><i className={styles.legendOnline} /> Online</span><span><i className={styles.legendStale} /> Stale</span><span><i className={styles.legendIssue} /> Issue</span></div>
+                </div>
               </div>
               <IoTMonitoringMap devices={monitoring.devices} selectedLoggerId={selectedLoggerId} onSelectLogger={selectLogger} onMapError={setMapError} />
             </section>
 
-            <aside className={styles.sidePanel}>
-              <section className={styles.devicePanel} aria-label="Daftar perangkat monitoring">
-                <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>DEVICE FLEET</span><h2>Daftar logger</h2><p>{monitoring.devices.length} perangkat · {summary?.mapped ?? 0} terpetakan</p></div></div>
-                <div className={styles.deviceList}>
-                  {monitoring.devices.map(device => <DeviceListItem key={device.loggerId} device={device} selected={device.loggerId === selectedLoggerId} onSelect={() => selectLogger(device.loggerId)} />)}
-                </div>
-              </section>
-
+            <div className={styles.detailSlot}>
               {selectedDevice && detailOpen ? (
                 <section className={styles.detailPanel} aria-label="Detail logger terpilih">
                   <div className={styles.detailHeader}><div><span className={styles.panelEyebrow}>SELECTED DEVICE</span><h2>{selectedDevice.namaLogger ?? selectedDevice.loggerCode ?? 'Logger IoT'}</h2><p>{selectedDevice.loggerCode ?? `Logger ${selectedDevice.loggerId}`} · {selectedDevice.sourceType ?? 'Sumber tidak diketahui'}</p></div><div className={styles.drawerHeaderActions}><span className={`${styles.statusBadge} ${styles[`status-${monitoringStatusTone(selectedDevice.status)}`]}`}><i />{monitoringStatusLabel(selectedDevice.status)}</span><button type="button" className={styles.closeButton} onClick={() => setDetailOpen(false)}>Tutup</button></div></div>
                   <div className={styles.observationSection}><div className={styles.sectionHeading}><div><span className={styles.panelEyebrow}>ACTUAL OBSERVATION</span><h3>Pembacaan terbaru</h3></div>{selectedDevice.ageMinutes != null && <small>Usia data {formatNumber(selectedDevice.ageMinutes)} menit</small>}</div>{parametersLoading ? <div className={styles.inlineState}>Memuat metadata parameter...</div> : Object.keys(selectedDevice.data).length === 0 ? <div className={styles.inlineState}>Belum ada pembacaan sensor pada response monitoring.</div> : <div className={styles.observationGrid}>{Object.entries(selectedDevice.data).map(([key, value]) => { const code = getParameterCode(key); const parameter = parameterMap.get(code); const displayedValue = adjustTmakValue(selectedDevice.loggerCode, code, value, selectedDevice.namaLogger); const numericValue = displayedValue == null ? null : Number(displayedValue); return <div className={styles.observation} key={key}><span>{getParameterName(parameter, code)}</span><strong>{formatNumber(numericValue != null && Number.isFinite(numericValue) ? numericValue : null)}</strong><small>{getParameterUnit(parameter)} · {code}</small></div> })}</div>}{parametersError && <small className={styles.detailNote}>{parametersError}</small>}</div>
-                  <div className={styles.weatherSection}><WeatherForecastPanel comfortable sensorLocations={weatherLocation} selectedSensorId={selectedDevice.loggerId} allowDefaultLocation={false} allowManualLocation={false} /></div>
                 </section>
-              ) : !selectedDevice ? <section className={styles.noSelection}><span>+</span><strong>Pilih marker atau logger</strong><p>Detail sensor dan prakiraan cuaca akan tampil di sini.</p></section> : null}
-            </aside>
+              ) : !selectedDevice ? <section className={styles.noSelection}><span>+</span><strong>Pilih marker atau logger</strong><p>Pembacaan terbaru akan tampil di sini setelah memilih perangkat.</p></section> : null}
+            </div>
           </section>
         </>
       )}
@@ -201,9 +191,5 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
 
 function SummaryCard({ label, value, hint, tone }: { label: string; value: number; hint: string; tone: string }) {
   return <article className={`${styles.summaryCard} ${styles[`tone-${tone}`]}`}><span className={styles.summaryLabel}>{label}</span><strong>{value}</strong><small>{hint}</small></article>
-}
-
-function DeviceListItem({ device, selected, onSelect }: { device: IoTMonitoringDevice; selected: boolean; onSelect: () => void }) {
-  return <button type="button" className={`${styles.deviceItem} ${selected ? styles.deviceSelected : ''}`} onClick={onSelect} aria-pressed={selected}><span className={`${styles.deviceDot} ${styles[`dot-${monitoringStatusTone(device.status)}`]}`} /><span className={styles.deviceCopy}><strong>{device.namaLogger ?? device.loggerCode ?? `Logger ${device.loggerId}`}</strong><small>{device.loggerCode ?? 'Kode tidak tersedia'} · {device.sourceType ?? 'UNKNOWN'}</small></span><span className={styles.deviceStatus}>{monitoringStatusLabel(device.status)}<small>{hasValidCoordinates(device.latitude, device.longitude) ? 'Terpetakan' : 'Tanpa koordinat'}</small></span></button>
 }
 
