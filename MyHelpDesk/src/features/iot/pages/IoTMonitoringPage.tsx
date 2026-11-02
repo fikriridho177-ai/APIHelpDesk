@@ -22,6 +22,7 @@ import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { useSearchParams } from 'react-router-dom'
 
 import { getIoTHistory, getIoTMonitoring, getIoTParameters } from '../api/iotApi'
+import { getHistoryTooltipValue } from '../lib/historyChart'
 import { adjustTmakValue } from '../lib/tmakOffset'
 import type {
   IoTDeviceWithLatest,
@@ -52,7 +53,7 @@ interface ChartStats {
 }
 
 const MENU_CODE = 'DASHBOARD_IOT'
-const CHART_COLORS = ['#30d5c8', '#54a8ff', '#f5b84b', '#b88cff', '#ff7b8b', '#72d572']
+const TEMPLATE_ACCENT = '#159b97'
 const HISTORY_PERIOD_OPTIONS: Array<{ value: IoTHistoryPeriod; label: string }> = [
   { value: 'day', label: 'Harian · 24 jam' },
   { value: 'week', label: 'Mingguan · 7 hari' },
@@ -277,7 +278,7 @@ function getLatestSummary(devices: IoTDeviceWithLatest[]) {
   }, { fresh: 0, late: 0, none: 0, unknown: 0 } as Record<Freshness, number>)
 }
 
-function getCategoryColor(index: number) { return CHART_COLORS[index % CHART_COLORS.length] }
+function getCategoryColor(_index: number) { return TEMPLATE_ACCENT }
 
 function getAggregationLabel(aggregation: IoTHistoryAggregation | undefined) {
   if (aggregation === 'sample') return 'interval logger'
@@ -661,14 +662,14 @@ function GaugeVisual({ points, parameterLabel, unit, aggregation }: { points: Ch
 
 function HeatVisual({ points, stats, parameterLabel, unit, aggregation }: { points: ChartPoint[]; stats: ChartStats; parameterLabel: string; unit: string; aggregation: IoTHistoryAggregation }) {
   const range = (stats.max ?? 0) - (stats.min ?? 0)
-  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={14} isAnimationActive={false}>{points.map((point, index) => { const ratio = range > 0 ? (point.value - (stats.min ?? 0)) / range : 1; return <Cell key={`${point.ts}-${index}`} fill={`hsl(${205 - ratio * 155} 78% 56%)`} fillOpacity={0.45 + ratio * 0.55} /> })}</Bar></BarChart></ResponsiveContainer>
+  return <ResponsiveContainer width="100%" height="100%"><BarChart data={points} margin={{ top: 7, right: 8, bottom: 2, left: 2 }}><CartesianGrid stroke="#dceeee" strokeDasharray="3 5" vertical={false} /><XAxis dataKey="ts" axisLine={false} tickLine={false} tick={{ fill: '#78949d', fontSize: 8.5 }} tickFormatter={value => formatAxisTime(value, aggregation)} minTickGap={34} interval="preserveStartEnd" /><YAxis hide domain={[0, 'auto']} /><Tooltip content={<HistoryTooltip parameterLabel={parameterLabel} unit={unit} aggregation={aggregation} />} /><Bar dataKey="value" radius={[3, 3, 0, 0]} maxBarSize={14} isAnimationActive={false}>{points.map((point, index) => { const ratio = range > 0 ? (point.value - (stats.min ?? 0)) / range : 1; return <Cell key={`${point.ts}-${index}`} fill="currentColor" fillOpacity={0.45 + ratio * 0.55} /> })}</Bar></BarChart></ResponsiveContainer>
 }
 
 function HistoryTooltip({ active, payload, label, parameterLabel, unit, aggregation = 'hour', directional = false }: TooltipProps<number, string> & { parameterLabel: string; unit: string; aggregation?: IoTHistoryAggregation; directional?: boolean }) {
   if (!active || !payload?.length) return null
   const sourcePoint = payload[0]?.payload as Partial<ChartPoint> | undefined
   const rawValue = payload[0]?.value
-  const value = typeof rawValue === 'number' || typeof rawValue === 'string' ? rawValue : sourcePoint?.value
+  const value = getHistoryTooltipValue({ rawValue, sourceValue: sourcePoint?.value, directional })
   const numericValue = getNumericValue(value)
   const timestamp = sourcePoint?.ts ?? label
   const tooltipTime = typeof timestamp === 'number' || typeof timestamp === 'string' ? formatChartTime(timestamp, aggregation) : '-'
