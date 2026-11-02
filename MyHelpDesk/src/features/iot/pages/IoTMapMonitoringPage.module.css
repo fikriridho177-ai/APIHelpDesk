@@ -162,7 +162,7 @@
 .tone-issue { border-top-color: #d86c4e; }
 .tone-mapped { border-top-color: #5b9be8; }
 
-/* Peta menjadi fokus utama satu baris penuh. Semua keterangan sengaja berada di bawahnya. */
+/* Peta menjadi fokus utama satu baris penuh. Detail dibuka sebagai dialog saat diperlukan. */
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -171,7 +171,6 @@
 }
 
 .mapPanel,
-.devicePanel,
 .detailPanel,
 .noSelection {
   min-width: 0;
@@ -206,6 +205,13 @@
 .panelHeader p,
 .detailHeader p { margin: 0; color: #78949d; font-size: .68rem; }
 
+.mapPanelHeader { align-items: center; }
+.mapTools { display: flex; align-items: flex-end; justify-content: flex-end; gap: 16px; }
+.loggerSelect { display: grid; gap: 5px; min-width: 180px; }
+.loggerSelect span { color: #6f8d96; font-size: .56rem; font-weight: 800; letter-spacing: .1em; }
+.loggerSelect select { min-height: 32px; padding: 0 28px 0 10px; border: 1px solid #c9e0e4; border-radius: 7px; background: #fff; color: #204b5d; font: inherit; font-size: .66rem; font-weight: 700; }
+.loggerSelect select:focus { outline: 2px solid rgba(48, 213, 200, .3); outline-offset: 1px; }
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -222,66 +228,7 @@
 .legendStale { background: #db8b1d; }
 .legendIssue { background: #cf5e37; }
 
-.sidePanel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  min-width: 0;
-}
-
-.deviceList {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  max-height: none;
-  overflow: visible;
-  padding: 12px;
-  background: #f6fbfc;
-}
-
-.deviceItem {
-  display: grid;
-  grid-template-columns: 9px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 9px;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid #d7e8eb;
-  border-radius: 8px;
-  background: #fff;
-  color: #173e4f;
-  text-align: left;
-  cursor: pointer;
-}
-
-.deviceItem:hover,
-.deviceSelected {
-  border-color: #54c6bd;
-  background: #effcf9;
-  box-shadow: inset 3px 0 #18a995;
-}
-
-.deviceDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #748894;
-  box-shadow: 0 0 0 4px rgba(116, 136, 148, .13);
-}
-
-.dot-online { background: #17a988; box-shadow: 0 0 0 4px rgba(23, 169, 136, .14); }
-.dot-stale { background: #db8b1d; box-shadow: 0 0 0 4px rgba(219, 139, 29, .14); }
-.dot-noRecentData,
-.dot-inactive { background: #cf5e37; box-shadow: 0 0 0 4px rgba(207, 94, 55, .14); }
-.dot-unknown { background: #8069ce; box-shadow: 0 0 0 4px rgba(128, 105, 206, .14); }
-
-.deviceCopy,
-.deviceStatus { display: grid; gap: 3px; min-width: 0; }
-.deviceCopy strong { overflow: hidden; color: #173e4f; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
-.deviceCopy small,
-.deviceStatus small { overflow: hidden; color: #8099a2; font-size: .57rem; text-overflow: ellipsis; white-space: nowrap; }
-.deviceStatus { color: #246d77; font-size: .6rem; font-weight: 800; text-align: right; }
-.deviceStatus small { font-weight: 500; }
+.detailSlot { display: contents; }
 
 .detailPanel {
   position: fixed;
@@ -290,7 +237,7 @@
   left: 50%;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  width: min(1240px, calc(100vw - 32px));
+  width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
   overflow: auto;
   border: 1px solid #a8d5d7;
@@ -329,16 +276,8 @@
 .status-inactive { border-color: #f0c1b4; background: #fff2ee; color: #b45036; }
 .status-unknown { border-color: #d7ccfb; background: #f5f2ff; color: #765dd1; }
 
-.observationSection,
-.weatherSection { padding: 22px 26px 26px; border-bottom: 1px solid #e1ecee; }
+.observationSection { padding: 22px 26px 26px; border-bottom: 1px solid #e1ecee; }
 .observationSection { grid-column: 1; grid-row: 2; background: #fff; }
-.weatherSection { grid-column: 1; grid-row: 3; min-width: 0; overflow: visible; padding: 0 0 18px; border-top: 1px solid #e1ecee; background: #f7fbfc; }
-.weatherSection :global(.panel) { border: 0; border-radius: 0; box-shadow: none; }
-.weatherSection :global(.panelHeading) { padding: 0; }
-.weatherSection :global(.heading) { padding: 16px; border-bottom: 1px solid #e1ecee; }
-.weatherSection :global(.locationBar) { padding: 12px 16px; }
-.weatherSection :global(.forecastGrid) { padding: 0 22px 22px; }
-.weatherSection :global(.footer) { padding: 12px 22px; }
 
 .sectionHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
 .sectionHeading h3 { margin: 4px 0 0; color: #17445a; font-size: .92rem; }
@@ -359,12 +298,10 @@
 
 @media (max-width: 1180px) {
   .summaryGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .deviceList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .observationGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-  .detailPanel { grid-template-columns: minmax(0, 1fr); width: min(980px, calc(100vw - 24px)); }
+  .detailPanel { grid-template-columns: minmax(0, 1fr); width: min(760px, calc(100vw - 24px)); }
   .detailHeader,
-  .observationSection,
-  .weatherSection { grid-column: 1; grid-row: auto; }
+  .observationSection { grid-column: 1; grid-row: auto; }
 }
 
 @media (max-width: 700px) {
@@ -377,8 +314,10 @@
   .summaryCard strong { font-size: 1.5rem; }
   .panelHeader,
   .detailHeader { padding: 14px; }
+  .mapPanelHeader { align-items: stretch; flex-direction: column; }
+  .mapTools { align-items: stretch; flex-direction: column; gap: 10px; }
+  .loggerSelect { min-width: 0; }
   .legend { justify-content: flex-start; white-space: normal; }
-  .deviceList { grid-template-columns: 1fr; }
   .observationGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .detailHeader { flex-direction: column; }
   .statusBadge { align-self: flex-start; }
