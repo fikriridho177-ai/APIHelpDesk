@@ -4,11 +4,18 @@ import { DashboardIcon } from '../../dashboard/components/DashboardIcon'
 import { WAD_SERVICE_ITEMS, type WadServiceItem } from '../wadServices'
 import styles from './WadServiceHub.module.css'
 
-function ServiceContent({ item }: { item: WadServiceItem }) {
+function ServiceContent({ item, index }: { item: WadServiceItem; index: number }) {
   const isAvailable = item.available && !!item.route
 
   return (
     <>
+      <span className={styles.serviceHeader}>
+        <span className={styles.serviceIndex}>{String(index + 1).padStart(2, '0')}</span>
+        <span className={`${styles.serviceStatus} ${isAvailable ? styles.statusAvailable : styles.statusPlanned}`}>
+          <span className={styles.statusDot} aria-hidden="true" />
+          {isAvailable ? 'Aktif' : 'Segera tersedia'}
+        </span>
+      </span>
       <span className={styles.serviceIcon}>
         <DashboardIcon name={item.icon} />
       </span>
@@ -16,67 +23,80 @@ function ServiceContent({ item }: { item: WadServiceItem }) {
         <strong>{item.label}</strong>
         <small>{item.description}</small>
       </span>
-      <span className={`${styles.serviceStatus} ${isAvailable ? styles.statusAvailable : styles.statusPlanned}`}>
-        {isAvailable ? 'Buka layanan' : 'Segera tersedia'}
-      </span>
-      <span className={styles.serviceArrow} aria-hidden="true">
-        <DashboardIcon name="arrow" />
+      <span className={styles.serviceFooter}>
+        <span className={styles.serviceAction}>{isAvailable ? 'Buka layanan' : 'Modul disiapkan'}</span>
+        <span className={styles.serviceArrow} aria-hidden="true">
+          <DashboardIcon name="arrow" />
+        </span>
       </span>
     </>
   )
 }
 
 export default function WadServiceHub() {
+  const availableCount = WAD_SERVICE_ITEMS.filter(item => item.available && item.route).length
+
   return (
     <section className={styles.section} aria-labelledby="wad-service-hub-title">
       <div className={styles.heading}>
-        <div>
-          <span className={styles.eyebrow}>WATER MANAGEMENT / WAD</span>
-          <h2 id="wad-service-hub-title">Pilih layanan WAD</h2>
-          <p>Pilih pemantauan atau pemeriksaan yang ingin Anda buka.</p>
-        </div>
-        <span className={styles.serviceCount}>6 layanan</span>
-      </div>
-
-      <div className={styles.flow}>
-        <div className={styles.rootNode} aria-label="WAD Water Management">
-          <span className={styles.rootIcon}>
+        <div className={styles.headingTitle}>
+          <span className={styles.sectionIcon}>
             <DashboardIcon name="water" />
           </span>
-          <strong>WAD</strong>
-          <small>Water Management</small>
+          <div>
+            <span className={styles.eyebrow}>WAD / WATER MANAGEMENT</span>
+            <h2 id="wad-service-hub-title">Ruang kerja layanan</h2>
+            <p>Pilih pemantauan atau pemeriksaan yang ingin Anda buka.</p>
+          </div>
         </div>
+        <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari 6 layanan`}>
+          <strong>{availableCount}</strong>
+          <span>aktif</span>
+          <i aria-hidden="true" />
+          <strong>{WAD_SERVICE_ITEMS.length}</strong>
+          <span>layanan</span>
+        </div>
+      </div>
 
-        <div className={styles.connector} aria-hidden="true" />
-
-        <div className={styles.serviceList}>
-          {WAD_SERVICE_ITEMS.map(item => {
+      <ul className={styles.serviceGrid}>
+        {WAD_SERVICE_ITEMS.map((item, index) => {
             const isAvailable = item.available && !!item.route
 
             if (!isAvailable) {
               return (
-                <div
+                <li
                   key={item.code}
-                  className={`${styles.serviceRow} ${styles.serviceRowDisabled}`}
-                  aria-disabled="true"
+                  className={styles.serviceItem}
                 >
-                  <ServiceContent item={item} />
-                </div>
+                  <div className={`${styles.serviceTile} ${styles.serviceTileDisabled}`} aria-disabled="true">
+                    <ServiceContent item={item} index={index} />
+                  </div>
+                </li>
               )
             }
 
             return (
-              <Link
+              <li
                 key={item.code}
-                className={styles.serviceRow}
-                to={item.route!}
-                aria-label={`${item.label}: ${item.description}`}
+                className={styles.serviceItem}
               >
-                <ServiceContent item={item} />
-              </Link>
+                <Link
+                  className={styles.serviceTile}
+                  to={item.route!}
+                  aria-label={`${item.label}: ${item.description}`}
+                >
+                  <ServiceContent item={item} index={index} />
+                </Link>
+              </li>
             )
           })}
-        </div>
+      </ul>
+
+      <div className={styles.sectionNote}>
+        <span className={styles.noteIcon}>
+          <DashboardIcon name="info" />
+        </span>
+        <span>Data sensor akan tampil setelah memilih layanan pemantauan yang tersedia.</span>
       </div>
     </section>
   )

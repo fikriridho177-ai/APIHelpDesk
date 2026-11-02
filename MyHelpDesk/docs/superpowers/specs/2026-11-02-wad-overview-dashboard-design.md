@@ -1,53 +1,55 @@
-# Desain Hub Layanan WAD
++# Desain Hub Layanan WAD
 
 ## Intent
 
-Saat pengguna memilih kartu WAD dari katalog layanan, halaman `/ecs` harus menjadi pusat pilihan layanan WAD. Alurnya mengikuti rancangan: `Pilih Layanan → WAD → enam layanan operasional`. Halaman depan WAD tidak boleh terasa seperti dashboard IoT atau daftar menu Manajemen IoT.
+Saat pengguna memilih kartu WAD dari katalog layanan, halaman /ecs menjadi ruang kerja untuk memilih layanan Water Management. Diagram yang diberikan menjadi urutan informasi, bukan bentuk visual yang disalin mentah sebagai kotak dan garis.
 
 ## Tujuan
 
-- Menampilkan identitas WAD sebagai `Water Management` dengan penjelasan singkat.
-- Menampilkan enam pilihan layanan secara jelas dan berurutan:
+- Menampilkan identitas WAD sebagai Water Management dengan penjelasan singkat.
+- Menampilkan enam layanan dalam urutan yang tetap:
   1. Pantauan TMAT
   2. Pantauan TMAK
   3. Kondisi Pintu Air
   4. Kondisi Siphon / Gorong-gorong
   5. Pengecekan Subsiden Gambut
   6. Pengecekan Curah Hujan
-- Membuat setiap pilihan menjadi titik masuk layanan yang dapat dikembangkan tanpa mengubah alur kartu WAD.
+- Membuat halaman terasa seperti ruang kerja aplikasi monitoring, bukan dokumen atau flowchart.
 - Mempertahankan halaman sensor yang sudah ada sebagai detail/tujuan layanan yang relevan.
-- Menyediakan state “modul disiapkan” untuk layanan yang belum memiliki sumber data atau halaman khusus.
+- Menyediakan state Segera tersedia untuk layanan yang belum memiliki sumber data atau halaman khusus.
 
 ## Bukan Tujuan
 
 - Tidak membuat API, tabel, atau endpoint baru pada tahap hub layanan.
 - Tidak menghapus halaman monitoring ECS yang sudah ada.
-- Tidak menampilkan kartu ringkasan sensor di landing WAD sebelum layanan spesifik dipilih.
+- Tidak menampilkan ringkasan sensor di landing WAD sebelum layanan spesifik dipilih.
 - Tidak mengklaim layanan yang belum memiliki sumber data sebagai monitoring aktif.
+- Tidak mengubah integrasi GIS, navbar, atau hierarki route lama.
 
 ## Pengalaman yang Dipilih
 
-Halaman `/ecs` akan memiliki urutan berikut:
+Halaman /ecs memiliki urutan berikut:
 
-1. Header ringkas dengan breadcrumb konteks `Pilih Layanan / WAD`, label `Water Management`, dan deskripsi pekerjaan WAD.
-2. Area hub dengan node WAD sebagai sumber alur.
-3. Daftar enam layanan berbentuk baris pilihan yang konsisten, memiliki nomor, ikon, judul, deskripsi singkat, status modul, dan panah tujuan.
-4. Layanan aktif membuka halaman yang sudah tersedia:
-   - Pantauan TMAT → daftar stasiun monitoring untuk memilih logger/lokasi.
-   - Pantauan TMAK → halaman TMAK yang sudah ada.
-   - Pengecekan Curah Hujan → halaman curah hujan yang sudah ada.
-5. Layanan yang belum memiliki halaman khusus tetap terlihat sebagai pilihan, tetapi diberi status `Segera tersedia` dan tidak mengarah ke halaman palsu.
-6. Navigasi IoT lama tidak ditampilkan sebagai isi utama hub WAD.
+1. Header WAD dengan identitas Water Management di sisi kiri dan panel status ringkas di sisi kanan.
+2. Area Ruang kerja layanan dengan indikator jumlah layanan aktif dan jumlah seluruh layanan.
+3. Enam service tile dalam grid responsif. Setiap tile memiliki nomor urut, ikon, judul, deskripsi, status, dan aksi.
+4. Tile aktif menggunakan hover/focus state dan membuka halaman yang tersedia:
+   - Pantauan TMAT → daftar stasiun monitoring.
+   - Pantauan TMAK → halaman TMAK.
+   - Pengecekan Curah Hujan → halaman curah hujan.
+5. Tile yang belum tersedia tetap terlihat tetapi tidak interaktif dan diberi status Segera tersedia.
+6. Catatan kecil menjelaskan bahwa data sensor muncul setelah layanan pemantauan dipilih.
 
 ## Data dan Logika
 
 - Definisi layanan disimpan sebagai konfigurasi frontend terpisah agar urutan, label, ikon, status, dan route mudah dirawat.
-- Route tujuan menggunakan route ECS yang sudah tersedia; layanan yang belum punya route diberi `available: false`.
+- Route tujuan menggunakan route ECS yang sudah tersedia.
+- Layanan tanpa route diberi available: false dan tidak dirender sebagai link.
 - Tidak ada fetch data sensor pada landing WAD. Fetch tetap terjadi di halaman layanan monitoring setelah pengguna memilih layanan.
 
 ## Batasan Teknis
 
-- Pertahankan permission gate WAD pada halaman `/ecs`.
+- Pertahankan permission gate WAD pada halaman /ecs.
 - Gunakan komponen dan CSS module ECS yang sudah ada.
 - Jangan mengubah integrasi GIS, navbar, API, database, atau route yang sudah ada.
 - Jangan menghapus alias route IoT lama yang masih diperlukan untuk bookmark/permission.
@@ -55,6 +57,6 @@ Halaman `/ecs` akan memiliki urutan berikut:
 
 ## Verifikasi
 
-- `npm run build` harus berhasil.
+- npm run build harus berhasil.
 - Tidak ada error TypeScript/diagnostic pada file yang disentuh.
-- Uji manual halaman `/ecs` pada desktop dan viewport sempit: enam layanan terlihat, dua route aktif membuka halaman yang benar, dan layanan belum tersedia tidak dapat diklik.
+- Uji manual halaman /ecs pada desktop dan viewport sempit: enam layanan terlihat, route aktif membuka halaman yang benar, dan layanan belum tersedia tidak dapat diklik.
