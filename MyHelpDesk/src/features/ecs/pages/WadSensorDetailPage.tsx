@@ -283,13 +283,6 @@ export default function WadSensorDetailPage() {
                   value={device.latitude != null && device.longitude != null ? `${device.latitude}, ${device.longitude}` : 'Belum diatur'}
                 />
               </dl>
-              <Link className={styles.historyLink} to={`/ecs/data-historis?loggerId=${device.loggerId}`}>
-                <span>
-                  <strong>Buka histori lengkap</strong>
-                  <small>Analisis pembacaan lampau per periode</small>
-                </span>
-                <DashboardIcon name="arrow" />
-              </Link>
             </aside>
           </div>
 
