@@ -50,6 +50,7 @@ interface IoTMonitoringPageProps {
   sourceType?: IoTSourceType
   menuCode?: string
   permissionCode?: string
+  lockLogger?: boolean
   title?: string
   subtitle?: string
   eyebrow?: string
@@ -250,6 +251,7 @@ export default function IoTMonitoringPage({
   sourceType,
   menuCode = MENU_CODE,
   permissionCode,
+  lockLogger = false,
   title = 'Monitoring Sensor IoT',
   subtitle = 'Pantau logger Vendor dan Internal dalam satu halaman dengan histori pembacaan bertimestamp.',
   eyebrow = 'IOT MONITORING / UNIFIED TELEMETRY',
@@ -257,6 +259,7 @@ export default function IoTMonitoringPage({
   const { permission, loaded: permissionLoaded } = useMenuPermission(permissionCode ?? menuCode)
   const [searchParams] = useSearchParams()
   const requestedLoggerId = Number(searchParams.get('loggerId'))
+  const isLoggerLocked = lockLogger || (Number.isInteger(requestedLoggerId) && requestedLoggerId > 0)
   const canRead = !!permission?.canRead
   const [devices, setDevices] = useState<IoTDeviceWithLatest[]>([])
   const [history, setHistory] = useState<IoTHistoryResponse | null>(null)
@@ -289,16 +292,20 @@ export default function IoTMonitoringPage({
         : allRows
       setDevices(rows)
       setLastUpdated(new Date().toISOString())
-      setSelectedLoggerId(current => current !== null && rows.some(device => device.loggerId === current)
-        ? current
-        : allRows.find(device => device.loggerId === requestedLoggerId)?.loggerId ?? rows[0]?.loggerId ?? null)
+      const requestedDevice = allRows.find(device => device.loggerId === requestedLoggerId)
+      setSelectedLoggerId(current => {
+        if (isLoggerLocked) return requestedDevice?.loggerId ?? null
+        return current !== null && rows.some(device => device.loggerId === current)
+          ? current
+          : requestedDevice?.loggerId ?? rows[0]?.loggerId ?? null
+      })
     } catch (loadError) {
       console.error('Gagal memuat perangkat IoT:', loadError)
       setError('Daftar perangkat IoT gagal dimuat. Silakan coba lagi.')
       setDevices([])
       setSelectedLoggerId(null)
     } finally { setLoading(false) }
-  }, [requestedLoggerId, sourceType])
+  }, [isLoggerLocked, requestedLoggerId, sourceType])
 
   useEffect(() => { if (permissionLoaded && canRead) void loadDevices() }, [permissionLoaded, canRead, loadDevices, refreshKey])
 
@@ -317,7 +324,9 @@ export default function IoTMonitoringPage({
     })
   }, [devices, sourceFilter, deviceFilter])
 
-  const selectedDevice = filteredDevices.find(device => device.loggerId === selectedLoggerId) ?? filteredDevices[0] ?? null
+  const selectedDevice = isLoggerLocked
+    ? devices.find(device => device.loggerId === requestedLoggerId) ?? null
+    : filteredDevices.find(device => device.loggerId === selectedLoggerId) ?? filteredDevices[0] ?? null
 
   const historyRangeError = historyPeriod === 'day'
     ? null
@@ -339,9 +348,10 @@ export default function IoTMonitoringPage({
   }
 
   useEffect(() => {
+    if (isLoggerLocked) return
     if (requestedLoggerId > 0 && selectedDevice?.loggerId === requestedLoggerId) return
     if (selectedDevice && selectedDevice.loggerId !== selectedLoggerId) setSelectedLoggerId(selectedDevice.loggerId)
-  }, [requestedLoggerId, selectedDevice, selectedLoggerId])
+  }, [isLoggerLocked, requestedLoggerId, selectedDevice, selectedLoggerId])
 
   useEffect(() => {
     if (!selectedDevice) { setParameters([]); setParametersError(null); return undefined }
@@ -427,10 +437,10 @@ export default function IoTMonitoringPage({
           <p className={styles.eyebrow}><span className={styles.liveDot} /> {eyebrow}</p>
           <h1>{title}</h1>
           <p className={styles.subtitle}>{subtitle}</p>
-          <div className={styles.headerMeta}><span>UPDATE {lastUpdated ? formatDate(lastUpdated, true) : '—'}</span><span>{selectedDevice ? `LOGGER ${selectedDevice.loggerCode}` : 'NO LOGGER SELECTED'}</span></div>
+          <div className={styles.headerMeta}><span>UPDATE {lastUpdated ? formatDate(lastUpdated, true) : '—'}</span><span>{selectedDevice ? `LOGGER ${selectedDevice.loggerCode}` : isLoggerLocked ? 'LOGGER TERKUNCI' : 'NO LOGGER SELECTED'}</span></div>
         </div>
         <div className={styles.headerActions}>
-          {!sourceType && <label className={styles.compactControl}><span>SUMBER LOGGER</span><select value={sourceFilter} onChange={event => setSourceFilter(event.target.value as IoTSourceType | '')}><option value="">Semua sumber</option><option value="INTERNAL">Internal</option><option value="VENDOR">Vendor</option></select></label>}
+          {!isLoggerLocked && !sourceType && <label className={styles.compactControl}><span>SUMBER LOGGER</span><select value={sourceFilter} onChange={event => setSourceFilter(event.target.value as IoTSourceType | '')}><option value="">Semua sumber</option><option value="INTERNAL">Internal</option><option value="VENDOR">Vendor</option></select></label>}
           <label className={styles.compactControl}><span>AUTO REFRESH</span><select value={autoRefresh} onChange={event => setAutoRefresh(Number(event.target.value) as AutoRefreshSeconds)}><option value={0}>Off</option><option value={30}>30 detik</option><option value={60}>1 menit</option><option value={300}>5 menit</option></select></label>
           <button className={styles.refreshButton} type="button" onClick={() => setRefreshKey(key => key + 1)} disabled={loading || historyLoading}><span>↻</span>{loading || historyLoading ? 'Memuat...' : 'Refresh data'}</button>
         </div>
@@ -438,7 +448,7 @@ export default function IoTMonitoringPage({
 
       {error && <section className={styles.error} role="alert"><span>{error}</span><button type="button" onClick={() => setRefreshKey(key => key + 1)}>Coba lagi</button></section>}
 
-      <section className={styles.statusPanel} aria-label="Ringkasan kondisi logger">
+      {!isLoggerLocked && <section className={styles.statusPanel} aria-label="Ringkasan kondisi logger">
         <div className={styles.statusPanelHeading}>
           <div>
             <span className={styles.panelEyebrow}>DEVICE HEALTH</span>
@@ -460,9 +470,9 @@ export default function IoTMonitoringPage({
             <StatusBar label="TIDAK DIKETAHUI" value={summary.unknown} total={devices.length} tone="unknown" />
           </div>
         </div>
-      </section>
+      </section>}
 
-      <section className={styles.workspace}>
+      {!isLoggerLocked && <section className={styles.workspace}>
         <section className={`${styles.panel} ${styles.devicePanel}`}>
           <PanelHeading eyebrow="LOGGER INVENTORY" title="Perangkat terpantau" subtitle={`${filteredDevices.length} dari ${devices.length} logger ditampilkan`} />
           <div className={styles.deviceToolbar}><label className={styles.searchControl}><span>Cari perangkat</span><input value={deviceFilter} onChange={event => setDeviceFilter(event.target.value)} placeholder="Nama, kode, atau lokasi..." /></label></div>
@@ -480,11 +490,11 @@ export default function IoTMonitoringPage({
           </div>
           <div className={styles.qualityNote}>Threshold belum dikonfigurasi oleh API. Dashboard tidak menebak batas normal atau bahaya.</div>
         </section>
-      </section>
+      </section>}
 
       <section className={styles.categoryBoard} aria-label="Grafik histori parameter">
         <div className={styles.categoryBoardHeading}>
-          <div><span className={styles.panelEyebrow}>HISTORICAL TELEMETRY</span><h2>Grafik histori per parameter</h2><p>{selectedDevice ? `${selectedDevice.namaLogger} · ${history?.total ?? 0} pembacaan terakhir` : 'Pilih logger untuk melihat histori pembacaan.'}</p></div>
+          <div><span className={styles.panelEyebrow}>HISTORICAL TELEMETRY</span><h2>Grafik histori per parameter</h2><p>{selectedDevice ? `${selectedDevice.namaLogger} · ${history?.total ?? 0} pembacaan terakhir` : isLoggerLocked ? 'Logger dari detail sensor tidak ditemukan.' : 'Pilih logger untuk melihat histori pembacaan.'}</p></div>
           <div className={styles.historyControls}>
             <div className={styles.historyRangeSummary}>
               <span>RENTANG AKTIF</span>
@@ -518,7 +528,7 @@ export default function IoTMonitoringPage({
             <span className={styles.dailyBadge}>{history ? `Agregasi per ${getAggregationLabel(historyAggregation)}` : `Agregasi ${getAggregationLabel(historyAggregation)}`}</span>
           </div>
         </div>
-        {historyLoading ? <div className={styles.panel}><StateMessage>Memuat histori pembacaan...</StateMessage></div> : historyError ? <div className={styles.panel}><StateMessage>{historyError}</StateMessage></div> : parameterGroups.length === 0 ? <div className={styles.panel}><StateMessage>{selectedDevice ? (parametersLoading ? 'Memuat metadata parameter...' : 'Belum ada nilai numerik untuk grafik histori.') : 'Pilih logger dari daftar perangkat.'}</StateMessage></div> : parameterGroups.map((group, index) => <CategorySection key={group.code} group={group} index={index} history={history?.data ?? []} latest={selectedDevice?.latest ?? null} loggerCode={selectedDevice?.loggerCode} loggerName={selectedDevice?.namaLogger} aggregation={historyAggregation} />)}
+        {historyLoading ? <div className={styles.panel}><StateMessage>Memuat histori pembacaan...</StateMessage></div> : historyError ? <div className={styles.panel}><StateMessage>{historyError}</StateMessage></div> : parameterGroups.length === 0 ? <div className={styles.panel}><StateMessage>{selectedDevice ? (parametersLoading ? 'Memuat metadata parameter...' : 'Belum ada nilai numerik untuk grafik histori.') : isLoggerLocked ? 'Logger dari tautan histori tidak ditemukan.' : 'Pilih logger dari daftar perangkat.'}</StateMessage></div> : parameterGroups.map((group, index) => <CategorySection key={group.code} group={group} index={index} history={history?.data ?? []} latest={selectedDevice?.latest ?? null} loggerCode={selectedDevice?.loggerCode} loggerName={selectedDevice?.namaLogger} aggregation={historyAggregation} />)}
       </section>
     </main>
   )
