@@ -16,9 +16,11 @@ import styles from './WadDeviceMonitoringPage.module.css'
 
 type DeviceFilter = 'all' | 'online' | 'attention'
 
+const DEVICE_REFRESH_INTERVAL_MS = 60_000
+
 const DEVICE_FILTERS: Array<{ key: DeviceFilter; label: string; description: string }> = [
   { key: 'all', label: 'Semua perangkat', description: 'Seluruh logger terdaftar' },
-  { key: 'online', label: 'Aktif', description: 'Payload masih dalam interval' },
+  { key: 'online', label: 'Online', description: 'Payload masih dalam interval' },
   { key: 'attention', label: 'Perlu perhatian', description: 'Terlambat atau tidak ada payload' },
 ]
 
@@ -98,7 +100,15 @@ export default function WadDeviceMonitoringPage() {
   }, [])
 
   useEffect(() => {
-    if (loaded && canRead) void loadMonitoring()
+    if (!loaded || !canRead) return
+
+    void loadMonitoring()
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void loadMonitoring()
+    }, DEVICE_REFRESH_INTERVAL_MS)
+
+    return () => window.clearInterval(intervalId)
   }, [canRead, loaded, loadMonitoring, refreshKey])
 
   const devices = monitoring?.devices ?? []
@@ -125,7 +135,7 @@ export default function WadDeviceMonitoringPage() {
           </div>
           <div className={common.heroMeta}>
             <span><strong>{devices.length}</strong> perangkat terpantau</span>
-            <span><strong>{onlineCount}</strong> aktif</span>
+            <span><strong>{onlineCount}</strong> online</span>
             <span><strong>{attentionCount}</strong> perlu perhatian</span>
           </div>
         </div>
@@ -150,14 +160,14 @@ export default function WadDeviceMonitoringPage() {
           <div>
             <span className={common.panelEyebrow}>STATUS PERANGKAT WAD</span>
             <h2>Kesehatan logger dalam satu tampilan</h2>
-            <p>Gunakan status aktif untuk melihat perangkat yang masih mengirim payload sesuai interval.</p>
+            <p>Gunakan status online untuk melihat perangkat yang masih mengirim payload sesuai interval.</p>
           </div>
-          <span className={common.panelStamp}>1 snapshot API</span>
+          <span className={common.panelStamp}>Refresh tiap 60 detik</span>
         </div>
 
         <div className={common.summaryGrid}>
           <DeviceSummary icon="desktop" tone="cyan" label="Perangkat terpantau" value={devices.length} hint="Logger pada snapshot terbaru" />
-          <DeviceSummary icon="check" tone="green" label="Aktif" value={onlineCount} hint="Payload dalam interval logger" />
+          <DeviceSummary icon="check" tone="green" label="Online" value={onlineCount} hint="Payload dalam interval logger" />
           <DeviceSummary icon="clock" tone="blue" label="Perlu perhatian" value={attentionCount} hint="Terlambat, nonaktif, atau tanpa data" />
         </div>
 
@@ -247,7 +257,7 @@ function DeviceCard({ device, index }: { device: IoTMonitoringDevice; index: num
           <span>{formatDeviceAge(device.ageMinutes)}</span>
         </div>
         <span className={`${styles.payloadBadge} ${online ? styles.payloadBadgeOnline : styles.payloadBadgeAttention}`}>
-          {online ? 'AKTIF' : 'PERLU CEK'}
+          {online ? 'ONLINE' : 'PERLU CEK'}
         </span>
       </div>
 
@@ -257,7 +267,7 @@ function DeviceCard({ device, index }: { device: IoTMonitoringDevice; index: num
           <strong>{formatInterval(device.intervalMenit)}</strong>
         </div>
         <div>
-          <span>Status logger</span>
+          <span>Konfigurasi logger</span>
           <strong>{device.aktif ? 'Aktif' : 'Nonaktif'}</strong>
         </div>
       </div>
