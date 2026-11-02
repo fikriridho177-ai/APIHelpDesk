@@ -12,15 +12,17 @@ import {
 
 import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
-import { getIoTDevices, getIoTHistory, getIoTLatest, getIoTParameters } from '../api/iotApi'
+import { useSearchParams } from 'react-router-dom'
+
+import { getIoTHistory, getIoTMonitoring, getIoTParameters } from '../api/iotApi'
 import { adjustTmakValue } from '../lib/tmakOffset'
 import type {
-  IoTDevice,
   IoTDeviceWithLatest,
   IoTHistoryAggregation,
   IoTHistoryPeriod,
   IoTHistoryQuery,
   IoTHistoryResponse,
+  IoTMonitoringDevice,
   IoTParameter,
   IoTReading,
   IoTSourceType,
@@ -66,6 +68,35 @@ function getFreshness(reading: IoTReading | null, intervalMinutes: number): Fres
   if (timestamp === null || timestamp > Date.now()) return 'unknown'
   const allowedDelayMs = Math.max(intervalMinutes * 2, 15) * 60_000
   return Date.now() - timestamp <= allowedDelayMs ? 'fresh' : 'late'
+}
+
+function toDeviceWithLatest(device: IoTMonitoringDevice): IoTDeviceWithLatest {
+  const sourceType: IoTSourceType = device.sourceType === 'INTERNAL' ? 'INTERNAL' : 'VENDOR'
+  const hasLatest = device.rawId !== null && (device.lastSensorAt !== null || device.lastReceivedAt !== null)
+
+  return {
+    loggerId: device.loggerId,
+    loggerCode: device.loggerCode ?? `LOGGER-${device.loggerId}`,
+    namaLogger: device.namaLogger ?? `Logger ${device.loggerId}`,
+    sourceType,
+    lokasi: device.lokasi,
+    latitude: device.latitude,
+    longitude: device.longitude,
+    controller: null,
+    communication: null,
+    intervalMenit: device.intervalMenit,
+    aktif: device.aktif,
+    latest: hasLatest
+      ? {
+          rawId: device.rawId!,
+          loggerId: device.loggerId,
+          ts: device.lastSensorAt ?? device.lastReceivedAt ?? '',
+          receivedAt: device.lastReceivedAt ?? device.lastSensorAt ?? '',
+          data: device.data,
+        }
+      : null,
+    readingError: false,
+  }
 }
 
 function freshnessLabel(freshness: Freshness) {
@@ -222,6 +253,8 @@ export default function IoTMonitoringPage({
   eyebrow = 'IOT MONITORING / UNIFIED TELEMETRY',
 }: IoTMonitoringPageProps = {}) {
   const { permission, loaded: permissionLoaded } = useMenuPermission(menuCode)
+  const [searchParams] = useSearchParams()
+  const requestedLoggerId = Number(searchParams.get('loggerId'))
   const canRead = !!permission?.canRead
   const [devices, setDevices] = useState<IoTDeviceWithLatest[]>([])
   const [history, setHistory] = useState<IoTHistoryResponse | null>(null)
@@ -247,22 +280,23 @@ export default function IoTMonitoringPage({
     setLoading(true)
     setError(null)
     try {
-      const response = await getIoTDevices(sourceType)
-      const latestResults = await Promise.allSettled(response.data.map(device => getIoTLatest(device.loggerId)))
-      const rows = response.data.map((device: IoTDevice, index) => {
-        const result = latestResults[index]
-        return { ...device, latest: result.status === 'fulfilled' ? result.value : null, readingError: result.status === 'rejected' }
-      })
+      const response = await getIoTMonitoring()
+      const allRows = response.devices.map(toDeviceWithLatest)
+      const rows = sourceType
+        ? allRows.filter(device => device.sourceType === sourceType)
+        : allRows
       setDevices(rows)
       setLastUpdated(new Date().toISOString())
-      setSelectedLoggerId(current => current !== null && rows.some(device => device.loggerId === current) ? current : rows[0]?.loggerId ?? null)
+      setSelectedLoggerId(current => current !== null && rows.some(device => device.loggerId === current)
+        ? current
+        : allRows.find(device => device.loggerId === requestedLoggerId)?.loggerId ?? rows[0]?.loggerId ?? null)
     } catch (loadError) {
       console.error('Gagal memuat perangkat IoT:', loadError)
       setError('Daftar perangkat IoT gagal dimuat. Silakan coba lagi.')
       setDevices([])
       setSelectedLoggerId(null)
     } finally { setLoading(false) }
-  }, [sourceType])
+  }, [requestedLoggerId, sourceType])
 
   useEffect(() => { if (permissionLoaded && canRead) void loadDevices() }, [permissionLoaded, canRead, loadDevices, refreshKey])
 
@@ -302,7 +336,10 @@ export default function IoTMonitoringPage({
     setHistoryPeriod(nextPeriod)
   }
 
-  useEffect(() => { if (selectedDevice && selectedDevice.loggerId !== selectedLoggerId) setSelectedLoggerId(selectedDevice.loggerId) }, [selectedDevice, selectedLoggerId])
+  useEffect(() => {
+    if (requestedLoggerId > 0 && selectedDevice?.loggerId === requestedLoggerId) return
+    if (selectedDevice && selectedDevice.loggerId !== selectedLoggerId) setSelectedLoggerId(selectedDevice.loggerId)
+  }, [requestedLoggerId, selectedDevice, selectedLoggerId])
 
   useEffect(() => {
     if (!selectedDevice) { setParameters([]); setParametersError(null); return undefined }
