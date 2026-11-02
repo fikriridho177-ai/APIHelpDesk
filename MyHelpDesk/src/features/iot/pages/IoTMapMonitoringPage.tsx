@@ -118,6 +118,22 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
 
   return (
     <main className={styles.page}>
+      <header className={styles.hero}>
+        <div>
+          <p className={styles.eyebrow}><span className={styles.liveDot} /> IOT MANAGEMENT / MAP OPERATIONS</p>
+          <h1>Peta Monitoring IoT</h1>
+          <p className={styles.subtitle}>Pantau posisi, status, dan pembacaan terbaru setiap logger dari satu layar.</p>
+          <div className={styles.heroMeta}>
+            <span>SUMBER VENDOR + INTERNAL</span>
+            <span>{monitoring ? `${monitoring.devices.length} LOGGER TERSEDIA` : 'DATA BELUM DIMUAT'}</span>
+            <span>LIVE SENSOR MAP</span>
+          </div>
+        </div>
+        <button type="button" className={styles.refreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading}>
+          {loading ? 'Memuat...' : 'Refresh monitoring'}
+        </button>
+      </header>
+
       {error && <section className={styles.alert} role="alert"><span>{error}</span><button type="button" onClick={() => setRefreshKey(key => key + 1)}>Coba lagi</button></section>}
       {mapError && <section className={styles.mapAlert} role="status"><span>{mapError}</span><button type="button" onClick={() => setMapError(null)}>Tutup</button></section>}
 
@@ -129,11 +145,8 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
         <section className={styles.workspace}>
           <section className={styles.mapPanel} aria-label="Peta posisi logger IoT">
             <div className={`${styles.panelHeader} ${styles.mapPanelHeader}`}>
-              <div><span className={styles.panelEyebrow}>LIVE SENSOR MAP</span><h2>Peta Monitoring IoT</h2><p>Gunakan marker atau pilih logger untuk membaca pembacaan terbaru.</p></div>
+              <div><span className={styles.panelEyebrow}>LIVE SENSOR MAP</span><h2>Posisi perangkat</h2><p>Klik marker atau gunakan filter logger untuk membaca data terbaru.</p></div>
               <div className={styles.mapTools}>
-                <button type="button" className={styles.mapRefreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading}>
-                  {loading ? 'Memuat...' : 'Refresh'}
-                </button>
                 <label className={styles.loggerSelect}>
                   <span>PILIH LOGGER</span>
                   <select aria-label="Pilih logger pada peta" value={selectedLoggerId ?? ''} onChange={event => {
@@ -150,14 +163,12 @@ export default function IoTMapMonitoringPage({ permissionCode = MENU_CODE }: IoT
             <IoTMonitoringMap devices={monitoring.devices} selectedLoggerId={selectedLoggerId} onSelectLogger={selectLogger} onMapError={setMapError} />
           </section>
 
-          <div className={styles.detailSlot}>
-            {selectedDevice && detailOpen ? (
-              <section className={styles.detailPanel} aria-label="Detail logger terpilih">
-                <div className={styles.detailHeader}><div><span className={styles.panelEyebrow}>SELECTED DEVICE</span><h2>{selectedDevice.namaLogger ?? selectedDevice.loggerCode ?? 'Logger IoT'}</h2><p>{selectedDevice.loggerCode ?? `Logger ${selectedDevice.loggerId}`} · {selectedDevice.sourceType ?? 'Sumber tidak diketahui'}</p></div><div className={styles.drawerHeaderActions}><span className={`${styles.statusBadge} ${styles[`status-${monitoringStatusTone(selectedDevice.status)}`]}`}><i />{monitoringStatusLabel(selectedDevice.status)}</span><button type="button" className={styles.closeButton} onClick={() => setDetailOpen(false)}>Tutup</button></div></div>
-                <div className={styles.observationSection}><div className={styles.sectionHeading}><div><span className={styles.panelEyebrow}>ACTUAL OBSERVATION</span><h3>Pembacaan terbaru</h3></div>{selectedDevice.ageMinutes != null && <small>Usia data {formatNumber(selectedDevice.ageMinutes)} menit</small>}</div>{parametersLoading ? <div className={styles.inlineState}>Memuat metadata parameter...</div> : Object.keys(selectedDevice.data).length === 0 ? <div className={styles.inlineState}>Belum ada pembacaan sensor pada response monitoring.</div> : <div className={styles.observationGrid}>{Object.entries(selectedDevice.data).map(([key, value]) => { const code = getParameterCode(key); const parameter = parameterMap.get(code); const displayedValue = adjustTmakValue(selectedDevice.loggerCode, code, value, selectedDevice.namaLogger); const numericValue = displayedValue == null ? null : Number(displayedValue); return <div className={styles.observation} key={key}><span>{getParameterName(parameter)}</span><strong>{formatNumber(numericValue != null && Number.isFinite(numericValue) ? numericValue : null)}</strong><small>{getParameterUnit(parameter)}</small></div> })}</div>}{parametersError && <small className={styles.detailNote}>{parametersError}</small>}</div>
-              </section>
-            ) : !selectedDevice ? <section className={styles.noSelection}><span>+</span><strong>Pilih marker atau logger</strong><p>Pembacaan terbaru akan tampil di sini setelah memilih perangkat.</p></section> : null}
-          </div>
+          {selectedDevice && detailOpen ? (
+            <section className={styles.detailPanel} aria-label="Detail logger terpilih">
+              <div className={styles.detailHeader}><div><span className={styles.panelEyebrow}>SELECTED DEVICE</span><h2>{selectedDevice.namaLogger ?? selectedDevice.loggerCode ?? 'Logger IoT'}</h2><p>{selectedDevice.loggerCode ?? `Logger ${selectedDevice.loggerId}`} · {selectedDevice.sourceType ?? 'Sumber tidak diketahui'}</p></div><div className={styles.drawerHeaderActions}><span className={`${styles.statusBadge} ${styles[`status-${monitoringStatusTone(selectedDevice.status)}`]}`}><i />{monitoringStatusLabel(selectedDevice.status)}</span><button type="button" className={styles.closeButton} onClick={() => setDetailOpen(false)}>Tutup</button></div></div>
+              <div className={styles.observationSection}><div className={styles.sectionHeading}><div><span className={styles.panelEyebrow}>ACTUAL OBSERVATION</span><h3>Pembacaan terbaru</h3></div>{selectedDevice.ageMinutes != null && <small>Usia data {formatNumber(selectedDevice.ageMinutes)} menit</small>}</div>{parametersLoading ? <div className={styles.inlineState}>Memuat metadata parameter...</div> : Object.keys(selectedDevice.data).length === 0 ? <div className={styles.inlineState}>Belum ada pembacaan sensor pada response monitoring.</div> : <div className={styles.observationGrid}>{Object.entries(selectedDevice.data).map(([key, value]) => { const code = getParameterCode(key); const parameter = parameterMap.get(code); const displayedValue = adjustTmakValue(selectedDevice.loggerCode, code, value, selectedDevice.namaLogger); const numericValue = displayedValue == null ? null : Number(displayedValue); return <div className={styles.observation} key={key}><span>{getParameterName(parameter)}</span><strong>{formatNumber(numericValue != null && Number.isFinite(numericValue) ? numericValue : null)}</strong><small>{getParameterUnit(parameter)}</small></div> })}</div>}{parametersError && <small className={styles.detailNote}>{parametersError}</small>}</div>
+            </section>
+          ) : null}
         </section>
       )}
     </main>
