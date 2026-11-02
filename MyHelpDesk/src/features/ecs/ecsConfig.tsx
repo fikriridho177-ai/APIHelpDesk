@@ -23,7 +23,7 @@ type EcsMenu = { code: string; route: string; label: string; page: () => ReactEl
 
 export const ECS_MENUS: EcsMenu[] = [
   { code: 'WAD_ECS_DASHBOARD', route: '/ecs', label: 'Pusat Layanan WAD', page: () => <OverviewPage /> },
-  { code: 'WAD_ECS_STASIUN', route: '/ecs/stasiun-monitoring', label: 'Stasiun Monitoring', page: () => <StasiunMonitoringPage /> },
+  { code: 'WAD_ECS_STASIUN', route: '/ecs/stasiun-monitoring', label: 'Monitoring Sensor', page: () => <StasiunMonitoringPage /> },
   { code: 'WAD_ECS_MONITOR_CH', route: '/ecs/monitor-curahhujan', label: 'Monitor Curah Hujan', page: () => <CurahHujanMonitorPage /> },
   { code: 'WAD_ECS_DATA_HISTORIS', route: '/ecs/data-historis', label: 'Data Historis', page: () => <DataHistorisPage /> },
   { code: 'WAD_ECS_KALENDER_CH', route: '/ecs/kalender-curah-hujan', label: 'Kalender Curah Hujan', page: () => <KalenderCurahHujanPage /> },

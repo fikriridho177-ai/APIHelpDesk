@@ -45,16 +45,21 @@ export default function WadServiceHub() {
           </span>
           <div>
             <span className={styles.eyebrow}>MENU WAD</span>
-            <h2 id="wad-service-hub-title">Layanan pemantauan</h2>
-            <p>Pilih data sensor atau pemeriksaan lapangan yang ingin Anda buka.</p>
+            <h2 id="wad-service-hub-title">Monitoring sensor</h2>
+            <p>Pilih fokus parameter atau buka seluruh pembacaan dalam satu halaman.</p>
           </div>
         </div>
-        <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari ${WAD_SERVICE_ITEMS.length} layanan`}>
-          <strong>{availableCount}</strong>
-          <span>aktif</span>
-          <span className={styles.countDivider} aria-hidden="true">/</span>
-          <strong>{WAD_SERVICE_ITEMS.length}</strong>
-          <span>total</span>
+        <div className={styles.headingAside}>
+          <Link className={styles.allSensorsLink} to="/ecs/stasiun-monitoring?filter=all">
+            Semua sensor <DashboardIcon name="arrow" />
+          </Link>
+          <div className={styles.serviceCount} aria-label={`${availableCount} fokus sensor aktif dari ${WAD_SERVICE_ITEMS.length} layanan`}>
+            <strong>{availableCount}</strong>
+            <span>fokus aktif</span>
+            <span className={styles.countDivider} aria-hidden="true">/</span>
+            <strong>{WAD_SERVICE_ITEMS.length}</strong>
+            <span>modul</span>
+          </div>
         </div>
       </div>
 
@@ -86,7 +91,7 @@ export default function WadServiceHub() {
         <span className={styles.noteIcon}>
           <DashboardIcon name="info" />
         </span>
-        <span>Data sensor terbaru diambil dari endpoint monitoring IoT ringkas.</span>
+        <span>Semua fokus membaca snapshot IoT yang sama; filter hanya mengubah highlight parameter.</span>
       </div>
     </section>
   )

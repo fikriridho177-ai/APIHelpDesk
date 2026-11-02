@@ -251,6 +251,120 @@
   font-size: .66rem;
 }
 
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e3eef0;
+  background: #fbfefe;
+}
+
+.filterCopy {
+  display: grid;
+  min-width: 175px;
+  gap: 3px;
+}
+
+.filterEyebrow {
+  color: #148f8d;
+  font-size: .54rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.filterCopy strong {
+  color: #173e50;
+  font-size: .72rem;
+}
+
+.filterCopy small {
+  color: #819ba3;
+  font-size: .58rem;
+}
+
+.filterTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.filterButton {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid #dbe9eb;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #587782;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.filterButton:hover,
+.filterButton:focus-visible {
+  border-color: #8bd6d0;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(48, 213, 200, .1);
+}
+
+.filterButtonActive {
+  border-color: #19afa5;
+  background: #e8f9f7;
+  box-shadow: inset 0 0 0 1px rgba(25, 175, 165, .08);
+  color: #075c67;
+}
+
+.filterIcon {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: #edf7f7;
+  color: #168e8c;
+  font-size: 14px;
+}
+
+.filterButtonActive .filterIcon {
+  background: #ccefeb;
+  color: #087e78;
+}
+
+.filterButton > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.filterButton strong,
+.filterButton small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filterButton strong {
+  color: #315767;
+  font-size: .59rem;
+}
+
+.filterButtonActive strong {
+  color: #075c67;
+}
+
+.filterButton small {
+  color: #8aa1a8;
+  font-size: .52rem;
+}
+
 .panelStamp {
   flex: 0 0 auto;
   padding: 6px 9px;
@@ -381,6 +495,29 @@
   transform: translateY(-2px);
 }
 
+.sensorCardActive {
+  border-color: #b6e3df;
+}
+
+.sensorCardActive::before {
+  background: #0f9b94;
+}
+
+.sensorCardMuted {
+  border-color: #e1eaec;
+  background: #fbfcfc;
+  opacity: .72;
+}
+
+.sensorCardMuted::before {
+  background: #c4d2d5;
+}
+
+.sensorCardMuted:hover {
+  border-color: #c5d8dc;
+  opacity: .9;
+}
+
 .cardTop,
 .cardFooter,
 .cardMeta {
@@ -497,6 +634,72 @@
   font-weight: 800;
 }
 
+.metricList {
+  margin-top: 17px;
+  padding: 10px;
+  border: 1px solid #d7eeeb;
+  border-radius: 10px;
+  background: #f0fbfa;
+}
+
+.metricListLabel {
+  display: block;
+  margin-bottom: 7px;
+  color: #67929a;
+  font-size: .52rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.metric {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 7px 5px;
+  border: 1px solid #d5eae8;
+  border-radius: 7px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.metric span,
+.metric small {
+  color: #7d9aa0;
+  font-size: .49rem;
+  font-weight: 800;
+}
+
+.metric strong {
+  overflow: hidden;
+  color: #087e78;
+  font-size: .77rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric small {
+  color: #9aaeb2;
+  font-weight: 600;
+}
+
+.metricEmpty {
+  border-color: #e2ecee;
+  background: #f8fbfb;
+}
+
+.metricEmpty strong,
+.metricEmpty span,
+.metricEmpty small {
+  color: #a4b4b8;
+}
+
 .cardMeta {
   align-items: flex-start;
   margin-top: 12px;
@@ -596,6 +799,16 @@
 }
 
 @media (max-width: 980px) {
+  .filterBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filterTabs {
+    grid-template-columns: repeat(4, minmax(145px, 1fr));
+    overflow-x: auto;
+  }
+
   .sensorGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -617,8 +830,11 @@
   .summaryGrid,
   .sensorGrid { grid-template-columns: 1fr; }
 
+  .filterTabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
   .summaryGrid,
-  .sensorGrid { padding-right: 14px; padding-left: 14px; }
+  .sensorGrid,
+  .filterBar { padding-right: 14px; padding-left: 14px; }
 }
 
 @media (max-width: 500px) {

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 type RouteItem = { label: string; path?: string };
 
 const ECS_BREADCRUMB_LABELS: Record<string, string> = {
-  "/ecs/stasiun-monitoring": "Stasiun Monitoring",
+  "/ecs/stasiun-monitoring": "Monitoring Sensor",
   "/ecs/monitor-curahhujan": "Monitor Curah Hujan",
   "/ecs/data-historis": "Data Historis",
   "/ecs/kalender-curah-hujan": "Kalender Curah Hujan",
