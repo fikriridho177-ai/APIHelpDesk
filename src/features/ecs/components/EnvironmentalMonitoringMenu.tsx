@@ -17,25 +17,29 @@ export default function EnvironmentalMonitoringMenu() {
     <section className={styles.section} aria-labelledby="environmental-monitoring-menu-title">
       <div className={styles.heading}>
         <div>
-          <span className={styles.eyebrow}>IOT MONITORING</span>
-          <h2 id="environmental-monitoring-menu-title">Pusat monitoring sensor</h2>
-          <p>Akses semua pekerjaan IoT dari satu halaman Environmental Monitoring.</p>
+          <span className={styles.eyebrow}>MENU MONITORING</span>
+          <h2 id="environmental-monitoring-menu-title">Akses cepat</h2>
         </div>
-        <span className={styles.permissionBadge}>AKSES AKTIF</span>
+        <span className={styles.permissionStatus}><i /> Sensor IoT aktif</span>
       </div>
 
-      <div className={styles.grid}>
+      <nav className={styles.menuBar} aria-label="Menu monitoring sensor">
         {IOT_NAVIGATION_ITEMS.map(item => (
-          <Link key={item.code} className={styles.card} to={item.route}>
+          <Link
+            key={item.code}
+            className={styles.menuItem}
+            to={item.route}
+            title={item.description}
+            aria-label={`${item.label}: ${item.description}`}
+          >
             <span className={styles.marker}>{item.marker}</span>
             <span className={styles.copy}>
               <strong>{item.label}</strong>
-              <small>{item.description}</small>
             </span>
             <span className={styles.arrow} aria-hidden="true">↗</span>
           </Link>
         ))}
-      </div>
+      </nav>
     </section>
   )
 }
