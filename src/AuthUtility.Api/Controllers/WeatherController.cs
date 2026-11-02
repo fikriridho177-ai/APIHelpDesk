@@ -19,7 +19,7 @@ public sealed class WeatherController(
     public async Task<IActionResult> GetForecast(
         [FromQuery] double? latitude,
         [FromQuery] double? longitude,
-        [FromQuery] int days = 10,
+        [FromQuery] int days = 14,
         [FromQuery] string? area = null,
         CancellationToken cancellationToken = default)
     {

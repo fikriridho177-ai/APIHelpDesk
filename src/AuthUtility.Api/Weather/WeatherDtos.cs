@@ -3,7 +3,7 @@ namespace AuthUtility.Api.Weather;
 public sealed record WeatherQuery(
     double Latitude,
     double Longitude,
-    int Days = 10,
+    int Days = 14,
     string? Area = null);
 
 public sealed class WeatherQueryException(string message) : ArgumentException(message);

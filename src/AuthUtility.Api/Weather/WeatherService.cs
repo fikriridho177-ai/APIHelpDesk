@@ -301,10 +301,10 @@ public sealed class WeatherService(
                 "Longitude harus berada di antara -180 dan 180.");
         }
 
-        if (query.Days is < 1 or > 10)
+        if (query.Days is < 1 or > 14)
         {
             throw new WeatherQueryException(
-                "Jumlah hari prakiraan harus berada di antara 1 dan 10.");
+                "Jumlah hari prakiraan harus berada di antara 1 dan 14.");
         }
     }
 
