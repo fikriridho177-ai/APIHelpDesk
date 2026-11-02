@@ -103,7 +103,7 @@
 
 .serviceGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin: 0;
   padding: 0;
@@ -155,6 +155,7 @@
 }
 
 .serviceTileDisabled {
+  min-height: 154px;
   border-color: #e0e8ea;
   background: #f8fafb;
   box-shadow: none;

@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom'
 
 import { DashboardIcon } from '../../dashboard/components/DashboardIcon'
-import { WAD_SERVICE_ITEMS, type WadServiceItem } from '../wadServices'
+import { WAD_SERVICE_ITEMS, WAD_TOTAL_MODULE_COUNT, type WadServiceItem } from '../wadServices'
 import styles from './WadServiceHub.module.css'
 
-function ServiceContent({ item, index }: { item: WadServiceItem; index: number }) {
+function ServiceContent({ item }: { item: WadServiceItem }) {
   const isAvailable = item.available && !!item.route
 
   return (
     <>
       <span className={styles.serviceHeader}>
-        <span className={styles.serviceIndex}>{String(index + 1).padStart(2, '0')}</span>
+        <span className={styles.serviceIndex}>{String(item.order).padStart(2, '0')}</span>
         <span className={`${styles.serviceStatus} ${isAvailable ? styles.statusAvailable : styles.statusPlanned}`}>
           <span className={styles.statusDot} aria-hidden="true" />
           {isAvailable ? 'Aktif' : 'Segera tersedia'}
@@ -46,25 +46,25 @@ export default function WadServiceHub() {
           <div>
             <span className={styles.eyebrow}>MENU WAD</span>
             <h2 id="wad-service-hub-title">Layanan pemantauan</h2>
-            <p>Pilih fokus sensor, cek perangkat, atau buka seluruh pembacaan dalam satu halaman.</p>
+            <p>Fokus parameter sensor tersedia sebagai filter. Kartu berikut membuka workspace operasional WAD.</p>
           </div>
         </div>
         <div className={styles.headingAside}>
           <Link className={styles.allSensorsLink} to="/ecs/stasiun-monitoring?filter=all">
             Semua sensor <DashboardIcon name="arrow" />
           </Link>
-          <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari ${WAD_SERVICE_ITEMS.length} modul`}>
+          <div className={styles.serviceCount} aria-label={`${availableCount} layanan aktif dari ${WAD_TOTAL_MODULE_COUNT} modul`}>
             <strong>{availableCount}</strong>
             <span>layanan aktif</span>
             <span className={styles.countDivider} aria-hidden="true">/</span>
-            <strong>{WAD_SERVICE_ITEMS.length}</strong>
+            <strong>{WAD_TOTAL_MODULE_COUNT}</strong>
             <span>modul</span>
           </div>
         </div>
       </div>
 
       <ul className={styles.serviceGrid}>
-        {WAD_SERVICE_ITEMS.map((item, index) => {
+        {WAD_SERVICE_ITEMS.map(item => {
           const isAvailable = item.available && !!item.route
 
           return (
@@ -75,11 +75,11 @@ export default function WadServiceHub() {
                   to={item.route!}
                   aria-label={`${item.label}: ${item.description}`}
                 >
-                  <ServiceContent item={item} index={index} />
+                  <ServiceContent item={item} />
                 </Link>
               ) : (
                 <div className={`${styles.serviceTile} ${styles.serviceTileDisabled}`} aria-disabled="true">
-                  <ServiceContent item={item} index={index} />
+                  <ServiceContent item={item} />
                 </div>
               )}
             </li>
@@ -91,7 +91,7 @@ export default function WadServiceHub() {
         <span className={styles.noteIcon}>
           <DashboardIcon name="info" />
         </span>
-        <span>Semua fokus membaca snapshot IoT yang sama; filter hanya mengubah highlight parameter.</span>
+        <span>TMAT, TMAK, dan curah hujan dipilih melalui filter Monitoring Sensor; map, perangkat, prediksi, dan kalender memiliki halaman kerja sendiri.</span>
       </div>
     </section>
   )

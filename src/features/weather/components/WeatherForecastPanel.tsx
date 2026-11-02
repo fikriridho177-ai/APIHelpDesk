@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { getWeatherForecast } from '../api/weatherApi'
-import type {
-  WeatherDayForecast,
-  WeatherForecastResponse,
-  WeatherQuery,
-  WeatherSensorLocation,
+import {
+  WEATHER_FORECAST_DAYS,
+  type WeatherDayForecast,
+  type WeatherForecastResponse,
+  type WeatherQuery,
+  type WeatherSensorLocation,
 } from '../types/weather'
 import styles from './WeatherForecastPanel.module.css'
 
@@ -83,7 +84,7 @@ function buildQuery(draft: LocationDraft): WeatherQuery | null {
   const longitude = Number(draft.longitude)
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return null
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null
-  return { latitude, longitude, days: 10 }
+  return { latitude, longitude, days: WEATHER_FORECAST_DAYS }
 }
 
 export default function WeatherForecastPanel({
@@ -208,15 +209,15 @@ export default function WeatherForecastPanel({
   }
 
   return (
-    <section className={`${styles.panel} ${compact ? styles.compact : ''} ${comfortable ? styles.comfortable : ''}`} aria-label="Prakiraan cuaca 10 hari">
+    <section className={`${styles.panel} ${compact ? styles.compact : ''} ${comfortable ? styles.comfortable : ''}`} aria-label={`Prakiraan hujan ${WEATHER_FORECAST_DAYS} hari`}>
       <div className={styles.heading}>
         <div>
           <span className={styles.eyebrow}>WEATHER INTELLIGENCE / WAD</span>
-          <h2>Prakiraan Cuaca {compact ? '10 Hari' : '10 Hari'}</h2>
+          <h2>Prakiraan Hujan {WEATHER_FORECAST_DAYS} Hari</h2>
           <p>Forecast operasional berdasarkan koordinat logger terpilih.</p>
         </div>
         <div className={styles.headingActions}>
-          {compact && <Link className={styles.detailLink} to="/iot-management/prakiraan-cuaca">Buka detail 10 hari <span>↗</span></Link>}
+          {compact && <Link className={styles.detailLink} to="/ecs/prakiraan-hujan">Buka detail {WEATHER_FORECAST_DAYS} hari <span>↗</span></Link>}
           <button type="button" className={styles.refreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading}>{loading ? 'Memuat...' : 'Refresh'}</button>
         </div>
       </div>

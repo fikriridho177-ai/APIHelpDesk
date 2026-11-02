@@ -32,7 +32,7 @@ const QUICK_ACTIONS = [
   {
     index: '03',
     eyebrow: 'WEATHER INTELLIGENCE',
-    title: 'Prakiraan Cuaca 10 Hari',
+    title: 'Prediksi Hujan 14 Hari',
     description: 'Lihat prakiraan berbasis koordinat logger dan peringatan BMKG.',
     to: '/iot-management/prakiraan-cuaca',
     tone: 'sky',

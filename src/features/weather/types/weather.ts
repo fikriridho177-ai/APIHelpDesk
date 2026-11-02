@@ -1,3 +1,5 @@
+export const WEATHER_FORECAST_DAYS = 14
+
 export interface WeatherQuery {
   latitude: number
   longitude: number
