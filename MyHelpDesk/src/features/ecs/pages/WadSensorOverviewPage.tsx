@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { DashboardIcon } from '../../dashboard/components/DashboardIcon'
 import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
-import { DashboardIcon } from '../../dashboard/components/DashboardIcon'
 import { getIoTMonitoring } from '../../iot/api/iotApi'
 import {
   formatMonitoringDate,
@@ -143,15 +143,29 @@ export default function WadSensorOverviewPage({ kind }: { kind: WadSensorKind })
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}><span className={styles.liveDot} /> {definition.eyebrow}</p>
-          <h1>{definition.title}</h1>
-          <p className={styles.subtitle}>{definition.description}</p>
+      <header className={styles.hero}>
+        <div className={styles.heroCopy}>
+          <div className={styles.heroHeading}>
+            <span className={styles.heroIcon}><DashboardIcon name="water" /></span>
+            <div>
+              <p className={styles.eyebrow}><span className={styles.liveDot} /> {definition.eyebrow}</p>
+              <h1>{definition.title}</h1>
+              <p className={styles.subtitle}>{definition.description}</p>
+            </div>
+          </div>
+          <div className={styles.heroMeta}>
+            <span><strong>{rows.length}</strong> logger terpantau</span>
+            <span><strong>{onlineCount}</strong> online</span>
+            <span>Snapshot IoT terbaru</span>
+          </div>
         </div>
-        <button type="button" className={styles.refreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading}>
-          {loading ? 'Memuat...' : 'Refresh data'}
-        </button>
+        <div className={styles.heroActions}>
+          <span className={styles.liveBadge}><i /> LIVE MONITORING</span>
+          <button type="button" className={styles.refreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading}>
+            <DashboardIcon name="chart" />
+            {loading ? 'Memuat...' : 'Refresh data'}
+          </button>
+        </div>
       </header>
 
       {error && (
@@ -161,59 +175,96 @@ export default function WadSensorOverviewPage({ kind }: { kind: WadSensorKind })
         </section>
       )}
 
-      <section className={styles.summaryGrid} aria-label={'Ringkasan ' + definition.title}>
-        <Summary label="Logger terpantau" value={rows.length} hint="Dari satu response monitoring" />
-        <Summary label="Online" value={onlineCount} hint="Status sesuai interval logger" />
-        <Summary label="Terpetakan" value={mappedCount} hint="Memiliki koordinat lokasi" />
+      <section className={styles.summaryPanel} aria-label={'Ringkasan ' + definition.title}>
+        <div className={styles.panelHeading}>
+          <div>
+            <span className={styles.panelEyebrow}>RINGKASAN PEMANTAUAN</span>
+            <h2>Snapshot sensor terbaru</h2>
+            <p>Data diringkas dari satu endpoint monitoring IoT.</p>
+          </div>
+          <span className={styles.panelStamp}>Diperbarui saat refresh</span>
+        </div>
+        <div className={styles.summaryGrid}>
+          <Summary icon="chart" tone="cyan" label="Logger terpantau" value={rows.length} hint="Sesuai parameter layanan" />
+          <Summary icon="check" tone="green" label="Online" value={onlineCount} hint="Status dalam interval logger" />
+          <Summary icon="map" tone="blue" label="Terpetakan" value={mappedCount} hint="Memiliki koordinat lokasi" />
+        </div>
       </section>
 
       {loading && !monitoring ? (
-        <section className={styles.state}><span className={styles.spinner} /><strong>Mengambil pembacaan terbaru...</strong><small>Memakai endpoint monitoring ringkas.</small></section>
+        <section className={styles.state}>
+          <span className={styles.spinner} />
+          <strong>Mengambil pembacaan terbaru...</strong>
+          <small>Memakai endpoint monitoring ringkas.</small>
+        </section>
       ) : rows.length === 0 ? (
-        <section className={styles.state}><strong>Belum ada pembacaan {definition.title.toLowerCase()}</strong><small>Logger belum mengirim parameter yang sesuai atau data belum tersedia.</small></section>
+        <section className={styles.state}>
+          <DashboardIcon name="info" />
+          <strong>Belum ada pembacaan {definition.title.toLowerCase()}</strong>
+          <small>Logger belum mengirim parameter yang sesuai atau data belum tersedia.</small>
+        </section>
       ) : (
-        <section className={styles.sensorGrid} aria-label="Daftar pembacaan sensor">
-          {rows.map(({ device, reading, value }, index) => (
-            <article className={styles.sensorCard} key={device.loggerId}>
-              <div className={styles.cardTop}>
-                <span className={styles.cardNumber}>{String(index + 1).padStart(2, '0')}</span>
-                <span className={styles.status + ' ' + styles['status-' + monitoringStatusTone(device.status)]}><i />{monitoringStatusLabel(device.status)}</span>
-              </div>
-
-              <div className={styles.identity}>
-                <span className={styles.sensorIcon}><DashboardIcon name="water" /></span>
-                <div>
-                  <small>{device.loggerCode ?? 'LOGGER-' + device.loggerId}</small>
-                  <h2>{device.namaLogger ?? 'Logger tanpa nama'}</h2>
-                  <span>{device.sourceType ?? 'Sumber tidak diketahui'}</span>
+        <section className={styles.sensorPanel} aria-label="Daftar pembacaan sensor">
+          <div className={styles.panelHeading}>
+            <div>
+              <span className={styles.panelEyebrow}>LOGGER &amp; PEMBACAAN</span>
+              <h2>Daftar stasiun</h2>
+              <p>Pilih histori pada kartu untuk melihat data lampau per logger.</p>
+            </div>
+            <span className={styles.panelStamp}>{rows.length} stasiun</span>
+          </div>
+          <div className={styles.sensorGrid}>
+            {rows.map(({ device, reading, value }, index) => (
+              <article className={styles.sensorCard} key={device.loggerId}>
+                <div className={styles.cardTop}>
+                  <span className={styles.cardNumber}>{String(index + 1).padStart(2, '0')}</span>
+                  <span className={`${styles.status} ${styles['status-' + monitoringStatusTone(device.status)]}`}><i />{monitoringStatusLabel(device.status)}</span>
                 </div>
-              </div>
 
-              <div className={styles.reading}>
-                <div>
-                  <small>{definition.valueLabel}</small>
-                  <strong>{value == null ? '—' : formatMonitoringNumber(value)}</strong>
+                <div className={styles.identity}>
+                  <span className={styles.sensorIcon}><DashboardIcon name="water" /></span>
+                  <div>
+                    <small>{device.loggerCode ?? 'LOGGER-' + device.loggerId}</small>
+                    <h3>{device.namaLogger ?? 'Logger tanpa nama'}</h3>
+                    <span>{device.sourceType ?? 'Sumber tidak diketahui'}</span>
+                  </div>
                 </div>
-                <span>{definition.unit}</span>
-              </div>
 
-              <div className={styles.cardMeta}>
-                <span>Data terakhir<strong>{formatMonitoringDate(device.lastSensorAt ?? device.lastReceivedAt)}</strong></span>
-                <span>Parameter<strong>{reading?.[0] ?? 'Belum tersedia'}</strong></span>
-              </div>
+                <div className={styles.reading}>
+                  <div>
+                    <small>{definition.valueLabel}</small>
+                    <strong>{value == null ? '—' : formatMonitoringNumber(value)}</strong>
+                  </div>
+                  <span>{definition.unit}</span>
+                </div>
 
-              <div className={styles.cardFooter}>
-                <span>{device.lokasi || 'Lokasi belum diatur'}</span>
-                <Link to={'/ecs/data-historis?loggerId=' + device.loggerId}>Lihat histori <span aria-hidden="true">→</span></Link>
-              </div>
-            </article>
-          ))}
+                <div className={styles.cardMeta}>
+                  <span>Data terakhir<strong>{formatMonitoringDate(device.lastSensorAt ?? device.lastReceivedAt)}</strong></span>
+                  <span>Parameter<strong>{reading?.[0] ?? 'Belum tersedia'}</strong></span>
+                </div>
+
+                <div className={styles.cardFooter}>
+                  <span>{device.lokasi || 'Lokasi belum diatur'}</span>
+                  <Link to={'/ecs/data-historis?loggerId=' + device.loggerId}>Lihat histori <span aria-hidden="true">→</span></Link>
+                </div>
+              </article>
+            ))}
+          </div>
         </section>
       )}
     </main>
   )
 }
 
-function Summary({ label, value, hint }: { label: string; value: number; hint: string }) {
-  return <article className={styles.summary}><span>{label}</span><strong>{value}</strong><small>{hint}</small></article>
+function Summary({ icon, tone, label, value, hint }: { icon: 'chart' | 'check' | 'map'; tone: 'cyan' | 'green' | 'blue'; label: string; value: number; hint: string }) {
+  return (
+    <article className={`${styles.summary} ${styles['summary-' + tone]}`}>
+      <span className={styles.summaryIcon}><DashboardIcon name={icon} /></span>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <small>{hint}</small>
+      </div>
+    </article>
+  )
 }
