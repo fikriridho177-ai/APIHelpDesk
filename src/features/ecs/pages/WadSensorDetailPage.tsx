@@ -67,7 +67,7 @@ function getLiveParameters(device: IoTMonitoringDevice, parameters: IoTParameter
 
       return {
         code,
-        label: getMonitoringParameterName(parameter, code),
+        label: getMonitoringParameterName(parameter),
         unit: getMonitoringParameterUnit(parameter),
         value: getNumber(adjustedValue),
         categoryOrder: parameter?.categoryOrder ?? parameter?.kategoriUrutan ?? Number.MAX_SAFE_INTEGER,
@@ -237,7 +237,6 @@ export default function WadSensorDetailPage() {
                       <span className={styles.parameterLabel}>{parameter.label}</span>
                       <strong>{parameter.value == null ? '—' : formatMonitoringNumber(parameter.value)}</strong>
                       <small>{parameter.unit}</small>
-                      <code>{parameter.code}</code>
                     </article>
                   ))}
                 </div>
@@ -253,7 +252,7 @@ export default function WadSensorDetailPage() {
 
               {parametersError && (
                 <p className={styles.metadataNotice}>
-                  Metadata parameter belum tersedia; label ditampilkan dari kode payload agar pembacaan realtime tetap dapat digunakan.
+                  Metadata parameter belum tersedia; pembacaan realtime tetap ditampilkan dengan nama umum.
                 </p>
               )}
               {parametersLoading && <p className={styles.metadataNotice}>Menyempurnakan nama dan satuan parameter...</p>}
