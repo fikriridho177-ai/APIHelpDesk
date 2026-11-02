@@ -8,7 +8,7 @@ export default function OverviewPage() {
   const activeServiceCount = WAD_SERVICE_ITEMS.filter(item => item.available && item.route).length
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.pageFixed}`}>
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
           <span className={styles.eyebrow}>WAD / WATER MANAGEMENT</span>
@@ -35,7 +35,7 @@ export default function OverviewPage() {
         </aside>
       </section>
 
-      <WadServiceHub />
+      <WadServiceHub compact />
     </div>
   )
 }

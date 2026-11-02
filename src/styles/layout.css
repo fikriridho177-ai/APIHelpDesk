@@ -430,6 +430,41 @@ body {
   flex: 1;
 }
 
+/* WAD landing page is an operation console: keep the whole workspace in the
+   viewport instead of allowing the document itself to scroll. Detail pages
+   retain the normal document flow. */
+.app-layout-overview {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-layout-overview .main-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 18px 28px 14px;
+}
+
+.app-layout-overview .breadcrumb-container {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.app-layout-overview .main-content > .ecs-root {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-layout-overview .app-footer {
+  flex: 0 0 auto;
+}
+
 
 /* =========================================================
    FOOTER
@@ -472,6 +507,19 @@ body {
 
   .user-group {
     display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-layout-overview {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-layout-overview .main-content,
+  .app-layout-overview .main-content > .ecs-root {
+    overflow: visible;
   }
 }
 
