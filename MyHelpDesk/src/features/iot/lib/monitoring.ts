@@ -8,14 +8,6 @@ export interface IoTMonitoringSummary {
   mapped: number
 }
 
-export interface MonitoringReading {
-  key: string
-  code: string
-  value: number | null
-}
-
-const priorityParameterCodes = ['TMAK', 'TMAT']
-
 export function hasValidCoordinates(
   latitude: number | null | undefined,
   longitude: number | null | undefined,
@@ -81,24 +73,6 @@ export function formatMonitoringNumber(value: number | null | undefined) {
 
 export function getMonitoringParameterCode(key: string) {
   return key.split('#', 1)[0]
-}
-
-export function getOrderedMonitoringReadings(data: Record<string, number | null>): MonitoringReading[] {
-  return Object.entries(data)
-    .map(([key, value], index) => ({
-      key,
-      code: getMonitoringParameterCode(key).trim(),
-      value,
-      index,
-    }))
-    .sort((left, right) => {
-      const leftPriority = priorityParameterCodes.indexOf(left.code.toUpperCase())
-      const rightPriority = priorityParameterCodes.indexOf(right.code.toUpperCase())
-      const leftRank = leftPriority === -1 ? priorityParameterCodes.length : leftPriority
-      const rightRank = rightPriority === -1 ? priorityParameterCodes.length : rightPriority
-      return leftRank - rightRank || left.index - right.index
-    })
-    .map(({ index: _index, ...reading }) => reading)
 }
 
 export function getMonitoringParameterName(parameter: IoTParameter | undefined, code: string) {
