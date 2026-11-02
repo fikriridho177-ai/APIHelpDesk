@@ -196,44 +196,6 @@
   white-space: nowrap;
 }
 
-.historyLink {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 4px 20px 20px;
-  padding: 13px 14px;
-  border: 1px solid #bfe9e2;
-  border-radius: 11px;
-  background: #e8f9f7;
-  color: #087e78;
-  text-decoration: none;
-}
-
-.historyLink:hover {
-  border-color: #76d5cb;
-  background: #dff6f3;
-}
-
-.historyLink span {
-  display: grid;
-  gap: 3px;
-}
-
-.historyLink strong {
-  font-size: .68rem;
-}
-
-.historyLink small {
-  color: #659299;
-  font-size: .56rem;
-}
-
-.historyLink svg {
-  flex: 0 0 auto;
-  font-size: 16px;
-}
-
 .emptyReading {
   display: flex;
   align-items: flex-start;
@@ -295,5 +257,4 @@
   .parameterGrid { grid-template-columns: 1fr; padding-right: 14px; padding-left: 14px; }
   .infoHeading { padding-right: 15px; padding-left: 15px; }
   .infoList { padding-right: 15px; padding-left: 15px; }
-  .historyLink { margin-right: 15px; margin-left: 15px; }
 }
