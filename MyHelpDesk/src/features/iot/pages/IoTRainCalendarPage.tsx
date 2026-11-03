@@ -5,6 +5,7 @@ import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { getIoTHistory, getIoTMonitoring } from '../api/iotApi'
 import { formatMonitoringDate, monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
+import { summarizeCalendarRainfall, toCalendarRainfallMm } from '../lib/rainCalendar'
 import type { IoTHistoryResponse, IoTMonitoringDevice, IoTMonitoringResponse } from '../types/iot'
 import styles from './IoTRainCalendarPage.module.css'
 
@@ -164,23 +165,17 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
 
   const calendar = useMemo(() => {
     const values = new Map<string, number>()
+    if (!selectedDevice || history?.loggerId !== selectedDevice.loggerId) return values
     history?.data.forEach(reading => {
       const rain = getRainReading(reading.data)
       const dateKey = getDateKey(reading.ts)
       if (!rain || !dateKey) return
-      values.set(dateKey, rain.value)
+      values.set(dateKey, toCalendarRainfallMm(selectedDevice, rain.key, rain.value))
     })
     return values
-  }, [history])
+  }, [history, selectedDevice])
 
-  const summary = useMemo(() => {
-    const values = [...calendar.values()]
-    return {
-      rainyDays: values.filter(value => value >= 0.5).length,
-      total: values.reduce((sum, value) => sum + value, 0),
-      maximum: values.length ? Math.max(...values) : null,
-    }
-  }, [calendar])
+  const summary = useMemo(() => summarizeCalendarRainfall(calendar.values()), [calendar])
 
   const rainParameter = useMemo(() => {
     const latest = selectedDevice ? getRainReading(selectedDevice.data) : null
