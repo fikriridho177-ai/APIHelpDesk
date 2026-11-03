@@ -10,7 +10,7 @@ const ECS_BREADCRUMB_LABELS: Record<string, string> = {
   "/ecs/prakiraan-hujan": "Prediksi Hujan 14 Hari",
   "/ecs/monitor-curahhujan": "Monitor Curah Hujan",
   "/ecs/data-historis": "Data Historis",
-  "/ecs/kalender-curah-hujan": "Kalender Curah Hujan",
+  "/ecs/kalender-curah-hujan": "Kalender Data Sensor",
   "/ecs/peta": "Peta Sensor",
   "/ecs/curahhujan": "Curah Hujan",
   "/ecs/tmak": "Tinggi Muka Air Kanal (TMAK)",

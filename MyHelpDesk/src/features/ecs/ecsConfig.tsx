@@ -38,7 +38,7 @@ export const ECS_MENUS: EcsMenu[] = [
   // Histori dibuka dari detail sensor, jadi gunakan hak akses monitoring sensor
   // yang sudah menjadi pintu utama WAD. Tidak perlu permission baru terpisah.
   { code: 'WAD_ECS_DATA_HISTORIS', permissionCode: 'WAD_ECS_STASIUN', route: '/ecs/data-historis', label: 'Data Historis', page: () => <DataHistorisPage /> },
-  { code: 'WAD_ECS_KALENDER_CH', route: '/ecs/kalender-curah-hujan', label: 'Kalender Curah Hujan', page: () => <KalenderCurahHujanPage /> },
+  { code: 'WAD_ECS_KALENDER_CH', route: '/ecs/kalender-curah-hujan', label: 'Kalender Data Sensor', page: () => <KalenderCurahHujanPage /> },
   { code: 'WAD_ECS_PETA', route: '/ecs/peta', label: 'Peta Sensor', page: () => <PetaPage /> },
   { code: 'WAD_ECS_CURAH_HUJAN', route: '/ecs/curahhujan', label: 'Curah Hujan', page: () => <CurahHujanPage /> },
   { code: 'WAD_ECS_TMAK', route: '/ecs/tmak', label: 'Tinggi Muka Air Kanal (TMAK)', page: () => <TmakPage /> },

@@ -1630,7 +1630,7 @@ export default function CurahHujanMonitorPage() {
               onClick={() =>
             navigate(stationUrl('/ecs/kalender-curah-hujan', stationId))}
             >
-              🗓 Kalender Curah Hujan
+              🗓 Kalender Data Sensor
             </button>
 
             <button

@@ -5,7 +5,12 @@ import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { getIoTHistory, getIoTMonitoring } from '../api/iotApi'
 import { formatMonitoringDate, monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
-import { summarizeCalendarRainfall, toCalendarRainfallMm } from '../lib/rainCalendar'
+import { summarizeCalendarRainfall } from '../lib/rainCalendar'
+import {
+  CALENDAR_KINDS, getCalendarHistoryQuery, getCalendarKind, getCalendarSelection,
+  getCalendarStatistics, getLevelCellStyle, getSensorCalendar,
+} from '../lib/sensorCalendar'
+import type { CalendarKind } from '../lib/sensorCalendar'
 import type { IoTHistoryResponse, IoTMonitoringDevice, IoTMonitoringResponse } from '../types/iot'
 import styles from './IoTRainCalendarPage.module.css'
 
@@ -20,44 +25,6 @@ function getYear(value: string | null) {
   return Number.isInteger(year) && year >= 2000 && year <= 2100
     ? year
     : new Date().getFullYear()
-}
-
-function getNumericValue(value: unknown) {
-  if (typeof value !== 'number' && typeof value !== 'string') return null
-  if (typeof value === 'string' && value.trim() === '') return null
-  const number = Number(value)
-  return Number.isFinite(number) ? number : null
-}
-
-function normalizeParameterCode(value: string) {
-  return value.split('#', 1)[0].replace(/[\s_-]/g, '').toLocaleUpperCase('id-ID')
-}
-
-function getRainReading(data: Record<string, number | string | null>) {
-  const entries = Object.entries(data)
-    .map(([key, value]) => ({ key, value: getNumericValue(value) }))
-    .filter((entry): entry is { key: string; value: number } => entry.value !== null)
-
-  const preferred = entries.find(entry => {
-    const code = normalizeParameterCode(entry.key)
-    return code === 'RAINTIP'
-      || code === 'CURAHHUJAN'
-      || code === 'HUJAN'
-      || code.includes('CURAH')
-      || code.includes('RAIN')
-  })
-
-  return preferred ?? null
-}
-
-function getDateKey(value: string | null | undefined) {
-  if (!value) return null
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 function daysInMonth(year: number, monthIndex: number) {
@@ -91,9 +58,12 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
   const { permission, loaded } = useMenuPermission(permissionCode)
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedLoggerId = Number(searchParams.get('loggerId'))
-  const [year, setYear] = useState(() => getYear(searchParams.get('year')))
+  const year = getYear(searchParams.get('year'))
+  const kind = getCalendarKind(searchParams.get('kind'))
+  const definition = CALENDAR_KINDS[kind]
+  const isRain = kind === 'rain'
   const [monitoring, setMonitoring] = useState<IoTMonitoringResponse | null>(null)
-  const [history, setHistory] = useState<IoTHistoryResponse | null>(null)
+  const [history, setHistory] = useState<{ key: string; response: IoTHistoryResponse } | null>(null)
   const [loading, setLoading] = useState(true)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,7 +78,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
     try {
       setMonitoring(await getIoTMonitoring())
     } catch (loadError) {
-      console.error('Gagal memuat logger untuk kalender hujan:', loadError)
+      console.error('Gagal memuat logger untuk kalender sensor:', loadError)
       setMonitoring(null)
       setError('Daftar logger gagal dimuat. Silakan coba lagi.')
     } finally {
@@ -120,21 +90,32 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
     if (loaded && canRead) void loadMonitoring()
   }, [canRead, loaded, loadMonitoring, refreshKey])
 
-  const devices = monitoring?.devices ?? []
-  const selectedDevice = useMemo(() => {
-    const requested = devices.find(device => device.loggerId === requestedLoggerId)
-    if (requested) return requested
-    return devices.find(device => getRainReading(device.data) !== null) ?? devices[0] ?? null
-  }, [devices, requestedLoggerId])
+  const { devices, selectedDevice } = useMemo(
+    () => getCalendarSelection(monitoring?.devices ?? [], kind, requestedLoggerId),
+    [monitoring, kind, requestedLoggerId],
+  )
+  const requestKey = `${selectedDevice?.loggerId ?? 0}:${kind}:${year}`
+  const visibleHistory = history?.key === requestKey ? history.response : null
 
-  const selectLogger = (loggerId: number) => {
-    setSearchParams({ loggerId: String(loggerId), year: String(year) })
+  const updateFilters = (nextKind: CalendarKind, nextYear: number, loggerId = selectedDevice?.loggerId ?? 0) => {
+    const next = getCalendarSelection(monitoring?.devices ?? [], nextKind, loggerId)
+    const params = new URLSearchParams({ kind: nextKind, year: String(nextYear) })
+    if (next.selectedDevice) params.set('loggerId', String(next.selectedDevice.loggerId))
+    setSearchParams(params)
   }
+
+  useEffect(() => {
+    if (!selectedDevice || requestedLoggerId === selectedDevice.loggerId) return
+    const params = new URLSearchParams(searchParams)
+    params.set('loggerId', String(selectedDevice.loggerId))
+    setSearchParams(params, { replace: true })
+  }, [selectedDevice?.loggerId, requestedLoggerId, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!selectedDevice) {
       setHistory(null)
       setHistoryError(null)
+      setHistoryLoading(false)
       return undefined
     }
 
@@ -142,50 +123,30 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
     setHistoryLoading(true)
     setHistoryError(null)
 
-    getIoTHistory(selectedDevice.loggerId, 'month', {
-      from: `${year}-01-01T00:00`,
-      to: `${year + 1}-01-01T00:00`,
-      aggregationMode: 'sum',
-    })
+    getIoTHistory(selectedDevice.loggerId, 'month', getCalendarHistoryQuery(kind, year))
       .then(result => {
-        if (active) setHistory(result)
+        if (active) setHistory({ key: requestKey, response: result })
       })
       .catch(loadError => {
         if (!active) return
-        console.error('Gagal memuat kalender hujan IoT:', loadError)
+        console.error('Gagal memuat kalender data sensor:', loadError)
         setHistory(null)
-        setHistoryError('Histori curah hujan logger ini gagal dimuat.')
+        setHistoryError('Histori data sensor gagal dimuat. Silakan coba lagi.')
       })
       .finally(() => {
         if (active) setHistoryLoading(false)
       })
 
     return () => { active = false }
-  }, [selectedDevice?.loggerId, year, refreshKey])
+  }, [selectedDevice?.loggerId, kind, year, refreshKey])
 
-  const calendar = useMemo(() => {
-    const values = new Map<string, number>()
-    if (!selectedDevice || history?.loggerId !== selectedDevice.loggerId) return values
-    history?.data.forEach(reading => {
-      const rain = getRainReading(reading.data)
-      const dateKey = getDateKey(reading.ts)
-      if (!rain || !dateKey) return
-      values.set(dateKey, toCalendarRainfallMm(selectedDevice, rain.key, rain.value))
-    })
-    return values
-  }, [history, selectedDevice])
+  const calendar = useMemo(
+    () => getSensorCalendar(visibleHistory, selectedDevice, kind, year),
+    [visibleHistory, selectedDevice, kind, year],
+  )
 
   const summary = useMemo(() => summarizeCalendarRainfall(calendar.values()), [calendar])
-
-  const rainParameter = useMemo(() => {
-    const latest = selectedDevice ? getRainReading(selectedDevice.data) : null
-    if (latest) return normalizeParameterCode(latest.key)
-    for (const reading of history?.data ?? []) {
-      const value = getRainReading(reading.data)
-      if (value) return normalizeParameterCode(value.key)
-    }
-    return 'PARAMETER HUJAN'
-  }, [history, selectedDevice])
+  const statistics = useMemo(() => getCalendarStatistics(calendar.values()), [calendar])
 
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear()
@@ -198,10 +159,10 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
     <main className={styles.page}>
       <header className={styles.hero}>
         <div>
-          <p className={styles.eyebrow}><span className={styles.liveDot} /> WAD / LIVE RAINFALL</p>
-          <h1>Kalender Curah Hujan</h1>
-          <p className={styles.subtitle}>Baca pola curah hujan harian dari logger terpilih tanpa memuat seluruh histori sensor sekaligus.</p>
-          <div className={styles.heroMeta}><span>{devices.length} LOGGER TERSEDIA</span><span>{selectedDevice ? `LOGGER ${selectedDevice.loggerCode}` : 'NO LOGGER SELECTED'}</span><span>AGREGASI HARIAN</span></div>
+          <p className={styles.eyebrow}><span className={styles.liveDot} /> WAD / SENSOR CALENDAR</p>
+          <h1>Kalender Data Sensor</h1>
+          <p className={styles.subtitle}>Telusuri curah hujan, tinggi muka air kanal, dan tinggi muka air tanah per sensor dan tahun.</p>
+          <div className={styles.heroMeta}><span>{devices.length} SENSOR SESUAI</span><span>{definition.label.toUpperCase()}</span><span>{isRain ? 'AKUMULASI HARIAN' : 'RATA-RATA HARIAN'}</span></div>
         </div>
         <button type="button" className={styles.refreshButton} onClick={() => setRefreshKey(key => key + 1)} disabled={loading || historyLoading}>
           {loading || historyLoading ? 'Memuat...' : 'Refresh data'}
@@ -210,22 +171,28 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
 
       {error && <section className={styles.alert} role="alert"><span>{error}</span><button type="button" onClick={() => setRefreshKey(key => key + 1)}>Coba lagi</button></section>}
 
-      <section className={styles.controlPanel} aria-label="Filter kalender curah hujan">
+      <section className={styles.controlPanel} aria-label="Filter kalender data sensor">
         <div className={styles.controlCopy}>
           <span className={styles.panelEyebrow}>FILTER SENSOR</span>
-          <h2>Pilih logger dan tahun</h2>
-          <p>Kalender hanya mengambil histori dari logger yang dipilih.</p>
+          <h2>Pilih jenis data, sensor, dan tahun</h2>
+          <p>Daftar sensor mengikuti parameter yang tersedia.</p>
         </div>
         <label className={styles.control}>
+          <span>JENIS DATA</span>
+          <select value={kind} onChange={event => updateFilters(event.target.value as CalendarKind, year)}>
+            {Object.entries(CALENDAR_KINDS).map(([key, item]) => <option key={key} value={key}>{item.label}</option>)}
+          </select>
+        </label>
+        <label className={styles.control}>
           <span>LOGGER SENSOR</span>
-          <select value={selectedDevice?.loggerId ?? ''} onChange={event => selectLogger(Number(event.target.value))} disabled={loading || devices.length === 0}>
-            {devices.length === 0 && <option value="">Belum ada logger</option>}
+          <select value={selectedDevice?.loggerId ?? ''} onChange={event => updateFilters(kind, year, Number(event.target.value))} disabled={loading || devices.length === 0}>
+            {devices.length === 0 && <option value="">Tidak ada sensor {definition.label}</option>}
             {devices.map(device => <option key={device.loggerId} value={device.loggerId}>{getDisplayName(device)} · {device.loggerCode}</option>)}
           </select>
         </label>
         <label className={styles.control}>
           <span>TAHUN</span>
-          <select value={year} onChange={event => { const nextYear = Number(event.target.value); setYear(nextYear); setSearchParams({ loggerId: String(selectedDevice?.loggerId ?? ''), year: String(nextYear) }) }}>
+          <select value={year} onChange={event => updateFilters(kind, Number(event.target.value))}>
             {yearOptions.map(option => <option key={option} value={option}>{option}</option>)}
           </select>
         </label>
@@ -235,26 +202,32 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
         <div>
           <span className={styles.panelEyebrow}>LOGGER TERPILIH</span>
           <strong>{selectedDevice ? getDisplayName(selectedDevice) : 'Belum ada logger'}</strong>
-          <small>{selectedDevice?.loggerCode ?? '-'} · {selectedDevice?.sourceType ?? '-'} · parameter {rainParameter}</small>
+          <small>{selectedDevice?.loggerCode ?? '-'} · {selectedDevice?.sourceType ?? '-'} · {definition.label} ({definition.unit}) · {isRain ? 'Akumulasi harian' : 'Rata-rata harian'}</small>
         </div>
         {selectedDevice && <span className={`${styles.statusBadge} ${styles[`status-${monitoringStatusTone(selectedDevice.status)}`]}`}><i />{monitoringStatusLabel(selectedDevice.status)}</span>}
       </section>
 
-      <section className={styles.summaryGrid} aria-label="Ringkasan curah hujan">
-        <SummaryCard label="Hari dengan hujan" value={summary.rainyDays} hint={`Ambang ≥ 0,5 mm pada ${year}`} tone="rain" />
-        <SummaryCard label="Akumulasi terbaca" value={formatNumber(summary.total)} hint="Nilai parameter hujan (mm)" tone="total" />
-        <SummaryCard label="Pembacaan tertinggi" value={formatNumber(summary.maximum)} hint="Nilai harian tertinggi (mm)" tone="peak" />
-        <SummaryCard label="Data harian" value={history?.total ?? 0} hint={history?.aggregationMode === 'sum' ? 'Total interval per hari dari API IoT' : 'Menunggu snapshot'} tone="days" />
+      <section className={styles.summaryGrid} aria-label={`Ringkasan ${definition.label}`}>
+        {isRain ? <>
+          <SummaryCard label="Hari dengan hujan" value={summary.rainyDays} hint={`Ambang ≥ 0,5 mm pada ${year}`} tone="rain" />
+          <SummaryCard label="Akumulasi terbaca" value={formatNumber(summary.total)} hint="Total curah hujan tersedia (mm)" tone="total" />
+          <SummaryCard label="Pembacaan tertinggi" value={formatNumber(summary.maximum)} hint="Nilai harian tertinggi (mm)" tone="peak" />
+        </> : <>
+          <SummaryCard label="Rata-rata" value={formatNumber(statistics.average)} hint="Rata-rata dari nilai harian tersedia (cm)" tone="total" />
+          <SummaryCard label="Terendah" value={formatNumber(statistics.minimum)} hint="Rata-rata harian terendah (cm)" tone="rain" />
+          <SummaryCard label="Tertinggi" value={formatNumber(statistics.maximum)} hint="Rata-rata harian tertinggi (cm)" tone="peak" />
+        </>}
+        <SummaryCard label="Data harian" value={calendar.size} hint="Jumlah hari dengan pembacaan valid" tone="days" />
       </section>
 
       {historyError && <section className={styles.alert} role="alert"><span>{historyError}</span><button type="button" onClick={() => setRefreshKey(key => key + 1)}>Coba lagi</button></section>}
 
-      <section className={styles.calendarPanel} aria-label="Kalender pembacaan curah hujan">
+      <section className={styles.calendarPanel} aria-label={`Kalender pembacaan ${definition.label}`}>
         <div className={styles.panelHeader}>
-          <div><span className={styles.panelEyebrow}>RAIN SENSOR HISTORY</span><h2>Kalender pembacaan harian</h2><p>{rainParameter} · data tahun {year}</p></div>
+          <div><span className={styles.panelEyebrow}>SENSOR HISTORY</span><h2>Kalender {definition.label}</h2><p>{isRain ? 'Akumulasi' : 'Rata-rata'} harian ({definition.unit}) · data tahun {year}</p></div>
           <span className={styles.sourceBadge}>{selectedDevice ? `${getDisplayName(selectedDevice)} · ${year}` : 'Pilih logger'}</span>
         </div>
-        {historyLoading ? <div className={styles.state}><strong>Memuat histori hujan...</strong><span>API IoT sedang merangkum pembacaan harian logger terpilih.</span></div> : selectedDevice && calendar.size === 0 ? <div className={styles.state}><strong>Belum ada pembacaan hujan untuk filter ini</strong><span>Logger mungkin tidak memiliki parameter curah hujan atau belum memiliki data pada tahun {year}.</span></div> : <div className={styles.tableWrap}>
+        {loading || historyLoading ? <div className={styles.state}><strong>Memuat kalender data sensor...</strong><span>Menyiapkan pembacaan harian sensor terpilih.</span></div> : !selectedDevice ? <div className={styles.state}><strong>Tidak ada sensor dengan parameter {definition.label}</strong><span>Pilih jenis data lain untuk melihat sensor yang tersedia.</span></div> : calendar.size === 0 ? <div className={styles.state}><strong>Belum ada pembacaan {definition.label} untuk filter ini</strong><span>Tidak ada data valid pada tahun {year}. Data kosong tidak dianggap nol.</span></div> : <div className={styles.tableWrap}>
           <table className={styles.calendarTable}>
             <thead><tr><th>Bulan / Tanggal</th>{Array.from({ length: 31 }, (_, index) => <th key={index}>{String(index + 1).padStart(2, '0')}</th>)}</tr></thead>
             <tbody>{MONTHS.map((month, monthIndex) => <tr key={month}><th>{month}</th>{Array.from({ length: 31 }, (_, dayIndex) => {
@@ -262,18 +235,20 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
               if (day > daysInMonth(year, monthIndex)) return <td key={day} className={styles.invalidDay} />
               const key = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
               const value = calendar.get(key)
-              const cell = getRainCellStyle(value)
-              return <td key={day} style={{ background: cell.background, color: cell.color }} title={value === undefined ? `${key}: tidak ada data` : `${key}: ${formatNumber(value)} mm`}>{value === undefined ? '–' : formatNumber(value)}</td>
+              const cell = isRain ? getRainCellStyle(value) : getLevelCellStyle(value, statistics.minimum, statistics.maximum)
+              return <td key={day} style={{ background: cell.background, color: cell.color }} title={value === undefined ? `${key}: tidak ada data` : `${key}: ${formatNumber(value)} ${definition.unit}`}>{value === undefined ? '–' : formatNumber(value)}</td>
             })}</tr>)}</tbody>
           </table>
         </div>}
       </section>
 
-      <div className={styles.legend} aria-label="Legenda intensitas hujan">
+      {isRain ? <div className={styles.legend} aria-label="Legenda curah hujan harian">
         <strong>Intensitas:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#ffffff" label="&lt; 0,5 mm" /><Legend color="#c8f0dc" label="0,5–20 mm" /><Legend color="#f8e7a9" label="21–50 mm" /><Legend color="#f9c58e" label="51–100 mm" /><Legend color="#f3a1a1" label="101–150 mm" /><Legend color="#cdb0ec" label="&gt; 150 mm" />
-      </div>
+      </div> : <div className={styles.legend} aria-label="Legenda rata-rata muka air">
+        <strong>Rentang data:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#e8f3fb" label={`Lebih rendah (${formatNumber(statistics.minimum)} cm)`} /><Legend color="#91c5e8" label="Nilai tengah" /><Legend color="#246a9a" label={`Lebih tinggi (${formatNumber(statistics.maximum)} cm)`} /><span>Warna mengikuti rentang data, bukan ambang bahaya.</span>
+      </div>}
 
-      {selectedDevice?.lastReceivedAt && <p className={styles.freshness}>Snapshot logger terakhir diterima {formatMonitoringDate(selectedDevice.lastReceivedAt)}. Data kalender dipanggil hanya ketika logger atau tahun berubah.</p>}
+      {selectedDevice?.lastReceivedAt && <p className={styles.freshness}>Snapshot logger terakhir diterima {formatMonitoringDate(selectedDevice.lastReceivedAt)}. Kalender mengikuti jenis data, sensor, dan tahun terpilih.</p>}
     </main>
   )
 }
