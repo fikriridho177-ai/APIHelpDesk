@@ -459,21 +459,21 @@
 
 .sensorGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px 20px 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px 22px 22px;
 }
 
 .sensorCard {
   position: relative;
   display: flex;
   min-width: 0;
-  min-height: 268px;
+  min-height: 292px;
   flex-direction: column;
-  padding: 15px;
+  padding: 18px;
   overflow: hidden;
   border: 1px solid #d7e7ea;
-  border-radius: 13px;
+  border-radius: 16px;
   background: linear-gradient(145deg, #ffffff, #f8fcfc);
   box-shadow: 0 7px 18px rgba(16, 63, 76, .055);
   transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
@@ -529,7 +529,7 @@
 
 .cardNumber {
   color: #b2c8cd;
-  font-size: 1.18rem;
+  font-size: 1.28rem;
   font-weight: 900;
 }
 
@@ -537,7 +537,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: .56rem;
+  font-size: .6rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -560,13 +560,13 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .sensorIcon {
   display: grid;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid #bfe9e2;
@@ -591,46 +591,46 @@
   overflow: hidden;
   margin: 3px 0;
   color: #173e50;
-  font-size: .75rem;
+  font-size: .86rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .identity div > span {
   color: #899fa6;
-  font-size: .56rem;
+  font-size: .6rem;
 }
 
 .reading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-top: 17px;
-  padding: 12px 13px;
+  margin-top: 19px;
+  padding: 15px 16px;
   border: 1px solid #d7eeeb;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f0fbfa;
 }
 
 .reading small {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: #67929a;
-  font-size: .52rem;
+  font-size: .58rem;
   text-transform: uppercase;
   letter-spacing: .07em;
 }
 
 .reading strong {
   color: #087e78;
-  font-size: 1.45rem;
+  font-size: 1.72rem;
   letter-spacing: -.03em;
 }
 
 .reading > span {
-  padding-bottom: 2px;
+  padding-bottom: 3px;
   color: #70939a;
-  font-size: .62rem;
+  font-size: .7rem;
   font-weight: 800;
 }
 
@@ -639,11 +639,11 @@
   display: inline-flex;
   width: fit-content;
   align-items: center;
-  margin-top: 5px;
-  padding: 3px 6px;
+  margin-top: 6px;
+  padding: 4px 8px;
   border: 1px solid rgba(49, 84, 72, .2);
   border-radius: 999px;
-  font-size: .48rem;
+  font-size: .56rem;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: 0;
@@ -653,8 +653,8 @@
 }
 
 .metricList {
-  margin-top: 17px;
-  padding: 10px;
+  margin-top: 19px;
+  padding: 12px;
   border: 1px solid #d7eeeb;
   border-radius: 10px;
   background: #f0fbfa;
@@ -662,9 +662,9 @@
 
 .metricListLabel {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 8px;
   color: #67929a;
-  font-size: .52rem;
+  font-size: .58rem;
   font-weight: 800;
   letter-spacing: .07em;
 }
@@ -674,9 +674,9 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 9px 9px;
+  padding: 10px 11px 11px;
   border: 1px solid #cfe9e5;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #ffffff;
 }
 
@@ -695,14 +695,14 @@
 
 .primaryMetric strong {
   color: #087e78;
-  font-size: 1.14rem;
+  font-size: 1.32rem;
   letter-spacing: -.03em;
 }
 
 .primaryMetric > small {
   padding-bottom: 2px;
   color: #70939a;
-  font-size: .59rem;
+  font-size: .64rem;
   font-weight: 800;
 }
 
@@ -765,9 +765,9 @@
 
 .cardMeta {
   align-items: flex-start;
-  margin-top: 12px;
+  margin-top: 15px;
   color: #819aa1;
-  font-size: .54rem;
+  font-size: .58rem;
 }
 
 .cardMeta span {
@@ -779,7 +779,7 @@
   overflow: hidden;
   margin-top: 3px;
   color: #4f707a;
-  font-size: .58rem;
+  font-size: .62rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -788,10 +788,10 @@
 .cardFooter {
   align-items: flex-end;
   margin-top: auto;
-  padding-top: 11px;
+  padding-top: 14px;
   border-top: 1px solid #e3edef;
   color: #7b949c;
-  font-size: .56rem;
+  font-size: .6rem;
 }
 
 .cardFooter > span {
@@ -806,7 +806,7 @@
   align-items: center;
   gap: 4px;
   color: #0b8582;
-  font-size: .58rem;
+  font-size: .62rem;
   font-weight: 800;
   text-decoration: none;
   white-space: nowrap;
