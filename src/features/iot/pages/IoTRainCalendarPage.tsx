@@ -6,7 +6,7 @@ import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { getIoTHistory, getIoTMonitoring } from '../api/iotApi'
 import { monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
 import { summarizeCalendarRainfall } from '../lib/rainCalendar'
-import { getRainfallCellStyle, RAINFALL_CATEGORIES } from '../lib/rainThresholds'
+import { formatRainfallCellTitle, getRainfallCellStyle, RAINFALL_CATEGORIES } from '../lib/rainThresholds'
 import {
   CALENDAR_KINDS, getCalendarHistoryQuery, getCalendarKind, getCalendarSelection,
   getCalendarStatistics, getLevelCellStyle, getSensorCalendar,
@@ -236,7 +236,10 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
                   : kind === 'tmak'
                     ? getTmakCellStyle(value)
                     : getLevelCellStyle(value, statistics.minimum, statistics.maximum)
-              return <td key={day} style={{ background: cell.background, color: cell.color }} title={value === undefined ? `${key}: tidak ada data` : `${key}: ${formatNumber(value)} ${definition.unit}${category ? ` · ${category.label}` : ''}`}>{value === undefined ? '–' : formatNumber(value)}</td>
+              const title = isRain
+                ? formatRainfallCellTitle(key, value, value === undefined ? undefined : formatNumber(value))
+                : value === undefined ? `${key}: tidak ada data` : `${key}: ${formatNumber(value)} ${definition.unit}${category ? ` · ${category.label}` : ''}`
+              return <td key={day} style={{ background: cell.background, color: cell.color }} title={title} aria-label={title}>{value === undefined ? '–' : formatNumber(value)}</td>
             })}</tr>)}</tbody>
           </table>
         </div>}

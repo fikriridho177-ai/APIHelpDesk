@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { classifyRainfall, getRainfallCellStyle, RAINFALL_CATEGORIES } from '../src/features/iot/lib/rainThresholds.ts'
+import { classifyRainfall, formatRainfallCellTitle, getRainfallCellStyle, RAINFALL_CATEGORIES } from '../src/features/iot/lib/rainThresholds.ts'
 
 test('classifies rainfall using the requested inclusive boundaries', () => {
   assert.equal(classifyRainfall(null).id, 'no-data')
@@ -27,4 +27,12 @@ test('uses the TMAK/TMAT visual theme for rainfall severity colors', () => {
     ['#f1f5f4', '#ffffff', '#10b981', '#f59e0b', '#f97316', '#e11d48', '#7c3aed'],
   )
   assert.deepEqual(getRainfallCellStyle(150), { background: '#e11d48', color: '#ffffff' })
+})
+
+test('includes the rainfall category in the calendar cell title', () => {
+  assert.equal(
+    formatRainfallCellTitle('2026-06-12', 35.5, '35,5'),
+    '2026-06-12: 35,5 mm · Hujan sedang',
+  )
+  assert.equal(formatRainfallCellTitle('2026-06-13', undefined, undefined), '2026-06-13: tidak ada data')
 })
