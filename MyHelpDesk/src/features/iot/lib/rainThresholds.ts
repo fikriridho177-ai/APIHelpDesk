@@ -67,6 +67,12 @@ export function classifyRainfall(value: number | null | undefined) {
   return RAINFALL_CATEGORIES[6]
 }
 
+export function formatRainfallCellTitle(date: string, value: number | null | undefined, formattedValue: string | undefined) {
+  const category = classifyRainfall(value)
+  if (category.id === 'no-data' || formattedValue == null) return `${date}: tidak ada data`
+  return `${date}: ${formattedValue} mm · ${category.label}`
+}
+
 export function getRainfallCellStyle(value: number | null | undefined) {
   const category = classifyRainfall(value)
   return { background: category.background, color: category.color }
