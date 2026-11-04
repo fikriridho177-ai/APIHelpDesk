@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { getBreadcrumbBackPath } from "./breadcrumbNavigation";
 
 type RouteItem = { label: string; path?: string };
 
@@ -122,14 +123,15 @@ export default function AppBreadcrumb() {
   const navigate = useNavigate();
   if (location.pathname === "/") return null;
   const items = resolveItems(location.pathname);
+  const fixedBackPath = getBreadcrumbBackPath(location.pathname);
 
   return (
     <div className="breadcrumb-container">
       <button
         type="button"
         className="breadcrumb-back"
-        onClick={() => navigate(-1)}
-        title="Kembali ke halaman sebelumnya"
+        onClick={() => fixedBackPath ? navigate(fixedBackPath) : navigate(-1)}
+        title={fixedBackPath ? "Kembali ke halaman ECS" : "Kembali ke halaman sebelumnya"}
       >
         ← Kembali
       </button>

@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { NoAccess } from '../../sensus/components/SensusParts'
 import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { getIoTHistory, getIoTMonitoring } from '../api/iotApi'
-import { formatMonitoringDate, monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
+import { monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
 import { summarizeCalendarRainfall } from '../lib/rainCalendar'
 import { getRainfallCellStyle, RAINFALL_CATEGORIES } from '../lib/rainThresholds'
 import {
@@ -255,7 +255,6 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
         <strong>Rentang data:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#e8f3fb" label={`Lebih rendah (${formatNumber(statistics.minimum)} cm)`} /><Legend color="#91c5e8" label="Nilai tengah" /><Legend color="#246a9a" label={`Lebih tinggi (${formatNumber(statistics.maximum)} cm)`} /><span>Warna mengikuti rentang data, bukan ambang bahaya.</span>
       </div>}
 
-      {selectedDevice?.lastReceivedAt && <p className={styles.freshness}>Snapshot logger terakhir diterima {formatMonitoringDate(selectedDevice.lastReceivedAt)}. Kalender mengikuti jenis data, sensor, dan tahun terpilih.</p>}
     </main>
   )
 }
