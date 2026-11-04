@@ -1,4 +1,4 @@
-// SinauBumi vendor dashboard categories, as supplied by the operator.
+// LPA vendor dashboard categories, as supplied by the operator.
 // Resolve overlapping labels explicitly: -40 cm is Normal; -60 cm is Rawan.
 // Apply to signed TMAT in cm relative to the ground surface, without rounding.
 export const TMAT_CATEGORIES = [
