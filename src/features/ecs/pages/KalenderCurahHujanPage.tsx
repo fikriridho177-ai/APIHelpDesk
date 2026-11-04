@@ -291,7 +291,7 @@ return (
               fontWeight: 800,
             }}
           >
-            Kalender Curah Hujan
+            Kalender Data Sensor
           </h1>
 
           <div

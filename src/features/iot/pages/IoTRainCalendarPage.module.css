@@ -39,7 +39,7 @@
 .calendarPanel,
 .summaryCard,
 .legend { border: 1px solid #c9dfe4; border-radius: 12px; background: #fff; box-shadow: 0 10px 28px rgba(16, 63, 76, .07); }
-.controlPanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, 280px) 130px; align-items: end; gap: 14px; padding: 18px 20px; }
+.controlPanel { display: grid; grid-template-columns: minmax(0, 1fr) 150px minmax(230px, 280px) 110px; align-items: end; gap: 14px; padding: 18px 20px; }
 .controlCopy h2 { margin: 4px 0 3px; color: #12384b; font-size: 1rem; }
 .controlCopy p { margin: 0; color: #78949d; font-size: .68rem; }
 .control { display: grid; gap: 6px; }

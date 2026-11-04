@@ -55,8 +55,8 @@ export const WAD_SERVICE_ITEMS = [
   {
     order: 5,
     code: 'WAD_KALENDER_HUJAN',
-    label: 'Kalender Curah Hujan',
-    description: 'Telusuri pola curah hujan harian per logger dan tahun.',
+    label: 'Kalender Data Sensor',
+    description: 'Telusuri curah hujan serta rata-rata harian TMAK dan TMAT per sensor.',
     icon: 'calendar',
     available: true,
     route: '/ecs/kalender-curah-hujan',

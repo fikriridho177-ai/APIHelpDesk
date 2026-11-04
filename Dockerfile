@@ -3,7 +3,10 @@ FROM public.ecr.aws/docker/library/node:22-alpine AS build
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Alpine uses musl; include its native CSS binding explicitly in npm's platform
+# selection and fail here if the build dependency cannot load.
+RUN npm ci --include=dev --include=optional --libc=musl \
+    && node -e "require('lightningcss-linux-' + process.arch + '-musl'); require('lightningcss')"
 
 # VITE_* di-embed saat build. Contoh:
 #   docker build --build-arg VITE_API_URL=https://helpdesk.example.com/api -t myhelpdesk .
