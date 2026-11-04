@@ -243,7 +243,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
       </section>
 
       {isRain ? <div className={styles.legend} aria-label="Legenda curah hujan harian">
-        <strong>Intensitas:</strong>{RAINFALL_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={`${category.label}: ${category.range}`} />)}
+        {RAINFALL_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={category.legend} />)}
       </div> : kind === 'tmat' ? <div className={styles.legend} aria-label="Legenda kategori TMAT vendor">
         <strong>Kategori TMAT:</strong><Legend color="#f1f5f4" label="Tidak ada data" />
         {TMAT_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={`${category.label}: ${category.range}`} />)}
