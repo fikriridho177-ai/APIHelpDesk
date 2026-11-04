@@ -11,6 +11,7 @@ import {
   getCalendarStatistics, getLevelCellStyle, getSensorCalendar,
 } from '../lib/sensorCalendar'
 import type { CalendarKind } from '../lib/sensorCalendar'
+import { classifyTmat, getTmatCellStyle, TMAT_CATEGORIES } from '../lib/tmatThresholds'
 import type { IoTHistoryResponse, IoTMonitoringDevice, IoTMonitoringResponse } from '../types/iot'
 import styles from './IoTRainCalendarPage.module.css'
 
@@ -235,8 +236,9 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
               if (day > daysInMonth(year, monthIndex)) return <td key={day} className={styles.invalidDay} />
               const key = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
               const value = calendar.get(key)
-              const cell = isRain ? getRainCellStyle(value) : getLevelCellStyle(value, statistics.minimum, statistics.maximum)
-              return <td key={day} style={{ background: cell.background, color: cell.color }} title={value === undefined ? `${key}: tidak ada data` : `${key}: ${formatNumber(value)} ${definition.unit}`}>{value === undefined ? '–' : formatNumber(value)}</td>
+              const category = kind === 'tmat' ? classifyTmat(value) : null
+              const cell = isRain ? getRainCellStyle(value) : kind === 'tmat' ? getTmatCellStyle(value) : getLevelCellStyle(value, statistics.minimum, statistics.maximum)
+              return <td key={day} style={{ background: cell.background, color: cell.color }} title={value === undefined ? `${key}: tidak ada data` : `${key}: ${formatNumber(value)} ${definition.unit}${category ? ` · ${category.label}` : ''}`}>{value === undefined ? '–' : formatNumber(value)}</td>
             })}</tr>)}</tbody>
           </table>
         </div>}
@@ -244,6 +246,10 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
 
       {isRain ? <div className={styles.legend} aria-label="Legenda curah hujan harian">
         <strong>Intensitas:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#ffffff" label="&lt; 0,5 mm" /><Legend color="#c8f0dc" label="0,5–20 mm" /><Legend color="#f8e7a9" label="21–50 mm" /><Legend color="#f9c58e" label="51–100 mm" /><Legend color="#f3a1a1" label="101–150 mm" /><Legend color="#cdb0ec" label="&gt; 150 mm" />
+      </div> : kind === 'tmat' ? <div className={styles.legend} aria-label="Legenda kategori TMAT SiTMAT">
+        <strong>Kategori TMAT:</strong><Legend color="#f1f5f4" label="Tidak ada data" />
+        {TMAT_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={`${category.label}: ${category.range}`} />)}
+        <span>Kategori berdasarkan rata-rata harian. Rujukan: <a href="https://sitmat.kemenlh.go.id/" target="_blank" rel="noopener noreferrer">SiTMAT KLH</a>.</span>
       </div> : <div className={styles.legend} aria-label="Legenda rata-rata muka air">
         <strong>Rentang data:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#e8f3fb" label={`Lebih rendah (${formatNumber(statistics.minimum)} cm)`} /><Legend color="#91c5e8" label="Nilai tengah" /><Legend color="#246a9a" label={`Lebih tinggi (${formatNumber(statistics.maximum)} cm)`} /><span>Warna mengikuti rentang data, bukan ambang bahaya.</span>
       </div>}
