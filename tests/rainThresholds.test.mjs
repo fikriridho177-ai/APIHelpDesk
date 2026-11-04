@@ -19,6 +19,10 @@ test('classifies rainfall using the requested inclusive boundaries', () => {
 
 test('uses the TMAK/TMAT visual theme for rainfall severity colors', () => {
   assert.deepEqual(
+    RAINFALL_CATEGORIES.map(category => category.legend),
+    ['Tidak ada data', '< 0,5 mm', '0,5–20 mm', '>20–50 mm', '>50–100 mm', '>100–150 mm', '>150 mm'],
+  )
+  assert.deepEqual(
     RAINFALL_CATEGORIES.map(category => category.background),
     ['#f1f5f4', '#ffffff', '#10b981', '#f59e0b', '#f97316', '#e11d48', '#7c3aed'],
   )

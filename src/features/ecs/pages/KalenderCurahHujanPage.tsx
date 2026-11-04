@@ -772,13 +772,13 @@ return (
 
       <Legend
         color={RAINFALL_CATEGORIES[0].background}
-        text={`${RAINFALL_CATEGORIES[0].label}: ${RAINFALL_CATEGORIES[0].range}`}
+        text={RAINFALL_CATEGORIES[0].legend}
       />
       {RAINFALL_CATEGORIES.slice(1).map(category => (
         <Legend
           key={category.id}
           color={category.background}
-          text={`${category.label}: ${category.range}`}
+          text={category.legend}
           border={category.id === 'below-threshold'}
         />
       ))}
