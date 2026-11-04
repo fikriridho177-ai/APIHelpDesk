@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getMonitorCurahHujan } from '../services/api'
 import type { CurahHujanMonitorItem } from '../types'
 import { buildCalendarData, getCalendarCellStyle } from '../utils/rainHistoris'
+import { RAINFALL_CATEGORIES } from '../../iot/lib/rainThresholds'
 import { filterRowsBySensor, getStationMeta, stationUrl, type MonitorRowWithMeta,} from '../utils/station'
 import PageNavigation from '../components/PageNavigation'
 
@@ -770,40 +771,17 @@ return (
       </span>
 
       <Legend
-        color="#e5e7eb"
-        text="Tidak ada data"
+        color={RAINFALL_CATEGORIES[0].background}
+        text={`${RAINFALL_CATEGORIES[0].label}: ${RAINFALL_CATEGORIES[0].range}`}
       />
-
-      <Legend
-        color="#ffffff"
-        text="< 0.5 mm"
-        border
-      />
-
-      <Legend
-        color="#6fcf97"
-        text="0.5 - 20 mm"
-      />
-
-      <Legend
-        color="#f2c94c"
-        text="21 - 50 mm"
-      />
-
-      <Legend
-        color="#f2994a"
-        text="51 - 100 mm"
-      />
-
-      <Legend
-        color="#eb5757"
-        text="101 - 150 mm"
-      />
-
-      <Legend
-        color="#9b51e0"
-        text="> 150 mm"
-      />
+      {RAINFALL_CATEGORIES.slice(1).map(category => (
+        <Legend
+          key={category.id}
+          color={category.background}
+          text={`${category.label}: ${category.range}`}
+          border={category.id === 'below-threshold'}
+        />
+      ))}
     </div>
   </div>
 )
