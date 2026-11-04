@@ -64,17 +64,17 @@ test('requests daily averages for levels and daily sums for rainfall', () => {
   assert.equal(getCalendarHistoryQuery('rain', 2026).aggregationMode, 'sum')
 })
 
-test('displays TMAK daily averages with the existing AWL offset, preserving gaps', () => {
+test('displays TMAK daily averages with the AWL correction below -60 cm, preserving gaps', () => {
   const response = history(1, 'average', [
-    { ts: '2026-10-01T00:00:00', data: { TMAK_DISTANCE: -50, RAIN_TIP: 200 } },
+    { ts: '2026-10-01T00:00:00', data: { TMAK_DISTANCE: -70, RAIN_TIP: 200 } },
     { ts: '2026-10-02T00:00:00', data: { TMAK_DISTANCE: 0 } },
     { ts: '2026-10-03T00:00:00', data: { TMAK_DISTANCE: null } },
     { ts: '2026-10-04T00:00:00', data: { TMAK_DISTANCE: '' } },
   ])
   assert.deepEqual([...getSensorCalendar(response, awl, 'tmak', 2026)], [
-    ['2026-10-01', -40], ['2026-10-02', 10],
+    ['2026-10-01', -60], ['2026-10-02', 0],
   ])
-  assert.equal(response.data[0].data.TMAK_DISTANCE, -50)
+  assert.equal(response.data[0].data.TMAK_DISTANCE, -70)
 })
 
 test('keeps negative and zero TMAT values and summarizes averages without summing levels', () => {
