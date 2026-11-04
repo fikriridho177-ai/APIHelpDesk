@@ -1,21 +1,39 @@
-// Operational KLHK reference for peatland water-level management: more than
-// 0.4 m below the peat surface is beyond the reference limit (PP 57/2016).
-// TMAK values in this application are signed centimetres relative to the
-// surface, so the boundary is -40 cm and the exact boundary remains in range.
+// TMAK uses the same signed-centimetre convention and visual reference as
+// TMAT. The dashboard bands follow the SiTMAT/KLH thresholds supplied by the
+// operator: > 0, (-40, 0], (-80, -40], and <= -80 cm.
+//
+// PP 57/2016 separately defines more than 0.4 m below the peat surface as a
+// peatland-damage criterion for groundwater level (TMAT). Keep that reference
+// at -40 cm, but do not present the SiTMAT display bands as extra legal limits.
 export const KLHK_TMAK_THRESHOLD_CM = -40
+export const KLHK_TMAK_VULNERABLE_THRESHOLD_CM = -80
 
 export const TMAK_CATEGORIES = [
   {
-    id: 'within',
-    label: 'Dalam ambang KLHK',
-    range: 'TMAK ≥ −40 cm',
+    id: 'high',
+    label: 'Di atas daratan acuan',
+    range: 'TMAK > 0 cm',
+    background: '#2563eb',
+    color: '#ffffff',
+  },
+  {
+    id: 'normal',
+    label: 'Normal*',
+    range: '−40 cm < TMAK ≤ 0 cm',
     background: '#10b981',
     color: '#052e23',
   },
   {
-    id: 'below',
-    label: 'Melewati ambang KLHK',
-    range: 'TMAK < −40 cm',
+    id: 'vulnerable',
+    label: 'Rawan*',
+    range: '−80 cm < TMAK ≤ −40 cm',
+    background: '#f59e0b',
+    color: '#451a03',
+  },
+  {
+    id: 'very-vulnerable',
+    label: 'Sangat rawan*',
+    range: 'TMAK ≤ −80 cm',
     background: '#e11d48',
     color: '#ffffff',
   },
@@ -23,7 +41,10 @@ export const TMAK_CATEGORIES = [
 
 export function classifyTmak(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return null
-  return value >= KLHK_TMAK_THRESHOLD_CM ? TMAK_CATEGORIES[0] : TMAK_CATEGORIES[1]
+  if (value > 0) return TMAK_CATEGORIES[0]
+  if (value > KLHK_TMAK_THRESHOLD_CM) return TMAK_CATEGORIES[1]
+  if (value > KLHK_TMAK_VULNERABLE_THRESHOLD_CM) return TMAK_CATEGORIES[2]
+  return TMAK_CATEGORIES[3]
 }
 
 export function getTmakCellStyle(value: number | null | undefined) {
