@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   classifyTmak,
+  formatTmakCategoryLabel,
   getTmakCellStyle,
   KLHK_TMAK_THRESHOLD_CM,
 } from '../src/features/iot/lib/tmakThresholds.ts'
@@ -23,4 +24,12 @@ test('colors four TMAK bands and leaves missing data neutral', () => {
   assert.equal(new Set(backgrounds).size, 4)
   assert.deepEqual(getTmakCellStyle(undefined), getTmakCellStyle(null))
   assert.deepEqual(getTmakCellStyle(Number.NaN), getTmakCellStyle(undefined))
+})
+
+test('provides the same category labels for monitoring cards', () => {
+  assert.equal(formatTmakCategoryLabel(5), 'Di atas daratan acuan')
+  assert.equal(formatTmakCategoryLabel(-20), 'Normal*')
+  assert.equal(formatTmakCategoryLabel(-50), 'Rawan*')
+  assert.equal(formatTmakCategoryLabel(-100), 'Sangat rawan*')
+  assert.equal(formatTmakCategoryLabel(null), 'Tidak ada data')
 })

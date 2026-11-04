@@ -47,6 +47,10 @@ export function classifyTmak(value: number | null | undefined) {
   return TMAK_CATEGORIES[3]
 }
 
+export function formatTmakCategoryLabel(value: number | null | undefined) {
+  return classifyTmak(value)?.label ?? 'Tidak ada data'
+}
+
 export function getTmakCellStyle(value: number | null | undefined) {
   const category = classifyTmak(value)
   return category
