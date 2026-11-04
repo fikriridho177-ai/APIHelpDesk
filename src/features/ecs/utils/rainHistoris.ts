@@ -1,4 +1,5 @@
 import type { CurahHujanMonitorItem } from '../types'
+import { getRainfallCellStyle } from '../../iot/lib/rainThresholds'
 
 export type HistoryInterval = '5m' | 'hour' | 'day' | 'month' | 'year'
 
@@ -158,11 +159,5 @@ export function buildCalendarData(
 }
 
 export function getCalendarCellStyle(total: number | undefined) {
-  if (total === undefined) return { background: '#e5e7eb', color: '#111827' }
-  if (total < 0.5) return { background: '#ffffff', color: '#111827' }
-  if (total <= 20) return { background: '#6fcf97', color: '#111827' }
-  if (total <= 50) return { background: '#f2c94c', color: '#111827' }
-  if (total <= 100) return { background: '#f2994a', color: '#111827' }
-  if (total <= 150) return { background: '#eb5757', color: '#ffffff' }
-  return { background: '#9b51e0', color: '#ffffff' }
+  return getRainfallCellStyle(total)
 }

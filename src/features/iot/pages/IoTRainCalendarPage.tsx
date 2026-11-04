@@ -6,6 +6,7 @@ import { useMenuPermission } from '../../sensus/hooks/useSensus'
 import { getIoTHistory, getIoTMonitoring } from '../api/iotApi'
 import { formatMonitoringDate, monitoringStatusLabel, monitoringStatusTone } from '../lib/monitoring'
 import { summarizeCalendarRainfall } from '../lib/rainCalendar'
+import { getRainfallCellStyle, RAINFALL_CATEGORIES } from '../lib/rainThresholds'
 import {
   CALENDAR_KINDS, getCalendarHistoryQuery, getCalendarKind, getCalendarSelection,
   getCalendarStatistics, getLevelCellStyle, getSensorCalendar,
@@ -36,16 +37,6 @@ function daysInMonth(year: number, monthIndex: number) {
 function formatNumber(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return '-'
   return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(value)
-}
-
-function getRainCellStyle(value: number | undefined) {
-  if (value === undefined) return { background: '#f1f5f4', color: '#80918b' }
-  if (value < 0.5) return { background: '#ffffff', color: '#315448' }
-  if (value <= 20) return { background: '#c8f0dc', color: '#18563e' }
-  if (value <= 50) return { background: '#f8e7a9', color: '#72570a' }
-  if (value <= 100) return { background: '#f9c58e', color: '#74400f' }
-  if (value <= 150) return { background: '#f3a1a1', color: '#7b2020' }
-  return { background: '#cdb0ec', color: '#4c2677' }
 }
 
 function getDisplayName(device: IoTMonitoringDevice) {
@@ -239,7 +230,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
               const value = calendar.get(key)
               const category = kind === 'tmat' ? classifyTmat(value) : kind === 'tmak' ? classifyTmak(value) : null
               const cell = isRain
-                ? getRainCellStyle(value)
+                ? getRainfallCellStyle(value)
                 : kind === 'tmat'
                   ? getTmatCellStyle(value)
                   : kind === 'tmak'
@@ -252,7 +243,7 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
       </section>
 
       {isRain ? <div className={styles.legend} aria-label="Legenda curah hujan harian">
-        <strong>Intensitas:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#ffffff" label="&lt; 0,5 mm" /><Legend color="#c8f0dc" label="0,5–20 mm" /><Legend color="#f8e7a9" label="21–50 mm" /><Legend color="#f9c58e" label="51–100 mm" /><Legend color="#f3a1a1" label="101–150 mm" /><Legend color="#cdb0ec" label="&gt; 150 mm" />
+        <strong>Intensitas:</strong>{RAINFALL_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={`${category.label}: ${category.range}`} />)}
       </div> : kind === 'tmat' ? <div className={styles.legend} aria-label="Legenda kategori TMAT vendor">
         <strong>Kategori TMAT:</strong><Legend color="#f1f5f4" label="Tidak ada data" />
         {TMAT_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={`${category.label}: ${category.range}`} />)}
