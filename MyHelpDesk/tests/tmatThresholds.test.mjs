@@ -2,12 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { classifyTmat, getTmatCellStyle } from '../src/features/iot/lib/tmatThresholds.ts'
 
-test('follows the SiTMAT categories including exact zero, -40 and -80 cm boundaries', () => {
+test('follows vendor categories including exact zero, -40 and -60 cm boundaries', () => {
   for (const [value, expected] of [
     [10, 'flooded'], [0.001, 'flooded'],
-    [0, 'normal'], [-0.001, 'normal'], [-39.999, 'normal'],
-    [-40, 'vulnerable'], [-40.001, 'vulnerable'], [-79.999, 'vulnerable'],
-    [-80, 'very-vulnerable'], [-80.001, 'very-vulnerable'], [-150, 'very-vulnerable'],
+    [0, 'normal'], [-0.001, 'normal'], [-39.999, 'normal'], [-40, 'normal'],
+    [-40.001, 'vulnerable'], [-59.999, 'vulnerable'], [-60, 'vulnerable'],
+    [-60.001, 'very-vulnerable'], [-79.999, 'very-vulnerable'], [-80, 'very-vulnerable'], [-150, 'very-vulnerable'],
   ]) assert.equal(classifyTmat(value)?.id, expected, `TMAT ${value} cm`)
 })
 
@@ -20,8 +20,9 @@ test('missing and nonfinite observations never become normal or vulnerable', () 
 })
 
 test('uses stable category colors rather than the observed yearly range', () => {
-  assert.deepEqual(getTmatCellStyle(-40), getTmatCellStyle(-79))
-  assert.deepEqual(getTmatCellStyle(-80), getTmatCellStyle(-150))
-  const backgrounds = [5, -20, -60, -90].map(value => getTmatCellStyle(value).background)
+  assert.deepEqual(getTmatCellStyle(-40), getTmatCellStyle(-20))
+  assert.deepEqual(getTmatCellStyle(-40.001), getTmatCellStyle(-60))
+  assert.deepEqual(getTmatCellStyle(-60.001), getTmatCellStyle(-150))
+  const backgrounds = [5, -20, -50, -70].map(value => getTmatCellStyle(value).background)
   assert.equal(new Set(backgrounds).size, 4)
 })
