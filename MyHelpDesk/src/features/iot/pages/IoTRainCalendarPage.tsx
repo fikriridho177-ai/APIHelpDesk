@@ -249,7 +249,6 @@ export default function IoTRainCalendarPage({ permissionCode = MENU_CODE }: IoTR
       </div> : kind === 'tmat' ? <div className={styles.legend} aria-label="Legenda kategori TMAT vendor">
         <strong>Kategori TMAT:</strong><Legend color="#f1f5f4" label="Tidak ada data" />
         {TMAT_CATEGORIES.map(category => <Legend key={category.id} color={category.background} label={`${category.label}: ${category.range}`} />)}
-        <span>Kategori berdasarkan rata-rata harian. Ambang mengikuti vendor LPA.</span>
       </div> : <div className={styles.legend} aria-label="Legenda rata-rata muka air">
         <strong>Rentang data:</strong><Legend color="#f1f5f4" label="Tidak ada data" /><Legend color="#e8f3fb" label={`Lebih rendah (${formatNumber(statistics.minimum)} cm)`} /><Legend color="#91c5e8" label="Nilai tengah" /><Legend color="#246a9a" label={`Lebih tinggi (${formatNumber(statistics.maximum)} cm)`} /><span>Warna mengikuti rentang data, bukan ambang bahaya.</span>
       </div>}
