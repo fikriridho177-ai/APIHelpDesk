@@ -634,6 +634,24 @@
   font-weight: 800;
 }
 
+.tmakCategory,
+.primaryMetric .tmakCategory {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  margin-top: 5px;
+  padding: 3px 6px;
+  border: 1px solid rgba(49, 84, 72, .2);
+  border-radius: 999px;
+  font-size: .48rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(20, 74, 61, .08);
+}
+
 .metricList {
   margin-top: 17px;
   padding: 10px;

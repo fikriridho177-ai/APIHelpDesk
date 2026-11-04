@@ -12,6 +12,7 @@ import {
   monitoringStatusTone,
 } from '../../iot/lib/monitoring'
 import { adjustTmakValue } from '../../iot/lib/tmakOffset'
+import { classifyTmak, formatTmakCategoryLabel } from '../../iot/lib/tmakThresholds'
 import type { IoTMonitoringDevice, IoTMonitoringResponse } from '../../iot/types/iot'
 import styles from './WadSensorOverviewPage.module.css'
 
@@ -353,6 +354,7 @@ export default function WadSensorOverviewPage({
                     <div>
                       <small>{activeDefinition?.valueLabel}</small>
                       <strong>{value == null ? '—' : formatMonitoringNumber(value)}</strong>
+                      {activeFilter === 'tmak' && <TmakCategoryBadge value={value} />}
                     </div>
                     <span>{activeDefinition?.unit}</span>
                   </div>
@@ -409,6 +411,7 @@ function MetricList({ device, readings }: { device: IoTMonitoringDevice; reading
         <div>
           <span>{primaryDefinition.valueLabel}</span>
           <strong>{primaryValue == null ? '—' : formatMonitoringNumber(primaryValue)}</strong>
+          {primaryKind === 'tmak' && <TmakCategoryBadge value={primaryValue} />}
         </div>
         <small>{primaryDefinition.unit}</small>
       </div>
@@ -429,6 +432,13 @@ function MetricList({ device, readings }: { device: IoTMonitoringDevice; reading
       )}
     </div>
   )
+}
+
+function TmakCategoryBadge({ value }: { value: number | null }) {
+  const category = classifyTmak(value)
+  if (!category) return null
+
+  return <span className={styles.tmakCategory} style={{ background: category.background, color: category.color }} title={category.range}>{formatTmakCategoryLabel(value)}</span>
 }
 
 function Summary({ icon, tone, label, value, hint }: { icon: 'chart' | 'check' | 'map'; tone: 'cyan' | 'green' | 'blue'; label: string; value: number; hint: string }) {
