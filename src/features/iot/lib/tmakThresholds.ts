@@ -11,28 +11,28 @@ export const KLHK_TMAK_VULNERABLE_THRESHOLD_CM = -80
 export const TMAK_CATEGORIES = [
   {
     id: 'high',
-    label: 'Di atas daratan acuan',
+    label: 'Di atas acuan',
     range: 'TMAK > 0 cm',
     background: '#2563eb',
     color: '#ffffff',
   },
   {
     id: 'normal',
-    label: 'Normal*',
+    label: 'Normal',
     range: '−40 cm < TMAK ≤ 0 cm',
     background: '#10b981',
     color: '#052e23',
   },
   {
     id: 'vulnerable',
-    label: 'Rawan*',
+    label: 'Waspada',
     range: '−80 cm < TMAK ≤ −40 cm',
     background: '#f59e0b',
     color: '#451a03',
   },
   {
     id: 'very-vulnerable',
-    label: 'Sangat rawan*',
+    label: 'Siaga',
     range: 'TMAK ≤ −80 cm',
     background: '#e11d48',
     color: '#ffffff',

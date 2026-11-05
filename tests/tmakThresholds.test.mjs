@@ -26,10 +26,10 @@ test('colors four TMAK bands and leaves missing data neutral', () => {
   assert.deepEqual(getTmakCellStyle(Number.NaN), getTmakCellStyle(undefined))
 })
 
-test('provides the same category labels for monitoring cards', () => {
-  assert.equal(formatTmakCategoryLabel(5), 'Di atas daratan acuan')
-  assert.equal(formatTmakCategoryLabel(-20), 'Normal*')
-  assert.equal(formatTmakCategoryLabel(-50), 'Rawan*')
-  assert.equal(formatTmakCategoryLabel(-100), 'Sangat rawan*')
+test('provides early-warning labels for calendar and monitoring views', () => {
+  assert.equal(formatTmakCategoryLabel(5), 'Di atas acuan')
+  assert.equal(formatTmakCategoryLabel(-20), 'Normal')
+  assert.equal(formatTmakCategoryLabel(-50), 'Waspada')
+  assert.equal(formatTmakCategoryLabel(-100), 'Siaga')
   assert.equal(formatTmakCategoryLabel(null), 'Tidak ada data')
 })
