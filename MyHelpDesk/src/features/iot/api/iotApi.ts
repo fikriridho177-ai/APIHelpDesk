@@ -11,6 +11,7 @@ import type {
     IoTHistoryQuery,
     IoTSourceType,
 } from '../types/iot'
+import { copyAwsRainfallToAwl } from '../lib/rainfallSource'
 
 const iotHttp = axios.create({
     baseURL:
@@ -60,7 +61,7 @@ export async function getIoTDevices(
 
 export async function getIoTMonitoring(): Promise<IoTMonitoringResponse> {
     const { data } = await iotHttp.get<IoTMonitoringResponse>('/iot/monitoring')
-    return data
+    return copyAwsRainfallToAwl(data)
 }
 
 export async function getIoTLatest(
