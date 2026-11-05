@@ -27,9 +27,9 @@ test('colors four TMAK bands and leaves missing data neutral', () => {
 })
 
 test('provides early-warning labels for calendar and monitoring views', () => {
-  assert.equal(formatTmakCategoryLabel(5), 'Di atas acuan')
+  assert.equal(formatTmakCategoryLabel(5), 'Siaga Banjir')
   assert.equal(formatTmakCategoryLabel(-20), 'Normal')
   assert.equal(formatTmakCategoryLabel(-50), 'Waspada')
-  assert.equal(formatTmakCategoryLabel(-100), 'Siaga')
+  assert.equal(formatTmakCategoryLabel(-100), 'Kritis')
   assert.equal(formatTmakCategoryLabel(null), 'Tidak ada data')
 })
