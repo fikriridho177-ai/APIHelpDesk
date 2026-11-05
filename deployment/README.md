@@ -1,6 +1,11 @@
-# Unified HelpDesk deployment
+# MyHelpDesk deployment
 
-This deployment uses one `APIHelpDesk` repository containing the API and the bundled `MyHelpDesk` frontend. The frontend remains available in its own upstream repository, but the deployment copy is synchronized into this repository as a Git subtree so Dokploy needs access to only one repository:
+This deployment keeps the Backend and Frontend in separate Git repositories while running them as one Compose stack:
+
+- Backend: `APIHelpDesk` (`https://github.com/fikriridho177-ai/APIHelpDesk.git`)
+- Frontend: `MyHelpDesk` (`https://github.com/fikriridho177-ai/MyHelpDesk.git`), linked into the Backend repository as a Git submodule
+
+Dokploy reads the Backend repository for the API and Compose files, then initializes the Frontend submodule for the web build. This keeps FE and BE history, permissions, and changes separate without losing the same-origin `/api/` and SignalR proxy.
 
 - `web`: React/Vite assets served by Nginx on the public port.
 - `api`: ASP.NET Core .NET 8 service on the private Compose network.
@@ -13,33 +18,34 @@ The stack does not create databases or run migrations. The API must be able to r
 
 - Git.
 - Docker Engine or Docker Desktop with Docker Compose v2 (`docker compose version`).
-- A GitHub provider credential that can read the `APIHelpDesk` repository when deploying from Dokploy.
+- A GitHub provider credential that can read both the `APIHelpDesk` repository and its `MyHelpDesk` submodule when deploying from Dokploy.
 - Network access from the API container to the configured databases and external ECS/weather services.
 - A free public TCP port for the frontend; the default is `8080`.
 
 ## Repository layout
 
-The deployment repository contains the frontend as a normal folder:
+The deployment repository contains the frontend as a Git submodule:
 
 ```text
 APIHelpDesk/
-  MyHelpDesk/          # bundled frontend subtree
+  MyHelpDesk/          # Git submodule -> fikriridho177-ai/MyHelpDesk
   deployment/
     docker-compose.yml
 ```
 
-The default `MYHELPDESK_CONTEXT=../MyHelpDesk` is relative to `deployment/docker-compose.yml`. If the frontend is provided by a different local checkout, change `MYHELPDESK_CONTEXT` in `deployment/.env` to an absolute path or another path relative to the Compose file.
+The default `MYHELPDESK_CONTEXT=../MyHelpDesk` is relative to `deployment/docker-compose.yml`. It therefore reads the Frontend submodule separately from the Backend source. If a different local FE checkout is required, change `MYHELPDESK_CONTEXT` in `deployment/.env` to an absolute path or another path relative to the Compose file.
 
 ## First deployment
 
-Clone the unified deployment repository:
+Clone the Backend repository and initialize the separate Frontend repository:
 
 ```powershell
-git clone https://github.com/fikriridho177-ai/APIHelpDesk.git
+git clone --recurse-submodules https://github.com/fikriridho177-ai/APIHelpDesk.git
 Set-Location APIHelpDesk
+git submodule status
 ```
 
-For Dokploy, use the **GitHub** provider with repository `APIHelpDesk`, branch `main`, and Compose path `./deployment/docker-compose.yml`. Leave **Enable Submodules** disabled because the frontend is already part of this repository.
+For Dokploy, use the **GitHub** provider with repository `APIHelpDesk`, branch `main`, and Compose path `./deployment/docker-compose.yml`. Keep **Enable Submodules** enabled so Dokploy reads the separate `MyHelpDesk` repository into the Frontend folder.
 
 Create the host-only environment file and fill in the real values for databases, JWT, ECS, and optional WebGIS settings:
 
@@ -75,12 +81,17 @@ docker compose --env-file deployment/.env -f deployment/docker-compose.yml ps
 
 If the pull reports local changes or cannot fast-forward, stop and review the checkout before rebuilding. Do not discard local changes as part of an ordinary deployment update.
 
-To update the bundled frontend from the upstream `MyHelpDesk` repository, run this from the `APIHelpDesk` root after reviewing the incoming changes:
+To update the Frontend from its separate upstream repository, run this from the `APIHelpDesk` root after reviewing the incoming changes:
 
 ```powershell
-git subtree pull --prefix=MyHelpDesk https://github.com/fikriridho177-ai/MyHelpDesk.git main --squash
+git submodule sync -- MyHelpDesk
+git submodule update --remote --merge MyHelpDesk
+git add .gitmodules MyHelpDesk
+git commit -m "chore: update frontend submodule"
 git push origin main
 ```
+
+The Frontend repository remains independently editable and pushable from its own checkout. Dokploy deploys the exact Frontend commit recorded by the Backend repository, so update the submodule pointer in `APIHelpDesk` before deploying a new FE commit through this Compose stack.
 
 ## Status and logs
 
@@ -132,7 +143,13 @@ There is no automatic database rollback. Check whether the selected application 
 
 ### Frontend build cannot find `MyHelpDesk`
 
-Check that the `MyHelpDesk` folder exists in the APIHelpDesk checkout. The default context is `../MyHelpDesk` relative to `deployment/docker-compose.yml`. **Enable Submodules** is not required. If a custom checkout is intended, verify `MYHELPDESK_CONTEXT` in `deployment/.env`.
+Check that the `MyHelpDesk` submodule is initialized in the APIHelpDesk checkout:
+
+```powershell
+git submodule update --init --recursive
+```
+
+The default context is `../MyHelpDesk` relative to `deployment/docker-compose.yml`. **Enable Submodules** is required in Dokploy. If a custom checkout is intended, verify `MYHELPDESK_CONTEXT` in `deployment/.env`.
 
 ### Frontend loads but API calls fail
 
