@@ -21,6 +21,8 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_IOT_API_URL: ${VITE_IOT_API_URL:-/api}
     image: myhelpdesk:local
+    environment:
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-api:8080}
     depends_on:
       api:
         condition: service_started

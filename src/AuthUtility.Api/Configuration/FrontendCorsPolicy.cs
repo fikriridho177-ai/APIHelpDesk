@@ -1,5 +1,7 @@
 namespace AuthUtility.Api.Configuration;
 
+using Microsoft.AspNetCore.Cors.Infrastructure;
+
 public static class FrontendCorsPolicy
 {
     private static readonly string[] DefaultOrigins =
@@ -20,6 +22,16 @@ public static class FrontendCorsPolicy
             .Select(origin => origin!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    public static void Configure(
+        CorsPolicyBuilder policy,
+        IEnumerable<string?>? configuredOrigins)
+    {
+        policy.WithOrigins(Build(configuredOrigins))
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     }
 
     private static string? Normalize(string? origin)

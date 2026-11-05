@@ -151,15 +151,12 @@ var configuredCorsOrigins = builder.Configuration
     .GetSection("Cors:Origins")
     .GetChildren()
     .Select(section => section.Value);
-var frontendCorsOrigins = FrontendCorsPolicy.Build(configuredCorsOrigins);
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-       policy.WithOrigins(frontendCorsOrigins)
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+       FrontendCorsPolicy.Configure(policy, configuredCorsOrigins);
     });
 });
 
