@@ -11,7 +11,7 @@ export const KLHK_TMAK_VULNERABLE_THRESHOLD_CM = -80
 export const TMAK_CATEGORIES = [
   {
     id: 'high',
-    label: 'Di atas acuan',
+    label: 'Siaga Banjir',
     range: 'TMAK > 0 cm',
     background: '#2563eb',
     color: '#ffffff',
@@ -32,7 +32,7 @@ export const TMAK_CATEGORIES = [
   },
   {
     id: 'very-vulnerable',
-    label: 'Siaga',
+    label: 'Kritis',
     range: 'TMAK ≤ −80 cm',
     background: '#e11d48',
     color: '#ffffff',
