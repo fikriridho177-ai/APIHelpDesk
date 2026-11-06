@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AuthUtility.Application.DTOs.Auth;
 using AuthUtility.Application.Interfaces;
+using AuthUtility.Application.Security;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -26,7 +27,9 @@ public class AuthController(
             .Include(x => x.Group)
             .FirstOrDefaultAsync(
                 x => x.UserId == r.UserId &&
-                     x.Active
+                     x.Active &&
+                     x.Group != null &&
+                     x.Group.Active
             );
 
         if (
@@ -69,7 +72,9 @@ public class AuthController(
             )!
         );
 
-        var u = await db.Users.FindAsync(id);
+        var u = await db.Users
+            .Include(x => x.Group)
+            .FirstOrDefaultAsync(x => x.Id == id && x.Active && x.Group != null && x.Group.Active);
 
         if (u == null)
         {
@@ -90,11 +95,37 @@ public class AuthController(
             });
         }
 
-        if (r.NewPassword.Length < 8)
+        var policyError = PasswordPolicy.Validate(r.NewPassword);
+        if (policyError != null)
         {
             return BadRequest(new
             {
-                message = "Password baru minimal 8 karakter"
+                message = policyError
+            });
+        }
+
+        if (hasher.VerifyHashedPassword(u, u.PasswordHash, r.NewPassword) != PasswordVerificationResult.Failed)
+        {
+            return BadRequest(new
+            {
+                message = "Password baru tidak boleh sama dengan password sebelumnya"
+            });
+        }
+
+        var previousHashes = await db.PasswordHistories
+            .AsNoTracking()
+            .Where(x => x.UserId == u.Id)
+            .OrderByDescending(x => x.ChangedAt)
+            .Take(5)
+            .Select(x => x.PasswordHash)
+            .ToListAsync();
+
+        if (previousHashes.Any(hash =>
+                hasher.VerifyHashedPassword(u, hash, r.NewPassword) != PasswordVerificationResult.Failed))
+        {
+            return BadRequest(new
+            {
+                message = "Password baru tidak boleh memakai salah satu dari lima password sebelumnya"
             });
         }
 
@@ -119,7 +150,8 @@ public class AuthController(
 
         return Ok(new
         {
-            message = "Password berhasil diganti"
+            message = "Password berhasil diganti",
+            token = jwt.CreateToken(u)
         });
     }
 

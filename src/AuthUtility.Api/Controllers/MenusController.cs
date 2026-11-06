@@ -1,4 +1,5 @@
 using AuthUtility.Application.DTOs.Menus;
+using AuthUtility.Application.Interfaces;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -15,13 +16,16 @@ namespace AuthUtility.Api.Controllers;
 public class MenusController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IPermissionService _permissionService;
 
 
     public MenusController(
-        AppDbContext db
+        AppDbContext db,
+        IPermissionService permissionService
     )
     {
         _db = db;
+        _permissionService = permissionService;
     }
 
 
@@ -33,6 +37,8 @@ public class MenusController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<MenuDto>>> GetAll()
     {
+        if (!await _permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var data =
             await _db.Menus
 
@@ -67,6 +73,8 @@ public class MenusController : ControllerBase
         int id
     )
     {
+        if (!await _permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var menu =
             await _db.Menus
 
@@ -108,6 +116,8 @@ public class MenusController : ControllerBase
         SaveMenuRequest request
     )
     {
+        if (!await _permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         if (
             string.IsNullOrWhiteSpace(
                 request.Code
@@ -284,6 +294,8 @@ public class MenusController : ControllerBase
         SaveMenuRequest request
     )
     {
+        if (!await _permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var menu =
             await _db.Menus
                 .FirstOrDefaultAsync(
@@ -437,6 +449,8 @@ public class MenusController : ControllerBase
         int id
     )
     {
+        if (!await _permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var menu =
             await _db.Menus
                 .FirstOrDefaultAsync(

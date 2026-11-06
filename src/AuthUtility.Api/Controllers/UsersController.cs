@@ -1,11 +1,13 @@
 using AuthUtility.Application.DTOs.Users;
 using AuthUtility.Application.Interfaces;
+using AuthUtility.Application.Security;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace AuthUtility.Api.Controllers;
 
@@ -19,7 +21,6 @@ public class UsersController(
 ) : ControllerBase
 {
     private const string MenuCode = "MASTER_USER";
-    private const string DefaultPassword = "User@123";
 
     [HttpGet]
     public async Task<IActionResult> Get()
@@ -54,6 +55,19 @@ public class UsersController(
     {
         if (!await permissionService.HasPermissionAsync(User, MenuCode, MenuPermission.Create)) return Forbid();
 
+        var isSuperAdmin = await permissionService.IsSuperAdminAsync(User);
+        if (!isSuperAdmin)
+        {
+            var currentGroupId = await GetCurrentGroupIdAsync();
+            if (!currentGroupId.HasValue
+                || !UserAdministrationRules.CanChangeGroup(currentGroupId.Value, r.GroupId, false))
+                return Forbid();
+        }
+
+        var passwordError = PasswordPolicy.Validate(r.Password);
+        if (passwordError != null)
+            return BadRequest(new { message = passwordError });
+
         if (await db.Users.AnyAsync(x => x.UserId == r.UserId))
             return Conflict(new { message = "User ID sudah ada" });
 
@@ -75,8 +89,7 @@ public class UsersController(
             MustChangePassword = true
         };
 
-        var password = string.IsNullOrWhiteSpace(r.Password) ? DefaultPassword : r.Password;
-        user.PasswordHash = hasher.HashPassword(user, password);
+        user.PasswordHash = hasher.HashPassword(user, r.Password);
 
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -91,6 +104,17 @@ public class UsersController(
 
         var user = await db.Users.FindAsync(id);
         if (user == null) return NotFound();
+
+        var isSuperAdmin = await permissionService.IsSuperAdminAsync(User);
+        if (!isSuperAdmin
+            && await db.Groups.AnyAsync(x => x.Id == user.GroupId && x.IsSuperAdmin))
+            return Forbid();
+
+        if (!UserAdministrationRules.CanChangeGroup(user.GroupId, r.GroupId, isSuperAdmin))
+            return Forbid();
+
+        if (!isSuperAdmin && await db.Groups.AnyAsync(x => x.Id == r.GroupId && x.IsSuperAdmin))
+            return Forbid();
 
         // User ID hanya diganti jika diisi dan berbeda dari sebelumnya.
         var newUserId = r.UserId?.Trim();
@@ -118,6 +142,25 @@ public class UsersController(
         // Password hanya diganti jika diisi; password lama disimpan ke riwayat.
         if (!string.IsNullOrWhiteSpace(r.Password))
         {
+            var passwordError = PasswordPolicy.Validate(r.Password);
+            if (passwordError != null)
+                return BadRequest(new { message = passwordError });
+
+            if (hasher.VerifyHashedPassword(user, user.PasswordHash, r.Password) != PasswordVerificationResult.Failed)
+                return BadRequest(new { message = "Password baru tidak boleh sama dengan password sebelumnya" });
+
+            var previousHashes = await db.PasswordHistories
+                .AsNoTracking()
+                .Where(x => x.UserId == user.Id)
+                .OrderByDescending(x => x.ChangedAt)
+                .Take(5)
+                .Select(x => x.PasswordHash)
+                .ToListAsync();
+
+            if (previousHashes.Any(hash =>
+                    hasher.VerifyHashedPassword(user, hash, r.Password) != PasswordVerificationResult.Failed))
+                return BadRequest(new { message = "Password baru tidak boleh memakai salah satu dari lima password sebelumnya" });
+
             db.PasswordHistories.Add(new UtlPasswordHistory
             {
                 UserId = user.Id,
@@ -126,6 +169,7 @@ public class UsersController(
 
             user.PasswordHash = hasher.HashPassword(user, r.Password);
             user.MustChangePassword = true;
+            user.LastPasswordChangedAt = DateTime.UtcNow;
         }
 
         await db.SaveChangesAsync();
@@ -142,9 +186,25 @@ public class UsersController(
         var user = await db.Users.FindAsync(id);
         if (user == null) return NotFound();
 
+        if (!await permissionService.IsSuperAdminAsync(User)
+            && await db.Groups.AnyAsync(x => x.Id == user.GroupId && x.IsSuperAdmin))
+            return Forbid();
+
         user.Active = false;
         await db.SaveChangesAsync();
 
         return Ok(new { message = "User dinonaktifkan" });
+    }
+
+    private async Task<int?> GetCurrentGroupIdAsync()
+    {
+        var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(rawUserId, out var userId)) return null;
+
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => x.Id == userId && x.Active)
+            .Select(x => (int?)x.GroupId)
+            .SingleOrDefaultAsync();
     }
 }

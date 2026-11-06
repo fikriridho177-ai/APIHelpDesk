@@ -16,6 +16,7 @@ public enum MenuPermission
 
 public interface IPermissionService
 {
+    Task<bool> IsSuperAdminAsync(ClaimsPrincipal principal);
     Task<bool> HasPermissionAsync(ClaimsPrincipal principal, string menuCode, MenuPermission permission);
     Task<CurrentMenuPermissionDto?> GetPermissionsAsync(ClaimsPrincipal principal, string menuCode);
 }

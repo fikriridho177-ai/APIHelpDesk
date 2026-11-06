@@ -43,7 +43,8 @@ Backend configuration:
 1. Select the GitHub provider, repository `APIHelpDesk`, branch `main`, build path `/`, and Dockerfile build type.
 2. Copy the existing production API environment values into the Application environment. Keep database connection strings, JWT keys, and service credentials in Dokploy only.
 3. Set `Cors__Origins__0` to the exact Frontend origin, including `http://` or `https://` and any port.
-4. Add a domain pointing to container port `8080`.
+4. If this is the first deployment and the database has no administrator, set the optional `BootstrapAdmin__Password` secret (minimum 12 characters with upper/lowercase, number, and symbol). There is no source-code default administrator password; leave this variable unset after the first administrator exists.
+5. Add a domain pointing to container port `8080`.
 
 Frontend configuration:
 
@@ -178,6 +179,8 @@ For split Dokploy Applications, roll back the Backend and Frontend to compatible
 - Set `Cors__Origins__0` to the exact frontend origin used by the browser, including the scheme and port when present (for example `http://helpdesk.example.com`). This is required for SignalR WebSocket negotiation.
 - For legacy SQL Server instances that fail during the pre-login TLS handshake, add `Encrypt=False;TrustServerCertificate=True` to each SQL Server connection string. Keep PostgreSQL connection strings in PostgreSQL format; do not add SQL Server `Encrypt` keywords to them.
 - Do not put passwords, connection strings, JWT keys, or access tokens in Dockerfiles, Compose files, or committed frontend files.
+- Set `BootstrapAdmin__Password` only as a Dokploy/runtime secret when a first administrator must be created; never commit its value or paste it into logs.
+- Use a JWT key of at least 32 random characters and rotate it through Dokploy secrets when exposure is suspected.
 - Verify the deployment file is ignored with `git check-ignore -v deployment/.env`.
 - Rotate any credential that has been exposed outside the protected deployment host, even if the value is later moved into `.env`.
 - Only publish the frontend port. Do not add database ports to this Compose stack.

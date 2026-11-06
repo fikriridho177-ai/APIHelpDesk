@@ -27,6 +27,8 @@ public class SecurityController(
     [HttpGet("menus")]
     public async Task<IActionResult> Menus()
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var menus = await db.Menus
             .OrderBy(x => x.SortOrder)
             .Select(
@@ -50,6 +52,8 @@ public class SecurityController(
         int groupId
     )
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var menus = await db.Menus
             .OrderBy(x => x.SortOrder)
             .ToListAsync();
@@ -92,6 +96,8 @@ public class SecurityController(
         List<SaveGroupMenuRequest> items
     )
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var old = await db.GroupMenus
             .Where(
                 x => x.GroupId == groupId

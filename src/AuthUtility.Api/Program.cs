@@ -1,8 +1,10 @@
 using System.Text;
 using AuthUtility.Api.Chat;
 using AuthUtility.Api.Configuration;
+using AuthUtility.Api.Security;
 using AuthUtility.Api.Weather;
 using AuthUtility.Application.Interfaces;
+using AuthUtility.Application.Security;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
 using AuthUtility.Infrastructure.Security;
@@ -11,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -102,9 +105,14 @@ builder.Services.AddHttpClient<WeatherService>((serviceProvider, client) =>
         Math.Clamp(options.TimeoutSeconds, 1, 60));
 });
 
-var jwtKey = Encoding.UTF8.GetBytes(
-    builder.Configuration["Jwt:Key"]!
-);
+var jwtKeyValue = builder.Configuration["Jwt:Key"];
+if (!JwtConfiguration.IsStrongEnough(jwtKeyValue))
+{
+    throw new InvalidOperationException(
+        "Konfigurasi Jwt:Key wajib diisi dengan minimal 32 byte random secret.");
+}
+
+var jwtKey = Encoding.UTF8.GetBytes(jwtKeyValue!);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -136,6 +144,55 @@ builder.Services
                     context.Token = token;
 
                 return Task.CompletedTask;
+            },
+            OnTokenValidated = async context =>
+            {
+                var rawUserId = context.Principal?
+                    .FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (!int.TryParse(rawUserId, out var userId))
+                {
+                    context.Fail("Token user tidak valid.");
+                    return;
+                }
+
+                using var scope = context.HttpContext.RequestServices.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var user = await db.Users
+                    .AsNoTracking()
+                    .Where(x => x.Id == userId)
+                    .Select(x => new
+                    {
+                        x.Active,
+                        x.MustChangePassword,
+                        x.LastPasswordChangedAt,
+                        GroupActive = x.Group != null && x.Group.Active
+                    })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                if (user == null || !user.Active || !user.GroupActive)
+                {
+                    context.Fail("User atau group sudah tidak aktif.");
+                    return;
+                }
+
+                var tokenStamp = context.Principal?
+                    .FindFirst(AuthClaimNames.PasswordChangedTicks)?.Value;
+                if (!AuthTokenValidation.IsPasswordStampCurrent(user.LastPasswordChangedAt, tokenStamp))
+                {
+                    context.Fail("Token diterbitkan sebelum password terakhir diubah.");
+                    return;
+                }
+
+                if (context.Principal?.Identity is ClaimsIdentity identity)
+                {
+                    foreach (var claim in identity.FindAll(AuthClaimNames.MustChangePassword).ToList())
+                        identity.RemoveClaim(claim);
+
+                    identity.AddClaim(new Claim(
+                        AuthClaimNames.MustChangePassword,
+                        user.MustChangePassword ? "true" : "false"));
+                }
             }
         };
     });
@@ -207,6 +264,7 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.UseAuthentication();
+app.UseMiddleware<PasswordChangeRequiredMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -230,30 +288,38 @@ using (var scope = app.Services.CreateScope())
 
         if (adminGroup != null)
         {
+            var bootstrapUserId = builder.Configuration["BootstrapAdmin:UserId"] ?? "admin";
             var admin = await db.Users
-                .FirstOrDefaultAsync(x => x.UserId == "admin");
+                .FirstOrDefaultAsync(x => x.UserId == bootstrapUserId);
 
-            if (admin == null)
+            var bootstrapPassword = builder.Configuration["BootstrapAdmin:Password"];
+
+            if (admin == null && !string.IsNullOrWhiteSpace(bootstrapPassword))
             {
-                var u = new UtlUser
+                var policyError = PasswordPolicy.Validate(bootstrapPassword);
+                if (policyError != null)
                 {
-                    UserId = "admin",
-                    Name = "Administrator",
-                    Email = "admin@local",
-                    GroupId = adminGroup.Id,
-                    Active = true,
-                    MustChangePassword = true,
-                    CreatedAt = DateTime.UtcNow
-                };
+                    app.Logger.LogError(
+                        "BootstrapAdmin:Password tidak memenuhi policy password: {Reason}. Admin bootstrap tidak dibuat.",
+                        policyError);
+                }
+                else
+                {
+                    var u = new UtlUser
+                    {
+                        UserId = bootstrapUserId,
+                        Name = builder.Configuration["BootstrapAdmin:Name"] ?? "Administrator",
+                        Email = builder.Configuration["BootstrapAdmin:Email"] ?? "admin@local",
+                        GroupId = adminGroup.Id,
+                        Active = true,
+                        MustChangePassword = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                u.PasswordHash = hasher.HashPassword(
-                    u,
-                    "Admin@123"
-                );
-
-                db.Users.Add(u);
-
-                await db.SaveChangesAsync();
+                    u.PasswordHash = hasher.HashPassword(u, bootstrapPassword);
+                    db.Users.Add(u);
+                    await db.SaveChangesAsync();
+                }
             }
         }
     }

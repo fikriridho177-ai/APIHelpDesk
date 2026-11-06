@@ -8,6 +8,18 @@ namespace AuthUtility.Infrastructure.Security;
 
 public class PermissionService(AppDbContext db) : IPermissionService
 {
+    public async Task<bool> IsSuperAdminAsync(ClaimsPrincipal principal)
+    {
+        var rawUserId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(rawUserId, out var userId)) return false;
+
+        return await db.Users
+            .AsNoTracking()
+            .Where(x => x.Id == userId && x.Active)
+            .Select(x => x.Group != null && x.Group.Active && x.Group.IsSuperAdmin)
+            .SingleOrDefaultAsync();
+    }
+
     public async Task<CurrentMenuPermissionDto?> GetPermissionsAsync(ClaimsPrincipal principal, string menuCode)
     {
         // var rawUserId = principal.FindFirstValue(ClaimTypes.NameIdentifier);

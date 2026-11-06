@@ -1,3 +1,4 @@
+using AuthUtility.Application.Interfaces;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,12 +11,18 @@ namespace AuthUtility.Api.Controllers;
 [Route("api/utility/pkb-payroll/employees")]
 [Authorize]
 public class PKBPayrollEmployeeController(
-    PKBPayrollDbContext pkbDb
+    PKBPayrollDbContext pkbDb,
+    IPermissionService permissionService,
+    ILogger<PKBPayrollEmployeeController> logger
 ) : ControllerBase
 {
+    private const string MenuCode = "MASTER_USER";
+
     [HttpGet]
     public async Task<IActionResult> Get()
     {
+        if (!await permissionService.HasPermissionAsync(User, MenuCode, MenuPermission.Read)) return Forbid();
+
         var connection = pkbDb.Database.GetDbConnection();
 
         try
@@ -80,12 +87,12 @@ public class PKBPayrollEmployeeController(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Gagal mengambil data karyawan PKBPayroll.");
             return StatusCode(
                 StatusCodes.Status500InternalServerError,
                 new
                 {
-                    message = "Gagal mengambil data karyawan PKBPayroll.",
-                    detail = ex.Message
+                    message = "Gagal mengambil data karyawan PKBPayroll."
                 }
             );
         }

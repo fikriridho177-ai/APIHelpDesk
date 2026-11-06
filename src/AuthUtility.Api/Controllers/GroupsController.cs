@@ -1,4 +1,5 @@
 using AuthUtility.Application.DTOs.Groups;
+using AuthUtility.Application.Interfaces;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
@@ -10,11 +11,16 @@ namespace AuthUtility.Api.Controllers;
 [ApiController]
 [Route("api/utility/groups")]
 [Authorize]
-public class GroupsController(AppDbContext db) : ControllerBase
+public class GroupsController(
+    AppDbContext db,
+    IPermissionService permissionService
+) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get()
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var groups = await db.Groups
             .AsNoTracking()
             .OrderBy(x => x.Code)
@@ -31,6 +37,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
         return group == null ? NotFound() : Ok(ToDto(group));
     }
@@ -38,6 +46,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(SaveGroupRequest r)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var code = r.Code.Trim().ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(r.Name))
             return BadRequest(new { message = "Kode dan nama group wajib diisi." });
@@ -64,6 +74,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, SaveGroupRequest r)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.FindAsync(id);
         if (group == null) return NotFound();
 
@@ -89,6 +101,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Disable(int id)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.FindAsync(id);
         if (group == null) return NotFound();
 
@@ -103,6 +117,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpGet("{groupId:int}/menus")]
     public async Task<IActionResult> GetMenuAccess(int groupId)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var groupExists = await db.Groups.AsNoTracking().AnyAsync(x => x.Id == groupId);
         if (!groupExists) return NotFound(new { message = "Group tidak ditemukan." });
 
@@ -145,6 +161,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpPut("{groupId:int}/menus")]
     public async Task<IActionResult> SaveMenuAccess(int groupId, SaveGroupMenuAccessRequest request)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.FindAsync(groupId);
         if (group == null) return NotFound(new { message = "Group tidak ditemukan." });
         if (group.IsSuperAdmin) return Ok(new { message = "Super Administrator selalu memiliki seluruh akses menu." });
@@ -214,6 +232,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpGet("{groupId:int}/companies")]
     public async Task<IActionResult> GetCompanies(int groupId)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == groupId);
@@ -240,6 +260,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
         SaveExternalGroupScopeRequest request
     )
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.FindAsync(groupId);
 
         if (group == null)
@@ -295,6 +317,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpGet("{groupId:int}/departments")]
     public async Task<IActionResult> GetDepartments(int groupId)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == groupId);
@@ -321,6 +345,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
         SaveExternalGroupScopeRequest request
     )
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.FindAsync(groupId);
 
         if (group == null)
@@ -376,6 +402,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpGet("{groupId:int}/item-sub-categories")]
     public async Task<IActionResult> GetItemSubCategories(int groupId)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.AsNoTracking().FirstOrDefaultAsync(x => x.Id == groupId);
         if (group == null) return NotFound();
         var selected = await db.GroupItemSubCategories.AsNoTracking().Where(x => x.GroupId == groupId).Select(x => x.ItemSubCategoryId).ToListAsync();
@@ -386,6 +414,8 @@ public class GroupsController(AppDbContext db) : ControllerBase
     [HttpPut("{groupId:int}/item-sub-categories")]
     public async Task<IActionResult> SaveItemSubCategories(int groupId, SaveGroupScopeRequest request)
     {
+        if (!await permissionService.IsSuperAdminAsync(User)) return Forbid();
+
         var group = await db.Groups.FindAsync(groupId);
         if (group == null) return NotFound(new { message = "Group tidak ditemukan." });
         if (group.IsSuperAdmin) return Ok(new { message = "Super Administrator selalu memiliki seluruh akses item sub kategori." });
