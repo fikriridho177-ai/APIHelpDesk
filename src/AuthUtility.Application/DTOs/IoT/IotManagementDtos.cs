@@ -118,11 +118,25 @@ public sealed record IotOtaJobDto
     public DateTimeOffset LastActivityAt { get; init; }
 }
 
+public sealed record IotOtaEventDto
+{
+    public long Id { get; init; }
+    public Guid OtaJobId { get; init; }
+    public int Sequence { get; init; }
+    public IotOtaEventType EventType { get; init; }
+    public int Progress { get; init; }
+    public string? Message { get; init; }
+    public string? ReportedFirmwareVersion { get; init; }
+    public DateTimeOffset OccurredAt { get; init; }
+    public DateTimeOffset ReceivedAt { get; init; }
+}
+
 public sealed record IotOtaPendingDto
 {
     public Guid JobId { get; init; }
-    public IotFirmwareDto Firmware { get; init; } = new();
-    public string DownloadUrl { get; init; } = "";
+    public Guid FirmwareId { get; init; }
+    public string TargetVersion { get; init; } = "";
+    public string FirmwareUrl { get; init; } = "";
     public string Sha256 { get; init; } = "";
     public long SizeBytes { get; init; }
 }
@@ -140,6 +154,53 @@ public sealed record IotOtaConfirmRequest
 {
     public string ReportedFirmwareVersion { get; init; } = "";
     public DateTimeOffset ReportedAt { get; init; }
+}
+
+public sealed record IotFirmwareUploadMetadata
+{
+    public string PackageName { get; init; } = "";
+    public string Version { get; init; } = "";
+    public string TargetMcu { get; init; } = "";
+    public IReadOnlyCollection<string> CompatibleBoardProfiles { get; init; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> CompatibleHardwareRevisions { get; init; } = Array.Empty<string>();
+    public string? Notes { get; init; }
+}
+
+public sealed record IotOtaCreateRequest
+{
+    public Guid FirmwareId { get; init; }
+    public IReadOnlyCollection<string> DeviceIds { get; init; } = Array.Empty<string>();
+}
+
+public sealed record IotConfigurationSaveRequest
+{
+    public JsonElement Configuration { get; init; }
+}
+
+public sealed record IotSensorTypeRequest
+{
+    public string Code { get; init; } = "";
+    public string Name { get; init; } = "";
+    public string? Model { get; init; }
+    public string Protocol { get; init; } = "";
+    public string Unit { get; init; } = "";
+    public JsonElement Parameters { get; init; }
+    public JsonElement PinRequirements { get; init; }
+    public string DriverKey { get; init; } = "";
+    public bool IsActive { get; init; } = true;
+}
+
+public sealed record IotDeviceSensorRequest
+{
+    public string DeviceId { get; init; } = "";
+    public Guid SensorTypeId { get; init; }
+    public string Label { get; init; } = "";
+    public string Protocol { get; init; } = "";
+    public string Unit { get; init; } = "";
+    public JsonElement PinMappings { get; init; }
+    public int ReadIntervalSeconds { get; init; } = 60;
+    public JsonElement? Calibration { get; init; }
+    public bool IsEnabled { get; init; } = true;
 }
 
 public sealed record IotSensorTypeDto

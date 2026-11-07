@@ -17,7 +17,8 @@ public sealed class IotAgentController(
     AppDbContext db,
     IIotDeviceCredentialService credentials,
     IOptions<IotDeviceOptions> options,
-    ILogger<IotAgentController> logger
+    ILogger<IotAgentController> logger,
+    IotFirmwareService? firmware = null
 ) : ControllerBase
 {
     [HttpPost("heartbeat")]
@@ -52,6 +53,22 @@ public sealed class IotAgentController(
                 HttpContext.RequestAborted);
 
         UpdateLastSeen(device, request.DeviceTimestamp, request.FirmwareVersion, request.IpAddress, request.Rssi, request.UptimeSeconds, receivedAt);
+
+        var confirmingJob = await db.IotOtaJobs
+            .Include(x => x.FirmwarePackage)
+            .SingleOrDefaultAsync(x => x.DeviceAgentId == device.Id
+                && x.Status == IotOtaStatus.WaitingConfirmation
+                && x.FirmwarePackage.Version == request.FirmwareVersion.Trim(),
+                HttpContext.RequestAborted);
+        if (confirmingJob is not null)
+        {
+            confirmingJob.Status = IotOtaStatus.Succeeded;
+            confirmingJob.Progress = 100;
+            confirmingJob.ReportedFirmwareVersion = request.FirmwareVersion.Trim();
+            confirmingJob.ConfirmedAt = receivedAt;
+            confirmingJob.LastActivityAt = receivedAt;
+            AddOtaEvent(confirmingJob, IotOtaEventType.Confirmed, 100, "Firmware target terkonfirmasi melalui heartbeat.", request.FirmwareVersion.Trim(), request.DeviceTimestamp, receivedAt);
+        }
 
         if (!duplicate)
         {
@@ -188,6 +205,150 @@ public sealed class IotAgentController(
         return Ok(ToConfigurationDto(configuration));
     }
 
+    [HttpGet("ota/pending")]
+    public async Task<IActionResult> GetPendingOta([FromQuery] string? currentVersion = null)
+    {
+        var authentication = await AuthenticateAsync();
+        if (authentication.Error is not null)
+            return authentication.Error;
+
+        var job = await db.IotOtaJobs
+            .Include(x => x.FirmwarePackage)
+            .Where(x => x.DeviceAgentId == authentication.Device!.Id
+                && x.Status != IotOtaStatus.Succeeded
+                && x.Status != IotOtaStatus.Failed)
+            .OrderBy(x => x.RequestedAt)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted);
+        if (job is null)
+            return NoContent();
+        if (!string.IsNullOrWhiteSpace(currentVersion)
+            && string.Equals(currentVersion.Trim(), job.FirmwarePackage.Version, StringComparison.Ordinal))
+        {
+            return NoContent();
+        }
+
+        var firmwareUrl = Url.Action(
+            nameof(DownloadFirmware),
+            values: new { firmwareId = job.FirmwarePackageId })
+            ?? $"/api/iot/agent/firmware/{job.FirmwarePackageId:D}/download";
+        return Ok(new IotOtaPendingDto
+        {
+            JobId = job.Id,
+            FirmwareId = job.FirmwarePackageId,
+            TargetVersion = job.FirmwarePackage.Version,
+            FirmwareUrl = firmwareUrl,
+            Sha256 = job.FirmwarePackage.Sha256,
+            SizeBytes = job.FirmwarePackage.SizeBytes
+        });
+    }
+
+    [HttpPost("ota/{jobId:guid}/events")]
+    public async Task<IActionResult> RecordOtaEvent(
+        Guid jobId,
+        [FromBody] IotOtaEventRequest request)
+    {
+        var authentication = await AuthenticateAsync();
+        if (authentication.Error is not null)
+            return authentication.Error;
+
+        var job = await db.IotOtaJobs
+            .Include(x => x.FirmwarePackage)
+            .SingleOrDefaultAsync(x => x.Id == jobId, HttpContext.RequestAborted);
+        if (job is null || job.DeviceAgentId != authentication.Device!.Id)
+            return NotFound(new { message = "OTA job tidak ditemukan." });
+        if (request.EventType == IotOtaEventType.Confirmed)
+            return Conflict(new { message = "Gunakan endpoint confirm untuk memverifikasi versi firmware." });
+
+        if (!IotOtaRules.TryTransition(job.Status, request.EventType, request.Progress, out var next, out var error))
+        {
+            return Conflict(new { message = error });
+        }
+
+        var receivedAt = DateTimeOffset.UtcNow;
+        var occurredAt = request.OccurredAt == default ? receivedAt : request.OccurredAt;
+        job.Status = next;
+        job.Progress = request.Progress;
+        job.LastActivityAt = receivedAt;
+        if (request.ReportedFirmwareVersion is not null)
+            job.ReportedFirmwareVersion = request.ReportedFirmwareVersion.Trim();
+        if (next == IotOtaStatus.Failed)
+            job.FailureReason = string.IsNullOrWhiteSpace(request.Message) ? "Perangkat melaporkan OTA gagal." : request.Message.Trim();
+        AddOtaEvent(job, request.EventType, request.Progress, request.Message, request.ReportedFirmwareVersion, occurredAt, receivedAt);
+        await db.SaveChangesAsync(HttpContext.RequestAborted);
+        return Ok(new { jobId = job.Id, status = job.Status, progress = job.Progress });
+    }
+
+    [HttpPost("ota/{jobId:guid}/confirm")]
+    public async Task<IActionResult> ConfirmOta(
+        Guid jobId,
+        [FromBody] IotOtaConfirmRequest request)
+    {
+        var authentication = await AuthenticateAsync();
+        if (authentication.Error is not null)
+            return authentication.Error;
+
+        var job = await db.IotOtaJobs
+            .Include(x => x.FirmwarePackage)
+            .SingleOrDefaultAsync(x => x.Id == jobId, HttpContext.RequestAborted);
+        if (job is null || job.DeviceAgentId != authentication.Device!.Id)
+            return NotFound(new { message = "OTA job tidak ditemukan." });
+        if (job.Status != IotOtaStatus.WaitingConfirmation)
+            return Conflict(new { message = "OTA belum berada pada tahap waiting_confirmation." });
+
+        if (!IotOtaRules.TryConfirm(job.FirmwarePackage.Version, request.ReportedFirmwareVersion, out var error))
+        {
+            var receivedAt = DateTimeOffset.UtcNow;
+            job.Status = IotOtaStatus.Failed;
+            job.FailureReason = error;
+            job.LastActivityAt = receivedAt;
+            AddOtaEvent(job, IotOtaEventType.Failed, job.Progress, error, request.ReportedFirmwareVersion, request.ReportedAt, receivedAt);
+            await db.SaveChangesAsync(HttpContext.RequestAborted);
+            return Conflict(new { message = error });
+        }
+
+        var confirmedAt = DateTimeOffset.UtcNow;
+        job.Status = IotOtaStatus.Succeeded;
+        job.Progress = 100;
+        job.ReportedFirmwareVersion = request.ReportedFirmwareVersion.Trim();
+        job.ConfirmedAt = confirmedAt;
+        job.LastActivityAt = confirmedAt;
+        AddOtaEvent(job, IotOtaEventType.Confirmed, 100, "Firmware target terkonfirmasi.", request.ReportedFirmwareVersion.Trim(), request.ReportedAt, confirmedAt);
+        await db.SaveChangesAsync(HttpContext.RequestAborted);
+        return Ok(new { jobId = job.Id, status = job.Status, progress = job.Progress });
+    }
+
+    [HttpGet("firmware/{firmwareId:guid}/download")]
+    public async Task<IActionResult> DownloadFirmware(Guid firmwareId)
+    {
+        var authentication = await AuthenticateAsync();
+        if (authentication.Error is not null)
+            return authentication.Error;
+
+        var assigned = await db.IotOtaJobs
+            .Include(x => x.FirmwarePackage)
+            .Where(x => x.DeviceAgentId == authentication.Device!.Id
+                && x.FirmwarePackageId == firmwareId
+                && x.Status != IotOtaStatus.Succeeded
+                && x.Status != IotOtaStatus.Failed)
+            .OrderBy(x => x.RequestedAt)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted);
+        if (assigned is null)
+            return Forbid();
+
+        try
+        {
+            var service = firmware ?? new IotFirmwareService(db);
+            var path = service.GetSafeFilePath(assigned.FirmwarePackage);
+            if (!System.IO.File.Exists(path))
+                return NotFound(new { message = "File firmware tidak ditemukan." });
+            return PhysicalFile(path, "application/octet-stream", assigned.FirmwarePackage.FileName, enableRangeProcessing: true);
+        }
+        catch (IotFirmwareValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("configuration/{version:int}/ack")]
     public async Task<IActionResult> AcknowledgeConfiguration(
         int version,
@@ -308,5 +469,33 @@ public sealed class IotAgentController(
     {
         using var document = JsonDocument.Parse(json);
         return document.RootElement.Clone();
+    }
+
+    private void AddOtaEvent(
+        IotOtaJob job,
+        IotOtaEventType eventType,
+        int progress,
+        string? message,
+        string? reportedFirmwareVersion,
+        DateTimeOffset occurredAt,
+        DateTimeOffset receivedAt)
+    {
+        var sequence = job.Events.Count == 0
+            ? db.IotOtaEvents
+                .Where(x => x.OtaJobId == job.Id)
+                .Select(x => (int?)x.Sequence)
+                .Max() ?? 0
+            : job.Events.Max(x => x.Sequence);
+        job.Events.Add(new IotOtaEvent
+        {
+            OtaJobId = job.Id,
+            Sequence = sequence + 1,
+            EventType = eventType,
+            Progress = progress,
+            Message = message?.Trim(),
+            ReportedFirmwareVersion = reportedFirmwareVersion?.Trim(),
+            OccurredAt = occurredAt == default ? receivedAt : occurredAt,
+            ReceivedAt = receivedAt
+        });
     }
 }

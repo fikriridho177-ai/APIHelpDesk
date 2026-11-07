@@ -82,6 +82,8 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IIotDeviceCredentialService, IotDeviceCredentialService>();
 builder.Services.Configure<IotDeviceOptions>(builder.Configuration.GetSection("IoT"));
+builder.Services.Configure<IotFirmwareOptions>(builder.Configuration.GetSection("IoT:Firmware"));
+builder.Services.AddScoped<IotFirmwareService>();
 builder.Services.AddScoped<AuthUtility.Api.Sensus.PersilReader>();
 // Peta GIS: pembaca read-only database PostGIS WebGIS (ConnectionStrings:WebGis).
 builder.Services.AddSingleton<AuthUtility.Api.WebGis.WebGisReader>();
