@@ -97,6 +97,8 @@ public sealed record IotFirmwareDto
     public string PackageName { get; init; } = "";
     public string Version { get; init; } = "";
     public string TargetMcu { get; init; } = "";
+    public IReadOnlyCollection<string> CompatibleBoardProfiles { get; init; } = Array.Empty<string>();
+    public string? Notes { get; init; }
     public string FileName { get; init; } = "";
     public long SizeBytes { get; init; }
     public string Sha256 { get; init; } = "";
@@ -143,6 +145,7 @@ public sealed record IotOtaPendingDto
 
 public sealed record IotOtaEventRequest
 {
+    public string DeviceId { get; init; } = "";
     public IotOtaEventType EventType { get; init; }
     public int Progress { get; init; }
     public string? Message { get; init; }
@@ -152,6 +155,7 @@ public sealed record IotOtaEventRequest
 
 public sealed record IotOtaConfirmRequest
 {
+    public string DeviceId { get; init; } = "";
     public string ReportedFirmwareVersion { get; init; } = "";
     public DateTimeOffset ReportedAt { get; init; }
 }

@@ -9,6 +9,13 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: http://+:8080
+      IoT__Firmware__StoragePath: ${IOT_FIRMWARE_STORAGE_PATH:-/app/firmware}
+      IoT__Firmware__MaxBytes: ${IOT_FIRMWARE_MAX_BYTES:-52428800}
     ports:
       - "${API_PORT:-5100}:8080"
+    volumes:
+      - api_firmware:/app/firmware
     restart: unless-stopped
+
+volumes:
+  api_firmware:

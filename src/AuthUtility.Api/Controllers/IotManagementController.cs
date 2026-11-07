@@ -30,9 +30,8 @@ public sealed class IotManagementController(
         var devices = await db.IotDeviceAgents
             .AsNoTracking()
             .OrderBy(x => x.Name)
-            .Select(x => ToDeviceDto(x))
             .ToListAsync(HttpContext.RequestAborted);
-        return Ok(devices);
+        return Ok(devices.Select(ToDeviceDto));
     }
 
     [HttpPost("devices")]
@@ -719,6 +718,8 @@ public sealed class IotManagementController(
         PackageName = x.PackageName,
         Version = x.Version,
         TargetMcu = x.TargetMcu,
+        CompatibleBoardProfiles = ParseJsonArray(x.CompatibleBoardProfilesJson),
+        Notes = x.Notes,
         FileName = x.FileName,
         SizeBytes = x.SizeBytes,
         Sha256 = x.Sha256,

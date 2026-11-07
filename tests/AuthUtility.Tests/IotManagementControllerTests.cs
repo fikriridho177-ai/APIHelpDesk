@@ -156,6 +156,7 @@ public sealed class IotManagementControllerTests
 
         var skipped = await agent.RecordOtaEvent(job.Id, new IotOtaEventRequest
         {
+            DeviceId = device.DeviceId,
             EventType = IotOtaEventType.Installing,
             Progress = 75,
             OccurredAt = DateTimeOffset.UtcNow
@@ -173,6 +174,7 @@ public sealed class IotManagementControllerTests
         {
             var response = await agent.RecordOtaEvent(job.Id, new IotOtaEventRequest
             {
+                DeviceId = device.DeviceId,
                 EventType = eventType,
                 Progress = progress,
                 OccurredAt = DateTimeOffset.UtcNow
@@ -182,6 +184,7 @@ public sealed class IotManagementControllerTests
 
         var mismatch = await agent.ConfirmOta(job.Id, new IotOtaConfirmRequest
         {
+            DeviceId = device.DeviceId,
             ReportedFirmwareVersion = "1.9.9",
             ReportedAt = DateTimeOffset.UtcNow
         });
@@ -202,6 +205,7 @@ public sealed class IotManagementControllerTests
 
         var success = await agent.ConfirmOta(successJob.Id, new IotOtaConfirmRequest
         {
+            DeviceId = device.DeviceId,
             ReportedFirmwareVersion = "2.0.0",
             ReportedAt = DateTimeOffset.UtcNow
         });
@@ -210,6 +214,14 @@ public sealed class IotManagementControllerTests
             .Where(x => x.Id == successJob.Id)
             .Select(x => x.Status)
             .SingleAsync());
+
+        var repeatedSuccess = await agent.ConfirmOta(successJob.Id, new IotOtaConfirmRequest
+        {
+            DeviceId = device.DeviceId,
+            ReportedFirmwareVersion = "2.0.0",
+            ReportedAt = DateTimeOffset.UtcNow
+        });
+        Assert.IsType<OkObjectResult>(repeatedSuccess);
     }
 
     [Fact]

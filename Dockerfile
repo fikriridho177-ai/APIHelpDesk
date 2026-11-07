@@ -31,5 +31,9 @@ RUN printf "\n[system_default_sect]\nMinProtocol = TLSv1\nCipherString = DEFAULT
 
 COPY --from=build /app/publish .
 
+# Firmware packages are mounted as a persistent volume in Compose/Dokploy.
+# Prepare the default path for the non-root ASP.NET runtime user.
+RUN mkdir -p /app/firmware && chown -R $APP_UID:$APP_UID /app/firmware
+
 USER $APP_UID
 ENTRYPOINT ["dotnet", "AuthUtility.Api.dll"]

@@ -256,6 +256,9 @@ public sealed class IotAgentController(
             .SingleOrDefaultAsync(x => x.Id == jobId, HttpContext.RequestAborted);
         if (job is null || job.DeviceAgentId != authentication.Device!.Id)
             return NotFound(new { message = "OTA job tidak ditemukan." });
+        var identityError = ValidateIdentity(authentication.Device, request.DeviceId);
+        if (identityError is not null)
+            return identityError;
         if (request.EventType == IotOtaEventType.Confirmed)
             return Conflict(new { message = "Gunakan endpoint confirm untuk memverifikasi versi firmware." });
 
@@ -292,6 +295,16 @@ public sealed class IotAgentController(
             .SingleOrDefaultAsync(x => x.Id == jobId, HttpContext.RequestAborted);
         if (job is null || job.DeviceAgentId != authentication.Device!.Id)
             return NotFound(new { message = "OTA job tidak ditemukan." });
+        var identityError = ValidateIdentity(authentication.Device, request.DeviceId);
+        if (identityError is not null)
+            return identityError;
+        if (job.Status == IotOtaStatus.Succeeded)
+        {
+            if (!IotOtaRules.TryConfirm(job.FirmwarePackage.Version, request.ReportedFirmwareVersion, out var alreadyConfirmedError))
+                return Conflict(new { message = alreadyConfirmedError });
+
+            return Ok(new { jobId = job.Id, status = job.Status, progress = job.Progress });
+        }
         if (job.Status != IotOtaStatus.WaitingConfirmation)
             return Conflict(new { message = "OTA belum berada pada tahap waiting_confirmation." });
 

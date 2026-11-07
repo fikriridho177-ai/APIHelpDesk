@@ -44,7 +44,9 @@ Backend configuration:
 2. Copy the existing production API environment values into the Application environment. Keep database connection strings, JWT keys, and service credentials in Dokploy only.
 3. Set `Cors__Origins__0` to the exact Frontend origin, including `http://` or `https://` and any port.
 4. If this is the first deployment and the database has no administrator, set the optional `BootstrapAdmin__Password` secret (minimum 12 characters with upper/lowercase, number, and symbol). There is no source-code default administrator password; leave this variable unset after the first administrator exists.
-5. Add a domain pointing to container port `8080`.
+5. Set `IOT_FIRMWARE_STORAGE_PATH=/app/firmware` and `IOT_FIRMWARE_MAX_BYTES=52428800` (or equivalent Dokploy environment values).
+6. Mount persistent storage at `/app/firmware`; firmware metadata is stored in PostgreSQL but the binary is stored in this mounted directory.
+7. Add a domain pointing to container port `8080`.
 
 Frontend configuration:
 
@@ -52,8 +54,9 @@ Frontend configuration:
 2. Set these build arguments to the public Backend URL:
    - `VITE_API_URL=http://api.example.com/api`
    - `VITE_IOT_API_URL=http://api.example.com/api`
-3. Set the runtime environment variable `BACKEND_UPSTREAM=api.example.com`.
-4. Add a domain pointing to container port `80`.
+3. Set `VITE_WAD_DEVICE_MANAGEMENT_MODE=api` so WAD device management loads the PostgreSQL-backed control plane.
+4. Set the runtime environment variable `BACKEND_UPSTREAM=api.example.com`.
+5. Add a domain pointing to container port `80`.
 
 Deploy the Backend first, then the Frontend. Verify the Frontend login page, a normal authenticated API request, Live Chat, and the online-user list. Keep both domains on the same scheme in production; use HTTPS for both when TLS is configured.
 
@@ -175,7 +178,9 @@ For split Dokploy Applications, roll back the Backend and Frontend to compatible
 
 - Keep `deployment/.env` on the deployment host; it is ignored by Git.
 - Keep `VITE_API_URL=/api` and `VITE_IOT_API_URL=/api` for the integrated stack so browser requests remain same-origin.
+- Keep `VITE_WAD_DEVICE_MANAGEMENT_MODE=api` in production; use `demo` only for an intentional local fixture environment.
 - For split Dokploy Applications, set both `VITE_*` values to the public Backend URL and set Frontend runtime `BACKEND_UPSTREAM` to the Backend hostname without a scheme or path.
+- Keep the API firmware directory on persistent storage. Recreating the API container without `/app/firmware` loses uploaded `.bin` packages even though their PostgreSQL metadata remains.
 - Set `Cors__Origins__0` to the exact frontend origin used by the browser, including the scheme and port when present (for example `http://helpdesk.example.com`). This is required for SignalR WebSocket negotiation.
 - For legacy SQL Server instances that fail during the pre-login TLS handshake, add `Encrypt=False;TrustServerCertificate=True` to each SQL Server connection string. Keep PostgreSQL connection strings in PostgreSQL format; do not add SQL Server `Encrypt` keywords to them.
 - Do not put passwords, connection strings, JWT keys, or access tokens in Dockerfiles, Compose files, or committed frontend files.
