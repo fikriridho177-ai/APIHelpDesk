@@ -1,6 +1,7 @@
 using System.Text;
 using AuthUtility.Api.Chat;
 using AuthUtility.Api.Configuration;
+using AuthUtility.Api.IoT;
 using AuthUtility.Api.Security;
 using AuthUtility.Api.Weather;
 using AuthUtility.Application.Interfaces;
@@ -79,6 +80,8 @@ builder.Services.AddDbContext<RSUPPKBDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("RSUPPKBConnection")));
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IIotDeviceCredentialService, IotDeviceCredentialService>();
+builder.Services.Configure<IotDeviceOptions>(builder.Configuration.GetSection("IoT"));
 builder.Services.AddScoped<AuthUtility.Api.Sensus.PersilReader>();
 // Peta GIS: pembaca read-only database PostGIS WebGIS (ConnectionStrings:WebGis).
 builder.Services.AddSingleton<AuthUtility.Api.WebGis.WebGisReader>();

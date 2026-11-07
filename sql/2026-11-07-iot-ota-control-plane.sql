@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS "IotFirmwarePackage" (
     "CreatedAt" timestamptz NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS "IX_IotFirmwarePackage_TargetMcu_Version"
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_IotFirmwarePackage_TargetMcu_Version"
     ON "IotFirmwarePackage" ("TargetMcu", "Version");
 
 CREATE TABLE IF NOT EXISTS "IotOtaJob" (

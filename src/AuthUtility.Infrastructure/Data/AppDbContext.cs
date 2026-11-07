@@ -541,7 +541,7 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("IotFirmwarePackage");
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => new { x.TargetMcu, x.Version });
+            entity.HasIndex(x => new { x.TargetMcu, x.Version }).IsUnique();
             entity.Property(x => x.PackageName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Version).HasMaxLength(128).IsRequired();
             entity.Property(x => x.TargetMcu).HasMaxLength(64).IsRequired();
