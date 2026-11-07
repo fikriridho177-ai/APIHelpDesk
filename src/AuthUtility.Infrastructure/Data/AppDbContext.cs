@@ -75,6 +75,17 @@ public class AppDbContext : DbContext
     public DbSet<SnsFoto> SnsFotos => Set<SnsFoto>();
     public DbSet<SnsLog> SnsLogs => Set<SnsLog>();
 
+    public DbSet<IotDeviceAgent> IotDeviceAgents => Set<IotDeviceAgent>();
+    public DbSet<IotDeviceCredential> IotDeviceCredentials => Set<IotDeviceCredential>();
+    public DbSet<IotDeviceReport> IotDeviceReports => Set<IotDeviceReport>();
+    public DbSet<IotSensorType> IotSensorTypes => Set<IotSensorType>();
+    public DbSet<IotDeviceSensor> IotDeviceSensors => Set<IotDeviceSensor>();
+    public DbSet<IotDeviceConfiguration> IotDeviceConfigurations => Set<IotDeviceConfiguration>();
+    public DbSet<IotFirmwarePackage> IotFirmwarePackages => Set<IotFirmwarePackage>();
+    public DbSet<IotOtaJob> IotOtaJobs => Set<IotOtaJob>();
+    public DbSet<IotOtaEvent> IotOtaEvents => Set<IotOtaEvent>();
+    public DbSet<IotActivityEvent> IotActivityEvents => Set<IotActivityEvent>();
+
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
@@ -428,6 +439,165 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("SnsLog");
             entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<IotDeviceAgent>(entity =>
+        {
+            entity.ToTable("IotDeviceAgent");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.DeviceId).IsUnique();
+            entity.Property(x => x.DeviceId).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.DeviceType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Platform).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.BoardType).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.BoardRevision).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Location).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.CapabilitiesJson).HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<IotDeviceCredential>(entity =>
+        {
+            entity.ToTable("IotDeviceCredential");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.KeyPrefix).IsUnique();
+            entity.Property(x => x.KeyPrefix).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Salt).HasColumnType("bytea").IsRequired();
+            entity.Property(x => x.KeyHash).HasColumnType("bytea").IsRequired();
+            entity.HasOne(x => x.DeviceAgent)
+                .WithMany(x => x.Credentials)
+                .HasForeignKey(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IotDeviceReport>(entity =>
+        {
+            entity.ToTable("IotDeviceReport");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.DeviceAgentId, x.DeviceTimestamp });
+            entity.HasIndex(x => new { x.DeviceAgentId, x.DeviceTimestamp, x.PayloadHash }).IsUnique();
+            entity.Property(x => x.Kind).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.FirmwareVersion).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.PayloadJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.PayloadHash).HasMaxLength(128).IsRequired();
+            entity.HasOne(x => x.DeviceAgent)
+                .WithMany(x => x.Reports)
+                .HasForeignKey(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IotSensorType>(entity =>
+        {
+            entity.ToTable("IotSensorType");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Code).IsUnique();
+            entity.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Model).HasMaxLength(128);
+            entity.Property(x => x.Protocol).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Unit).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ParametersJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.PinRequirementsJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.DriverKey).HasMaxLength(128).IsRequired();
+        });
+
+        modelBuilder.Entity<IotDeviceSensor>(entity =>
+        {
+            entity.ToTable("IotDeviceSensor");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.DeviceAgentId, x.Label }).IsUnique();
+            entity.Property(x => x.Label).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Protocol).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Unit).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.PinMappingsJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.CalibrationJson).HasColumnType("jsonb");
+            entity.HasOne(x => x.DeviceAgent)
+                .WithMany(x => x.Sensors)
+                .HasForeignKey(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.SensorType)
+                .WithMany(x => x.DeviceSensors)
+                .HasForeignKey(x => x.SensorTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IotDeviceConfiguration>(entity =>
+        {
+            entity.ToTable("IotDeviceConfiguration");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.DeviceAgentId).IsUnique();
+            entity.Property(x => x.DesiredJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.DesiredStatus).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.ReportedJson).HasColumnType("jsonb");
+            entity.Property(x => x.ReportedStatus).HasConversion<string>().HasMaxLength(32);
+            entity.HasOne(x => x.DeviceAgent)
+                .WithOne(x => x.Configuration)
+                .HasForeignKey<IotDeviceConfiguration>(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IotFirmwarePackage>(entity =>
+        {
+            entity.ToTable("IotFirmwarePackage");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.TargetMcu, x.Version });
+            entity.Property(x => x.PackageName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Version).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.TargetMcu).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.CompatibleBoardProfilesJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.CompatibleHardwareRevisionsJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.FileName).HasMaxLength(255).IsRequired();
+            entity.Property(x => x.StoragePath).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Sha256).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.SignatureStatus).HasMaxLength(32).IsRequired();
+        });
+
+        modelBuilder.Entity<IotOtaJob>(entity =>
+        {
+            entity.ToTable("IotOtaJob");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.DeviceAgentId, x.Status });
+            entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.FailureReason).HasMaxLength(2000);
+            entity.Property(x => x.CurrentFirmwareVersion).HasMaxLength(128);
+            entity.Property(x => x.ReportedFirmwareVersion).HasMaxLength(128);
+            entity.HasOne(x => x.DeviceAgent)
+                .WithMany(x => x.OtaJobs)
+                .HasForeignKey(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.FirmwarePackage)
+                .WithMany(x => x.OtaJobs)
+                .HasForeignKey(x => x.FirmwarePackageId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IotOtaEvent>(entity =>
+        {
+            entity.ToTable("IotOtaEvent");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.OtaJobId, x.Sequence }).IsUnique();
+            entity.Property(x => x.EventType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(x => x.Message).HasMaxLength(2000);
+            entity.Property(x => x.ReportedFirmwareVersion).HasMaxLength(128);
+            entity.HasOne(x => x.OtaJob)
+                .WithMany(x => x.Events)
+                .HasForeignKey(x => x.OtaJobId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IotActivityEvent>(entity =>
+        {
+            entity.ToTable("IotActivityEvent");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.DeviceAgentId, x.OccurredAt });
+            entity.Property(x => x.EventType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Message).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.DetailsJson).HasColumnType("jsonb");
+            entity.HasOne(x => x.DeviceAgent)
+                .WithMany(x => x.ActivityEvents)
+                .HasForeignKey(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
