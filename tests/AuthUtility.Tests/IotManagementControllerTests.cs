@@ -66,6 +66,31 @@ public sealed class IotManagementControllerTests
     }
 
     [Fact]
+    public async Task Provisioned_device_starts_offline_and_can_authenticate_before_first_heartbeat()
+    {
+        await using var db = CreateDb();
+        var controller = CreateManagementController(db, allow: true);
+
+        var result = await controller.ProvisionDevice(new IotDeviceProvisionRequest
+        {
+            DeviceId = "datalogger-esp32-auth-001",
+            Name = "DataLogger ESP32 auth",
+            BoardType = "esp32-devkit-v1"
+        });
+
+        var created = Assert.IsType<CreatedAtActionResult>(result);
+        var response = Assert.IsType<IotDeviceProvisionResponse>(created.Value);
+        var device = await db.IotDeviceAgents.SingleAsync();
+
+        Assert.Equal(IotDeviceStatus.Offline, device.Status);
+
+        var credentials = new IotDeviceCredentialService(db);
+        var authenticated = await credentials.AuthenticateAsync(response.DeviceKey);
+        Assert.NotNull(authenticated);
+        Assert.Equal(device.Id, authenticated.Device.Id);
+    }
+
+    [Fact]
     public async Task Ota_assignment_rejects_incompatible_targets_and_creates_queued_job_for_compatible_device()
     {
         await using var db = CreateDb();

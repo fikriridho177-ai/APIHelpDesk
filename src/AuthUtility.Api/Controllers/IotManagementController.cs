@@ -63,7 +63,10 @@ public sealed class IotManagementController(
             BoardRevision = request.BoardRevision.Trim(),
             Location = request.Location.Trim(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
-            Status = IotDeviceStatus.Disabled,
+            // Perangkat baru harus bisa melakukan heartbeat pertama. Status
+            // Disabled ditujukan untuk perangkat yang sengaja dinonaktifkan;
+            // provisioning sendiri bukan tindakan disable.
+            Status = IotDeviceStatus.Offline,
             IsActive = true,
             CreatedAt = now,
             UpdatedAt = now
