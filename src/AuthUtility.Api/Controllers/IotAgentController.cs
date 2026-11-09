@@ -57,7 +57,8 @@ public sealed class IotAgentController(
         var confirmingJob = await db.IotOtaJobs
             .Include(x => x.FirmwarePackage)
             .SingleOrDefaultAsync(x => x.DeviceAgentId == device.Id
-                && (x.Status == IotOtaStatus.Installing
+                && (x.Status == IotOtaStatus.Verifying
+                    || x.Status == IotOtaStatus.Installing
                     || x.Status == IotOtaStatus.Rebooting
                     || x.Status == IotOtaStatus.WaitingConfirmation)
                 && x.FirmwarePackage.Version == request.FirmwareVersion.Trim(),
