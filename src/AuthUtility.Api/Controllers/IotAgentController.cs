@@ -33,6 +33,10 @@ public sealed class IotAgentController(
         if (identityError is not null)
             return identityError;
 
+        var hardwareError = ValidateHardwareProfile(device, request);
+        if (hardwareError is not null)
+            return hardwareError;
+
         if (request.DeviceTimestamp == default || string.IsNullOrWhiteSpace(request.FirmwareVersion))
         {
             return BadRequest(new { message = "deviceTimestamp dan firmwareVersion wajib diisi." });
@@ -438,6 +442,46 @@ public sealed class IotAgentController(
         }
 
         return null;
+    }
+
+    private static IActionResult? ValidateHardwareProfile(
+        IotDeviceAgent device,
+        IotDeviceHeartbeatRequest request)
+    {
+        var mismatches = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(request.DeviceType)
+            && !string.Equals(device.DeviceType, request.DeviceType.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            mismatches.Add("deviceType");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Platform)
+            && !string.Equals(device.Platform, request.Platform.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            mismatches.Add("platform");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.BoardType)
+            && !string.Equals(device.BoardType, request.BoardType.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            mismatches.Add("boardType");
+        }
+
+        if (mismatches.Count == 0)
+            return null;
+
+        return new BadRequestObjectResult(new
+        {
+            message = "Hardware profile heartbeat tidak sesuai dengan device yang diprovision.",
+            fields = mismatches,
+            expected = new
+            {
+                deviceType = device.DeviceType,
+                platform = device.Platform,
+                boardType = device.BoardType
+            }
+        });
     }
 
     private void UpdateLastSeen(

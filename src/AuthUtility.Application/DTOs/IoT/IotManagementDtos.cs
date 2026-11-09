@@ -50,6 +50,9 @@ public sealed record IotDeviceUpdateRequest
 public sealed record IotDeviceHeartbeatRequest
 {
     public string DeviceId { get; init; } = "";
+    public string? DeviceType { get; init; }
+    public string? Platform { get; init; }
+    public string? BoardType { get; init; }
     public DateTimeOffset DeviceTimestamp { get; init; }
     public string FirmwareVersion { get; init; } = "";
     public string? IpAddress { get; init; }

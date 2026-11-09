@@ -44,6 +44,28 @@ public sealed class IotManagementControllerTests
     }
 
     [Fact]
+    public async Task Provisioning_derives_the_hardware_identity_from_an_esp32_board_profile()
+    {
+        await using var db = CreateDb();
+        var controller = CreateManagementController(db, allow: true);
+
+        var result = await controller.ProvisionDevice(new IotDeviceProvisionRequest
+        {
+            DeviceId = "datalogger-esp32-001",
+            Name = "DataLogger ESP32",
+            DeviceType = "ESP8266",
+            Platform = "ESP8266",
+            BoardType = "esp32-devkit-v1"
+        });
+
+        var created = Assert.IsType<CreatedAtActionResult>(result);
+        var response = Assert.IsType<IotDeviceProvisionResponse>(created.Value);
+        Assert.Equal("DATALOGGER", response.Device.DeviceType);
+        Assert.Equal("ESP32", response.Device.Platform);
+        Assert.Equal("esp32-devkit-v1", response.Device.BoardType);
+    }
+
+    [Fact]
     public async Task Ota_assignment_rejects_incompatible_targets_and_creates_queued_job_for_compatible_device()
     {
         await using var db = CreateDb();

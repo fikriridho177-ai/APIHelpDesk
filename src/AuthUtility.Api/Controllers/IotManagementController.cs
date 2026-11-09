@@ -49,13 +49,16 @@ public sealed class IotManagementController(
             return Conflict(new { message = "deviceId sudah terdaftar." });
 
         var now = DateTimeOffset.UtcNow;
+        var hardware = HardwareIdentityForBoard(request.BoardType);
         var device = new IotDeviceAgent
         {
             Id = Guid.NewGuid(),
             DeviceId = deviceId,
             Name = request.Name.Trim(),
-            DeviceType = string.IsNullOrWhiteSpace(request.DeviceType) ? "ESP8266" : request.DeviceType.Trim(),
-            Platform = string.IsNullOrWhiteSpace(request.Platform) ? "ESP8266" : request.Platform.Trim(),
+            DeviceType = hardware?.DeviceType
+                ?? (string.IsNullOrWhiteSpace(request.DeviceType) ? "ESP8266" : request.DeviceType.Trim()),
+            Platform = hardware?.Platform
+                ?? (string.IsNullOrWhiteSpace(request.Platform) ? "ESP8266" : request.Platform.Trim()),
             BoardType = request.BoardType.Trim(),
             BoardRevision = request.BoardRevision.Trim(),
             Location = request.Location.Trim(),
@@ -118,7 +121,16 @@ public sealed class IotManagementController(
             return NotFound(new { message = "Perangkat tidak ditemukan." });
 
         if (!string.IsNullOrWhiteSpace(request.Name)) device.Name = request.Name.Trim();
-        if (!string.IsNullOrWhiteSpace(request.BoardType)) device.BoardType = request.BoardType.Trim();
+        if (!string.IsNullOrWhiteSpace(request.BoardType))
+        {
+            device.BoardType = request.BoardType.Trim();
+            var hardware = HardwareIdentityForBoard(device.BoardType);
+            if (hardware is not null)
+            {
+                device.DeviceType = hardware.Value.DeviceType;
+                device.Platform = hardware.Value.Platform;
+            }
+        }
         if (!string.IsNullOrWhiteSpace(request.BoardRevision)) device.BoardRevision = request.BoardRevision.Trim();
         if (!string.IsNullOrWhiteSpace(request.Location)) device.Location = request.Location.Trim();
         if (request.Description is not null) device.Description = request.Description.Trim();
@@ -621,6 +633,17 @@ public sealed class IotManagementController(
         var revisionMatch = revisions.Length == 0
             || revisions.Contains(device.BoardRevision, StringComparer.OrdinalIgnoreCase);
         return boardMatch && revisionMatch;
+    }
+
+    private static (string DeviceType, string Platform)? HardwareIdentityForBoard(string? boardType)
+    {
+        return boardType?.Trim().ToLowerInvariant() switch
+        {
+            "esp32-devkit-v1" => ("DATALOGGER", "ESP32"),
+            "mega2560-esp8266" => ("MEGA_ESP8266", "ESP8266"),
+            "esp8266-node" => ("ESP8266", "ESP8266"),
+            _ => null
+        };
     }
 
     private static string[] ParseList(string? value)

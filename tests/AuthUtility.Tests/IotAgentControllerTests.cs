@@ -25,6 +25,9 @@ public sealed class IotAgentControllerTests
         var response = await controller.Heartbeat(new IotDeviceHeartbeatRequest
         {
             DeviceId = device.DeviceId,
+            DeviceType = device.DeviceType,
+            Platform = device.Platform,
+            BoardType = device.BoardType,
             DeviceTimestamp = DateTimeOffset.UtcNow,
             FirmwareVersion = "1.2.3",
             IpAddress = "10.0.0.10",
@@ -93,6 +96,28 @@ public sealed class IotAgentControllerTests
         Assert.Equal(IotOtaStatus.Succeeded, job.Status);
         Assert.Equal(package.Version, job.ReportedFirmwareVersion);
         Assert.Contains(job.Events, x => x.EventType == IotOtaEventType.Confirmed);
+    }
+
+    [Fact]
+    public async Task Heartbeat_rejects_a_mismatched_hardware_profile()
+    {
+        await using var db = CreateDb();
+        var (device, material) = await SeedDeviceAsync(db, "hardware-profile-mismatch");
+        var controller = CreateController(db);
+        Authenticate(controller, material.PlaintextKey);
+
+        var response = await controller.Heartbeat(new IotDeviceHeartbeatRequest
+        {
+            DeviceId = device.DeviceId,
+            DeviceType = "DATALOGGER",
+            Platform = "ESP32",
+            BoardType = "DATALOGGER_ESP32_SENSOR_V1",
+            DeviceTimestamp = DateTimeOffset.UtcNow,
+            FirmwareVersion = "1.1.3"
+        });
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(response);
+        Assert.Contains("deviceType", JsonSerializer.Serialize(badRequest.Value));
     }
 
     [Fact]
