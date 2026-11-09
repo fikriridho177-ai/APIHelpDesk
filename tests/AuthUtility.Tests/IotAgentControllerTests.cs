@@ -50,6 +50,52 @@ public sealed class IotAgentControllerTests
     }
 
     [Fact]
+    public async Task Heartbeat_confirms_a_rebooting_job_when_the_target_version_is_reported()
+    {
+        await using var db = CreateDb();
+        var (device, material) = await SeedDeviceAsync(db, "esp8266-reboot-confirmation");
+        var package = new IotFirmwarePackage
+        {
+            Id = Guid.NewGuid(),
+            PackageName = "ESP8266 agent",
+            Version = "2.0.0",
+            TargetMcu = "ESP8266",
+            CompatibleBoardProfilesJson = "[\"esp8266-node\"]",
+            CompatibleHardwareRevisionsJson = "[]",
+            FileName = "agent.bin",
+            StoragePath = "agent.bin",
+            SizeBytes = 1,
+            Sha256 = new string('a', 64)
+        };
+        db.IotFirmwarePackages.Add(package);
+        db.IotOtaJobs.Add(new IotOtaJob
+        {
+            Id = Guid.NewGuid(),
+            DeviceAgentId = device.Id,
+            FirmwarePackageId = package.Id,
+            FirmwarePackage = package,
+            Status = IotOtaStatus.Rebooting,
+            Progress = 100
+        });
+        await db.SaveChangesAsync();
+
+        var controller = CreateController(db);
+        Authenticate(controller, material.PlaintextKey);
+        var response = await controller.Heartbeat(new IotDeviceHeartbeatRequest
+        {
+            DeviceId = device.DeviceId,
+            DeviceTimestamp = DateTimeOffset.UtcNow,
+            FirmwareVersion = package.Version
+        });
+
+        Assert.IsType<OkObjectResult>(response);
+        var job = await db.IotOtaJobs.Include(x => x.Events).SingleAsync();
+        Assert.Equal(IotOtaStatus.Succeeded, job.Status);
+        Assert.Equal(package.Version, job.ReportedFirmwareVersion);
+        Assert.Contains(job.Events, x => x.EventType == IotOtaEventType.Confirmed);
+    }
+
+    [Fact]
     public async Task Telemetry_is_idempotent_and_rejects_oversized_or_non_numeric_readings()
     {
         await using var db = CreateDb();
