@@ -2,7 +2,6 @@ using System.Text;
 using AuthUtility.Api.Chat;
 using AuthUtility.Api.Configuration;
 using AuthUtility.Api.IoT;
-using AuthUtility.Api.Security;
 using AuthUtility.Api.Weather;
 using AuthUtility.Application.Interfaces;
 using AuthUtility.Application.Security;
@@ -269,7 +268,6 @@ app.UseExceptionHandler(errorApp =>
 });
 
 app.UseAuthentication();
-app.UseMiddleware<PasswordChangeRequiredMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
