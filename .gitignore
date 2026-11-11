@@ -30,6 +30,12 @@ logs/
 # Publish output
 publish/
 artifacts/
+.deploy/
+**/.tmp-*/
+
+# Local agent planning documents
+docs/superpowers/plans/2026-10-*.md
+docs/superpowers/specs/2026-10-*.md
 
 # OS
 Thumbs.db
