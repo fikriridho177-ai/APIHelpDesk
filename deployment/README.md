@@ -46,7 +46,7 @@ Backend configuration:
 4. If this is the first deployment and the database has no administrator, set the optional `BootstrapAdmin__Password` secret (minimum 12 characters with upper/lowercase, number, and symbol). There is no source-code default administrator password; leave this variable unset after the first administrator exists.
 5. Set `IOT_FIRMWARE_STORAGE_PATH=/app/firmware` and `IOT_FIRMWARE_MAX_BYTES=52428800` (or equivalent Dokploy environment values).
 6. Mount persistent storage at `/app/firmware`; firmware metadata is stored in PostgreSQL but the binary is stored in this mounted directory.
-7. Add a domain pointing to container port `8080`.
+7. Add a domain pointing to container port `8080`. Set **Path** to `/`, keep **Internal Path** at its default `/` (or empty), and disable **Strip Path** so both `/api/...` and `/hubs/...` reach the Backend unchanged. For `myhelpdesk-be.wanmixc.dev`, enable HTTPS. A domain restricted to `/api` serves REST but excludes SignalR.
 
 Frontend configuration:
 
@@ -210,7 +210,44 @@ If the split Frontend returns `502 Bad Gateway`, inspect the Nginx logs first. A
 
 ### Live Chat or online users do not update
 
-Inspect the `api` log for a CORS message containing the browser origin. Add that exact origin under `Cors__Origins__0`, then redeploy the Backend. The CORS policy allows credentials for configured exact origins; the Nginx configuration must keep HTTP/1.1 and forward Upgrade/Connection headers. Rebuild the web image after changing `nginx.conf`.
+First check whether the hub requests reach the Backend. A browser error about a missing `Access-Control-Allow-Origin` header can also mean Traefik returned a 404 before the request reached ASP.NET Core. Adding origins to the API CORS policy cannot change that proxy response.
+
+Compare REST and both SignalR preflight requests (replace the URLs for another deployment):
+
+```powershell
+$backend = 'https://myhelpdesk-be.wanmixc.dev'
+$frontend = 'https://myhelpdesk.wanmixc.dev'
+$paths = @('/api/auth/login', '/hubs/chat/negotiate?negotiateVersion=1', '/hubs/presence/negotiate?negotiateVersion=1')
+foreach ($path in $paths) {
+    Write-Output $path
+    curl.exe --silent --show-error --max-time 15 --include --request OPTIONS "$backend$path" --header "Origin: $frontend" --header 'Access-Control-Request-Method: POST' --header 'Access-Control-Request-Headers: authorization,x-signalr-user-agent'
+}
+```
+
+All three should return `204` with `Access-Control-Allow-Origin: https://myhelpdesk.wanmixc.dev`. If REST succeeds but the hubs return a plain `404 page not found` without `Server: Kestrel`, check **MyHelpDesk Backend > Domains** in Dokploy:
+
+| Setting | Value |
+| --- | --- |
+| Host | `myhelpdesk-be.wanmixc.dev` |
+| Path | `/` |
+| Internal Path | `/` (default), or empty |
+| Strip Path | Disabled |
+| Container Port | `8080` |
+| HTTPS | Enabled |
+
+Save the domain and repeat the checks. Dokploy Application domain changes apply immediately; Docker Compose domain changes require redeployment. If the deployment intentionally restricts paths, keep the `/api` route and add a `/hubs` route to the same Backend service without stripping or adding a prefix. See the [Dokploy Domains documentation](https://docs.dokploy.com/docs/core/domains).
+
+Then verify that both hub endpoints are mapped. Without an access token, these requests should return `401` with the frontend CORS header, rather than `404`:
+
+```powershell
+foreach ($hub in @('chat', 'presence')) {
+    curl.exe --silent --show-error --max-time 15 --include --request POST "$backend/hubs/$hub/negotiate?negotiateVersion=1" --header "Origin: $frontend"
+}
+```
+
+A successful preflight alone does not prove a hub exists: the API's global CORS middleware can answer OPTIONS for an unmapped path. Keep the frontend hub URLs at `/hubs/chat` and `/hubs/presence`; `/api/hubs/...` is not mapped by the Backend. After both checks pass, sign in and verify Live Chat and the online-user list in the browser.
+
+If the requests reach Kestrel but the expected CORS header is still missing, inspect the `api` log for the browser origin. Add that exact origin under `Cors__Origins__0`, then redeploy the Backend. The CORS policy allows credentials for configured exact origins; the Nginx configuration must keep HTTP/1.1 and forward Upgrade/Connection headers. Rebuild the web image after changing `nginx.conf`.
 
 ### API starts but cannot load data
 
