@@ -18,6 +18,16 @@ namespace AuthUtility.Tests;
 public sealed class IotManagementControllerTests
 {
     [Fact]
+    public void UploadFirmware_file_parameter_does_not_use_explicit_from_form_attribute()
+    {
+        var method = typeof(IotManagementController).GetMethod(nameof(IotManagementController.UploadFirmware));
+        Assert.NotNull(method);
+
+        var fileParameter = method!.GetParameters().Single(parameter => parameter.Name == "file");
+        Assert.Empty(fileParameter.GetCustomAttributes(typeof(FromFormAttribute), inherit: true));
+    }
+
+    [Fact]
     public async Task Management_requires_permission_and_provisioning_returns_key_once()
     {
         await using var db = CreateDb();

@@ -471,7 +471,7 @@ public sealed class IotManagementController(
     [HttpPost("firmware")]
     [RequestSizeLimit(100 * 1024 * 1024)]
     public async Task<IActionResult> UploadFirmware(
-        [FromForm] IFormFile? file,
+        IFormFile? file,
         [FromForm] string packageName,
         [FromForm] string version,
         [FromForm] string targetMcu,
