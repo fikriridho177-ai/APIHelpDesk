@@ -126,7 +126,9 @@ public record SnsDetailDto(
     List<SnsParameterSummaryDto> Ringkasan,
     List<SnsDetailValueDto> Details,
     List<SnsFotoDto> Fotos,
-    List<SnsLogDto> Logs
+    List<SnsLogDto> Logs,
+    bool CanEditPhotos = false,
+    Guid? ClientUuid = null
 );
 
 public class SnsActionRequest

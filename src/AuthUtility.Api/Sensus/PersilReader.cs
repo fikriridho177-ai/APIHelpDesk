@@ -12,7 +12,7 @@ namespace AuthUtility.Api.Sensus;
 //   TNM_NNS -> MyPAD   tblNNSTrnInventarisTanamanNenas (Kode)                         komoditas NANAS
 //   LHN_NNS -> MyPAD   tblNNSTrnInventarisLahanNenas   (Kode)                         komoditas NANAS
 //   PNN     -> RSUPPKB tblMstPersilKelapa              (Kode)                         komoditas KELAPA
-public class PersilReader(MyPADDbContext myPad, RSUPPKBDbContext rsuppkb)
+public partial class PersilReader(MyPADDbContext myPad, RSUPPKBDbContext rsuppkb)
 {
     public const int MaxRows = 20000;
 

@@ -86,6 +86,13 @@ public class AppDbContext : DbContext
     public DbSet<IotOtaEvent> IotOtaEvents => Set<IotOtaEvent>();
     public DbSet<IotActivityEvent> IotActivityEvents => Set<IotActivityEvent>();
 
+    // QC module (PostgreSQL HelpDesk — transaksi QC). Lihat 2026-11-11-qc-core-schema.sql
+    public DbSet<QcForm> QcForms => Set<QcForm>();
+    public DbSet<QcInspection> QcInspections => Set<QcInspection>();
+    public DbSet<QcApproval> QcApprovals => Set<QcApproval>();
+    public DbSet<QcFinding> QcFindings => Set<QcFinding>();
+    public DbSet<QcHistory> QcHistories => Set<QcHistory>();
+
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
@@ -597,6 +604,173 @@ public class AppDbContext : DbContext
             entity.HasOne(x => x.DeviceAgent)
                 .WithMany(x => x.ActivityEvents)
                 .HasForeignKey(x => x.DeviceAgentId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        /* =====================================================
+           QC MODULE
+           Lihat sql/2026-11-11-qc-core-schema.sql
+           Konvensi: timestamptz eksplisit, jsonb, FK dinamai, index IX_...
+           ===================================================== */
+
+        // QcForm — master jenis pemeriksaan
+        modelBuilder.Entity<QcForm>(entity =>
+        {
+            entity.ToTable("QcForm");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Code).IsUnique();
+            entity.Property(x => x.Code).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Commodity).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+        });
+
+        // QcInspection — satu tabel transaksi utama
+        modelBuilder.Entity<QcInspection>(entity =>
+        {
+            entity.ToTable("QcInspection");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.InspectionNo).IsUnique();
+            entity.HasIndex(x => x.FormId);
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.CompanyId);
+            entity.HasIndex(x => x.WilayahKode);
+            entity.HasIndex(x => x.Commodity);
+            entity.HasIndex(x => x.InspectionDate);
+            entity.HasIndex(x => new { x.PeriodYear, x.PeriodMonth });
+            entity.HasIndex(x => new { x.Status, x.CurrentApprovalLevel });
+
+            entity.Property(x => x.InspectionNo).HasMaxLength(50);
+            entity.Property(x => x.CompanyNameSnapshot).HasMaxLength(200);
+            entity.Property(x => x.WilayahKode).HasMaxLength(50);
+            entity.Property(x => x.PersilSumber).HasMaxLength(20);
+            entity.Property(x => x.PersilId).HasMaxLength(100);
+            entity.Property(x => x.PersilKode).HasMaxLength(100);
+            entity.Property(x => x.KodeAfdeling).HasMaxLength(50);
+            entity.Property(x => x.Commodity).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.DataJson).HasColumnType("jsonb");
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.SubmittedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.ApprovedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.ClosedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(x => x.Form)
+                .WithMany(x => x.Inspections)
+                .HasForeignKey(x => x.FormId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(x => x.Approvals)
+                .WithOne(x => x.Inspection)
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(x => x.Findings)
+                .WithOne(x => x.Inspection)
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(x => x.Histories)
+                .WithOne(x => x.Inspection)
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // QcApproval — satu row per (InspectionId, Level)
+        modelBuilder.Entity<QcApproval>(entity =>
+        {
+            entity.ToTable("QcApproval");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.InspectionId, x.Level }).IsUnique();
+            entity.HasIndex(x => x.Status);
+
+            entity.Property(x => x.Action).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ApproverNameSnapshot).HasMaxLength(150);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.ApprovedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(x => x.Inspection)
+                .WithMany(x => x.Approvals)
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(x => x.Approver)
+                .WithMany()
+                .HasForeignKey(x => x.ApproverUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(x => x.ApproverGroup)
+                .WithMany()
+                .HasForeignKey(x => x.ApproverGroupId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // QcFinding — temuan
+        modelBuilder.Entity<QcFinding>(entity =>
+        {
+            entity.ToTable("QcFinding");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.FindingNo).IsUnique();
+            entity.HasIndex(x => x.InspectionId);
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.TargetDate);
+            entity.HasIndex(x => x.Severity);
+
+            entity.Property(x => x.FindingNo).HasMaxLength(50);
+            entity.Property(x => x.Category).HasMaxLength(100);
+            entity.Property(x => x.Description).IsRequired();
+            entity.Property(x => x.Severity).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.PicNameSnapshot).HasMaxLength(150);
+            entity.Property(x => x.FollowUpNote);
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(x => x.Inspection)
+                .WithMany(x => x.Findings)
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.PicUser)
+                .WithMany()
+                .HasForeignKey(x => x.PicUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(x => x.VerifiedBy)
+                .WithMany()
+                .HasForeignKey(x => x.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // QcHistory — audit trail (immutable)
+        modelBuilder.Entity<QcHistory>(entity =>
+        {
+            entity.ToTable("QcHistory");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.InspectionId, x.CreatedAt });
+
+            entity.Property(x => x.Action).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.FromStatus).HasMaxLength(32);
+            entity.Property(x => x.ToStatus).HasMaxLength(32);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(x => x.Inspection)
+                .WithMany(x => x.Histories)
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
     }

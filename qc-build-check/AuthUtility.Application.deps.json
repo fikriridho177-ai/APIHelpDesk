@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "AuthUtility.Application/1.0.0": {
+        "dependencies": {
+          "AuthUtility.Domain": "1.0.0"
+        },
+        "runtime": {
+          "AuthUtility.Application.dll": {}
+        }
+      },
+      "AuthUtility.Domain/1.0.0": {
+        "runtime": {
+          "AuthUtility.Domain.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AuthUtility.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "AuthUtility.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

@@ -41,7 +41,6 @@ public class PKBPayrollCompanyController(
                     ShortName,
                     NotActive
                 FROM tblMstPerusahaan
-                WHERE NotActive = 0
                 ORDER BY Nama
             ";
 

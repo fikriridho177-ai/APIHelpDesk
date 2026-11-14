@@ -2,6 +2,7 @@ using System.Text;
 using AuthUtility.Api.Chat;
 using AuthUtility.Api.Configuration;
 using AuthUtility.Api.IoT;
+using AuthUtility.Api.Qc;
 using AuthUtility.Api.Weather;
 using AuthUtility.Application.Interfaces;
 using AuthUtility.Application.Security;
@@ -83,6 +84,11 @@ builder.Services.AddScoped<IIotDeviceCredentialService, IotDeviceCredentialServi
 builder.Services.Configure<IotDeviceOptions>(builder.Configuration.GetSection("IoT"));
 builder.Services.Configure<IotFirmwareOptions>(builder.Configuration.GetSection("IoT:Firmware"));
 builder.Services.AddScoped<IotFirmwareService>();
+
+// QC module helpers (Api/Qc). Number generator, status engine, approval flow config.
+builder.Services.AddScoped<QcNumberGenerator>();
+builder.Services.AddScoped<QcStatusEngine>();
+builder.Services.AddScoped<QcApprovalFlowConfig>();
 builder.Services.AddScoped<AuthUtility.Api.Sensus.PersilReader>();
 // Peta GIS: pembaca read-only database PostGIS WebGIS (ConnectionStrings:WebGis).
 builder.Services.AddSingleton<AuthUtility.Api.WebGis.WebGisReader>();
@@ -269,6 +275,15 @@ app.UseExceptionHandler(errorApp =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Only Sensus-generated image files are served from this upload root.
+var sensusPhotoRoot = AuthUtility.Api.Sensus.SensusPhotoPolicy.Root(app.Environment);
+Directory.CreateDirectory(sensusPhotoRoot);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(sensusPhotoRoot),
+    RequestPath = "/uploads/sensus"
+});
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");

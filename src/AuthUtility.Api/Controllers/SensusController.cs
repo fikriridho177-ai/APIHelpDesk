@@ -15,7 +15,7 @@ namespace AuthUtility.Api.Controllers;
 [ApiController]
 [Route("api/sensus")]
 [Authorize]
-public class SensusController(
+public partial class SensusController(
     AppDbContext db,
     IPermissionService permissions,
     PersilReader persilReader,
@@ -117,7 +117,9 @@ public class SensusController(
         var jenisId = await db.SnsHeaders.Where(x => x.Id == id).Select(x => (int?)x.JenisId).FirstOrDefaultAsync();
         if (jenisId == null) return NotFound(new { message = "Data sensus tidak ditemukan." });
 
-        if (!await CanAny(MenuPermission.Read, SnsMenu.Approval, SnsMenu.Monitoring, SnsMenu.Analisis) &&
+        var ownerCanRead = await db.SnsHeaders.AnyAsync(x => x.Id == id && x.PetugasUserId == SensusHelper.CurrentUserId(User))
+            && await permissions.HasPermissionAsync(User, SnsMenu.Mobile, MenuPermission.Create);
+        if (!ownerCanRead && !await CanAny(MenuPermission.Read, SnsMenu.Approval, SnsMenu.Monitoring, SnsMenu.Analisis) &&
             !await CanJenis(jenisId.Value, MenuPermission.Read))
             return Forbid();
 
@@ -533,8 +535,12 @@ public class SensusController(
             header.Fotos.OrderBy(x => x.Id)
                 .Select(x => new SnsFotoDto(x.Id, x.FileUrl, x.Keterangan, x.Latitude, x.Longitude, x.TakenAt))
                 .ToList(),
-            logs);
+            logs,
+            await CanEditPhotos(header),
+            ownerCanAccessUuid(header) ? header.ClientUuid : null);
     }
+
+    private bool ownerCanAccessUuid(SnsHeader header) => header.PetugasUserId == SensusHelper.CurrentUserId(User);
 
     private Task<bool> CanJenis(int jenisId, MenuPermission permission) =>
         SensusHelper.HasJenisPermissionAsync(db, permissions, User, jenisId, permission);
