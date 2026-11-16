@@ -19,14 +19,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8080
-# The production WAD/Logger SQL Server is a legacy instance. Keep this
-# compatibility profile isolated to this API container instead of changing the
-# base image's global OpenSSL configuration.
-ENV OPENSSL_CONF=/app/openssl-legacy.cnf
 EXPOSE 8080
 
 COPY --from=build /app/publish .
-COPY deployment/openssl-legacy.cnf /app/openssl-legacy.cnf
 
 # Firmware packages and Sensus photos are mounted or written at runtime.
 # Prepare all writable paths for the non-root ASP.NET runtime user.
