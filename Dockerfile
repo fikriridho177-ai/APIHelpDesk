@@ -21,6 +21,13 @@ WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
+# Compatibility workaround for the legacy SQL Server pre-login TLS handshake.
+# This is the runtime setting used by the previously working API image.
+USER root
+RUN sed -i '/\[openssl_init\]/a ssl_conf = ssl_sect' /etc/ssl/openssl.cnf
+RUN printf "\n[ssl_sect]\nsystem_default = system_default_sect\n" >> /etc/ssl/openssl.cnf
+RUN printf "\n[system_default_sect]\nMinProtocol = TLSv1\nCipherString = DEFAULT@SECLEVEL=0\n" >> /etc/ssl/openssl.cnf
+
 COPY --from=build /app/publish .
 
 # Firmware packages and Sensus photos are mounted or written at runtime.
