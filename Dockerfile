@@ -23,9 +23,10 @@ EXPOSE 8080
 
 COPY --from=build /app/publish .
 
-# Firmware packages are mounted as a persistent volume in Compose/Dokploy.
-# Prepare the default path for the non-root ASP.NET runtime user.
-RUN mkdir -p /app/firmware && chown -R $APP_UID:$APP_UID /app/firmware
+# Firmware packages and Sensus photos are mounted or written at runtime.
+# Prepare all writable paths for the non-root ASP.NET runtime user.
+RUN mkdir -p /app/firmware /app/wwwroot/uploads/sensus \
+    && chown -R $APP_UID:$APP_UID /app/firmware /app/wwwroot
 
 USER $APP_UID
 ENTRYPOINT ["dotnet", "AuthUtility.Api.dll"]
