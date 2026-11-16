@@ -70,14 +70,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Database PKBPayroll (SQL Server) - hanya dibaca
 builder.Services.AddDbContext<PKBPayrollDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("PKBPayrollConnection")
+        SqlServerConnectionString.Get(builder.Configuration, "PKBPayrollConnection")
     )
 );
 // Database MyPAD & RSUPPKB (SQL Server) - hanya dibaca, master persil kelapa / nanas
 builder.Services.AddDbContext<MyPADDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyPADConnection")));
+    options.UseSqlServer(SqlServerConnectionString.Get(builder.Configuration, "MyPADConnection")));
 builder.Services.AddDbContext<RSUPPKBDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("RSUPPKBConnection")));
+    options.UseSqlServer(SqlServerConnectionString.Get(builder.Configuration, "RSUPPKBConnection")));
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IIotDeviceCredentialService, IotDeviceCredentialService>();
@@ -95,7 +95,7 @@ builder.Services.AddSingleton<AuthUtility.Api.WebGis.WebGisReader>();
 
 // Database MyKTTATest (SQL Server) - hanya dibaca, data sensor ECS Monitoring (akses WAD)
 builder.Services.AddDbContext<MyKTTATestDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("MyKTTATestConnection")));
+    options.UseSqlServer(SqlServerConnectionString.Get(builder.Configuration, "MyKTTATestConnection")));
 
 builder.Services.AddScoped<
     IPasswordHasher<UtlUser>,
