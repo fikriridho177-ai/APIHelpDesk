@@ -13,7 +13,15 @@ public sealed class WeatherController(
     IPermissionService permissions,
     ILogger<WeatherController> logger) : ControllerBase
 {
-    private const string MenuCode = "DASHBOARD_IOT";
+    // Prakiraan dipakai halaman WAD (menu Prakiraan Hujan) maupun IoT lama.
+    // SuperAdmin lolos otomatis; selain itu cukup hak Read salah satu kode menu.
+    private static readonly string[] MenuCodes =
+    {
+        "WAD_ECS_STASIUN",
+        "DASHBOARD_IOT",
+        "PRAKIRAAN_CUACA",
+        "PRAKIRAAN-CUACA",
+    };
 
     [HttpGet("forecast")]
     public async Task<IActionResult> GetForecast(
@@ -23,8 +31,18 @@ public sealed class WeatherController(
         [FromQuery] string? area = null,
         CancellationToken cancellationToken = default)
     {
-        var permission = await permissions.GetPermissionsAsync(User, MenuCode);
-        if (permission?.IsSuperAdmin != true)
+        var allowed = false;
+        foreach (var menuCode in MenuCodes)
+        {
+            var permission = await permissions.GetPermissionsAsync(User, menuCode);
+            if (permission is { IsSuperAdmin: true } or { CanRead: true })
+            {
+                allowed = true;
+                break;
+            }
+        }
+
+        if (!allowed)
             return Forbid();
 
         if (latitude is null || longitude is null)
