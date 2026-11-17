@@ -1,5 +1,7 @@
 using AuthUtility.Api.Sensus;
 using AuthUtility.Domain.Entities;
+using AuthUtility.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace AuthUtility.Tests;
 
@@ -15,10 +17,10 @@ public class SensusHptEvaluationTests
     [InlineData("TIRATHABA", "", 5, true)]
     [InlineData("RAYAP", "", 1, true)]
     [InlineData("FUSARIUM", "", 1, true)]
-    public void OfficialThresholdBoundaries(string code, string stage, int attacked, bool expected)
+    public async Task OfficialThresholdBoundaries(string code, string stage, int attacked, bool expected)
     {
         var parameter = new SnsParameter { Id=1,Code="STATUS_TANAMAN",TipeData="OPTION",Opsi="TM,TBM",Active=true };
-        var header = new SnsHeader {JumlahPokokSampel=100,JumlahPokokTerserang=attacked,Jenis=new SnsJenis {Code=code},
+        var header = new SnsHeader {JumlahPokokSampel=100,JumlahPokokTerserang=attacked,Jenis=await Seeded(code),
             Details=new List<SnsDetail> {new(){Parameter=parameter,NilaiTeks=stage}}};
         Assert.Equal(expected,SensusHptEvaluation.Evaluate(header).PerluPengendalian);
     }
@@ -27,20 +29,25 @@ public class SensusHptEvaluationTests
     [InlineData("ULAT_API",4,false)]
     [InlineData("ULAT_API",5,true)]
     [InlineData("ULAT_KANTONG",5,true)]
-    public void WormThresholdUsesMasterPerFrondIndicator(string code,int value,bool expected)
+    public async Task WormThresholdUsesMasterPerFrondIndicator(string code,int value,bool expected)
     {
-        var header=new SnsHeader {Jenis=new SnsJenis {Code=code},Details=new List<SnsDetail>{new(){Parameter=new(){Id=1,Code="JML_ULAT",Name="Jumlah ulat per pelepah",TipeData="NUMBER",Active=true,IsIndikator=true},NilaiAngka=value}}};
+        var header=new SnsHeader {Jenis=await Seeded(code),Details=new List<SnsDetail>{new(){Parameter=new(){Id=1,Code="JML_ULAT",Name="Jumlah ulat per pelepah",TipeData="NUMBER",Active=true,IsIndikator=true},NilaiAngka=value}}};
         Assert.Equal(expected,SensusHptEvaluation.Evaluate(header).PerluPengendalian);
     }
 
     [Fact]
-    public void MissingOrMixedStageAndUnknownRuleAreNotAssumedSafe()
+    public async Task MissingOrMixedStageAndUnknownRuleAreNotAssumedSafe()
     {
-        var header=new SnsHeader {Jenis=new SnsJenis{Code="ORYCTES"},JumlahPokokSampel=100,JumlahPokokTerserang=10};
+        var header=new SnsHeader {Jenis=await Seeded("ORYCTES"),JumlahPokokSampel=100,JumlahPokokTerserang=10};
         Assert.Null(SensusHptEvaluation.Evaluate(header).PerluPengendalian);
-        header.Jenis.Code="GANODERMA";
+        header.Jenis=await Seeded("GANODERMA");
         Assert.Null(SensusHptEvaluation.Evaluate(header).PerluPengendalian);
-        header.Jenis.Code="TIRATHABA";header.JumlahPokokSampel=0;
+        header.Jenis=await Seeded("TIRATHABA");header.JumlahPokokSampel=0;
         Assert.Null(SensusHptEvaluation.Evaluate(header).PerluPengendalian);
+    }
+    private static async Task<SnsJenis> Seeded(string code)
+    {
+        await using var db=new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var kind=new SnsJenis{Code=code,Name=code};db.SnsJenis.Add(kind);await db.SaveChangesAsync();await SensusBusinessSetup.SeedAsync(db);return kind;
     }
 }

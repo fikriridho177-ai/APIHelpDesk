@@ -1,5 +1,5 @@
+using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using AuthUtility.Application.DTOs.Sensus;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
@@ -7,75 +7,88 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AuthUtility.Api.Sensus;
 
-// Official workbook Sheet1 C72:C82 and patch README. This is control-required evaluation,
-// not an invented mapping to the legacy RINGAN/SEDANG/BERAT severity scale.
+// Evaluation uses only persisted master rule/parameter metadata, never a HPT-code switch.
 public static class SensusHptEvaluation
 {
-    public record Rule(string EvaluationType,string Description,string SourceCell,decimal? Threshold=null,string? Unit=null);
-    public static Rule? Definition(string code,string? name=null)
+    public static readonly string[] Operators={">",">=","<","<=","="};
+    public static readonly string[] Aggregations={"AVG","SUM","MIN","MAX"};
+    public static readonly string[] Numbers={"PERSEN_TERSERANG","POKOK_TERSERANG","POKOK_SAMPEL","LUAS_HA","JUMLAH_POHON","JUMLAH_JALUR"};
+    public static readonly string[] Texts={"STATUS_LAHAN","FASE_TANAMAN","JENIS_FORM"};
+    public static readonly string[] Colors={"red","green","gray","orange","blue"};
+    public static bool Compare(decimal a,string op,decimal b)=>op switch{">"=>a>b,">="=>a>=b,"<"=>a<b,"<="=>a<=b,"="=>a==b,_=>throw new ArgumentException("Operator tidak valid.")};
+    private static decimal? Number(SnsHeader h,string code,string aggregate)
     {
-        static string Clean(string value)=>Regex.Replace(value.ToUpperInvariant(),"[^A-Z0-9]","");
-        var key=Clean(code);
-        var aliases=new Dictionary<string,string> { ["KUMBANG"]="ORYCTES",["KUMBANGTANDUK"]="ORYCTES",["PLASISPA"]="PLESISPA",["ULATK"]="ULATKANTONG",["BUSUKP"]="BUSUKPUCUK" };
-        Rule? Find(string value)
+        switch(code.ToUpperInvariant())
         {
-            value=aliases.GetValueOrDefault(value,value);
-            return value switch {
-                "ORYCTES"=>new("CONDITIONAL","TM >3% pokok terserang; TBM >=1 pohon terserang.","C73",3,"%"),
-                "PLESISPA"=>new("CONDITIONAL","TM >5% pokok terserang; TBM >=1 pohon terserang.","C76",5,"%"),
-                "ULATAPI" or "ULATKANTONG"=>new("THRESHOLD",">=5 ulat/pelepah memerlukan pengendalian.",value=="ULATAPI"?"C74":"C75",5,"ulat/pelepah"),
-                "TIRATHABA"=>new("THRESHOLD",">=5% pokok terserang memerlukan pengendalian.","C77",5,"%"),
-                "RAYAP"=>new("THRESHOLD",">=1 pohon terserang memerlukan pengendalian.","C72",1,"pohon"),
-                "HELMINTHOSPORIUM" or "FUSARIUM" or "BUSUKPUCUK" or "CURVULARIA" or "PESTALOTIA"=>new("ANY_OCCURRENCE","Setiap ada serangan dilakukan pengendalian.","C78:C82",0,"pohon"),
-                _=>null
-            };
+            case "PERSEN_TERSERANG":return h.JumlahPokokSampel>0?h.JumlahPokokTerserang*100m/h.JumlahPokokSampel:null;
+            case "POKOK_TERSERANG":return h.JumlahPokokTerserang;
+            case "POKOK_SAMPEL":return h.JumlahPokokSampel;
+            case "LUAS_HA":return h.LuasHa;
+            case "JUMLAH_POHON":return h.JumlahPokokPersil;
+            case "JUMLAH_JALUR":return h.JumlahJalur;
         }
-        return Find(key) ?? Find(Clean((name??"").Replace("Sensus ","",StringComparison.OrdinalIgnoreCase)));
+        var values=h.Details.Where(d=>d.Parameter?.Active==true && d.Parameter.Code.Equals(code,StringComparison.OrdinalIgnoreCase) && d.NilaiAngka.HasValue).Select(d=>d.NilaiAngka!.Value).ToList();
+        if(values.Count==0)return null;
+        return aggregate switch{"AVG"=>values.Average(),"SUM"=>values.Sum(),"MIN"=>values.Min(),"MAX"=>values.Max(),_=>null};
     }
-
-    public static SnsEvaluationDto Evaluate(SnsHeader header)
+    private static string? Text(SnsHeader h,string code)
     {
-        var rule=Definition(header.Jenis?.Code??"",header.Jenis?.Name);
-        if(rule==null)return new("NONE",null,null,null,"Belum ada aturan pengendalian pada flowchart resmi.");
-        SnsEvaluationDto Result(bool? control,decimal? value,string? message=null,string? unit=null)=>new(rule.EvaluationType,control,value,unit??rule.Unit,rule.Description,message);
-        var details=header.Details.Where(d=>d.Parameter?.Active==true).ToList();
-        decimal? percent=header.JumlahPokokSampel>0?header.JumlahPokokTerserang*100m/header.JumlahPokokSampel:null;
-        if(rule.EvaluationType=="CONDITIONAL")
+        string? value=code.ToUpperInvariant() switch{"STATUS_LAHAN"=>h.StatusLahan,"FASE_TANAMAN"=>h.FaseTanaman,"JENIS_FORM"=>h.JenisForm,_=>null};
+        if(value!=null)return value;
+        var values=h.Details.Where(d=>d.Parameter?.Active==true && d.Parameter.Code.Equals(code,StringComparison.OrdinalIgnoreCase)).Select(d=>d.NilaiTeks?.Trim()).Where(v=>!string.IsNullOrEmpty(v)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if(values.Count==1)return values[0];
+        // Legacy snapshots have phase in an OPTION master rather than a header field.
+        if(code=="FASE_TANAMAN")
         {
-            var stages=details.Where(d=>d.Parameter!.TipeData=="OPTION" &&
-                (d.Parameter.Opsi??"").Split(',').Select(x=>x.Trim().ToUpperInvariant()).Contains("TM") &&
-                (d.Parameter.Opsi??"").Split(',').Select(x=>x.Trim().ToUpperInvariant()).Contains("TBM"))
-                .Select(d=>d.NilaiTeks?.Trim().ToUpperInvariant()).Where(x=>x is "TM" or "TBM").Distinct().ToList();
-            if(stages.Count!=1)return Result(null,null,"Isi satu status tanaman TM/TBM yang konsisten melalui parameter OPTION di master.");
-            if(stages[0]=="TBM")return Result(header.JumlahPokokTerserang>=1,header.JumlahPokokTerserang,unit:"pohon");
-            return Result(percent.HasValue?percent>rule.Threshold:null,percent,percent==null?"Jumlah pokok sampel belum tersedia.":null);
+            var phases=h.Details.Where(d=>d.Parameter?.Active==true && d.Parameter.TipeData=="OPTION" &&
+                (d.Parameter.Opsi??"").Split(',').Any(v=>v.Trim().Equals("TM",StringComparison.OrdinalIgnoreCase)) &&
+                (d.Parameter.Opsi??"").Split(',').Any(v=>v.Trim().Equals("TBM",StringComparison.OrdinalIgnoreCase)))
+                .Select(d=>d.NilaiTeks?.Trim().ToUpperInvariant()).Where(v=>v is "TM" or "TBM").Distinct().ToList();
+            return phases.Count==1?phases[0]:null;
         }
-        if(rule.Unit=="ulat/pelepah")
-        {
-            var indicators=details.Where(d=>d.Parameter!.IsIndikator && d.Parameter.TipeData=="NUMBER" &&
-                (d.Parameter.Code.Equals("JML_ULAT",StringComparison.OrdinalIgnoreCase) ||
-                 (d.Parameter.Name.Contains("ulat",StringComparison.OrdinalIgnoreCase)&&d.Parameter.Name.Contains("pelepah",StringComparison.OrdinalIgnoreCase))))
-                .GroupBy(d=>d.ParameterId).ToList();
-            if(indicators.Count!=1)return Result(null,null,"Atur satu indikator jumlah ulat per pelepah pada Master Jenis & Parameter.");
-            var values=indicators[0].Where(d=>d.NilaiAngka.HasValue).Select(d=>d.NilaiAngka!.Value).ToList();
-            decimal? average=values.Count>0?values.Average():null;
-            return Result(average.HasValue?average>=rule.Threshold:null,average);
-        }
-        if(rule.Unit=="%")return Result(percent.HasValue?percent>=rule.Threshold:null,percent,percent==null?"Jumlah pokok sampel belum tersedia.":null);
-        return Result(rule.EvaluationType=="ANY_OCCURRENCE"?header.JumlahPokokTerserang>0:header.JumlahPokokTerserang>=rule.Threshold,header.JumlahPokokTerserang);
+        return null;
     }
-
+    private static bool? Condition(SnsHeader h,SnsHptRule r)
+    {
+        if(r.ConditionParameterCode==null)return true;
+        if(!Operators.Contains(r.ConditionOperator))return null;
+        if(Numbers.Contains(r.ConditionParameterCode) || h.Details.Any(d=>d.Parameter?.Active==true && d.Parameter.Code.Equals(r.ConditionParameterCode,StringComparison.OrdinalIgnoreCase) && d.Parameter.TipeData=="NUMBER"))
+        {
+            var value=Number(h,r.ConditionParameterCode,r.Aggregation);
+            return value.HasValue && decimal.TryParse(r.ConditionValue,NumberStyles.Float,CultureInfo.InvariantCulture,out var expected)?Compare(value.Value,r.ConditionOperator!,expected):null;
+        }
+        var text=Text(h,r.ConditionParameterCode);
+        return text!=null && r.ConditionOperator=="="?text.Equals(r.ConditionValue,StringComparison.OrdinalIgnoreCase):null;
+    }
+    public static string Describe(SnsHptRule r)=>$"{(r.ConditionParameterCode==null?"":$"{r.ConditionParameterCode} {r.ConditionOperator} {r.ConditionValue}: ")}{r.Aggregation} {r.ParameterCode} {r.Operator} {r.ThresholdValue.ToString(CultureInfo.InvariantCulture)} {r.ThresholdUnit}";
+    public static SnsEvaluationDto Evaluate(SnsHeader h)
+    {
+        var rules=h.Jenis?.Rules.Where(r=>r.Active).OrderBy(r=>r.SortOrder).ThenBy(r=>r.Id).ToList()??new();
+        if(rules.Count==0)return new("NONE",null,null,null,"Aturan master belum ditetapkan.",Color:"gray");
+        var description=string.Join("; ",rules.Select(Describe));var unknown=false;SnsHptRule? fallback=null;decimal? last=null;
+        foreach(var r in rules)
+        {
+            if(r.StatusLahan!=null && h.StatusLahan==null){unknown=true;continue;}
+            if(r.StatusLahan!=null && r.StatusLahan!=h.StatusLahan || r.JenisForm!=null && r.JenisForm!=h.JenisForm)continue;
+            if(!Operators.Contains(r.Operator)||!Aggregations.Contains(r.Aggregation)||!Colors.Contains(r.Color)||!Colors.Contains(r.ElseColor)||r.ResultCode is not ("PERLU_PENGENDALIAN" or "MONITORING")){unknown=true;continue;}
+            var condition=Condition(h,r);if(condition==null){unknown=true;continue;}if(!condition.Value)continue;
+            var value=Number(h,r.ParameterCode,r.Aggregation);if(!value.HasValue){unknown=true;continue;}
+            if(Compare(value.Value,r.Operator,r.ThresholdValue))
+            {
+                var control=r.ResultCode=="PERLU_PENGENDALIAN";
+                if(!control && unknown)continue;
+                return new("MASTER_RULE",control,value,r.ThresholdUnit,description,r.Message,r.ResultCode,r.Color,r.Id);
+            }
+            if(fallback==null){fallback=r;last=value;}
+        }
+        if(unknown || fallback==null)return new("MASTER_RULE",null,null,null,description,"Data/kondisi evaluasi belum lengkap atau tidak cocok.",Color:"gray");
+        return new("MASTER_RULE",false,last,fallback.ThresholdUnit,description,fallback.ElseMessage,"MONITORING",fallback.ElseColor,fallback.Id);
+    }
+    public static string? RuleJson(SnsJenis kind)=>kind.Rules.Any(r=>r.Active)?JsonSerializer.Serialize(new{description=string.Join("; ",kind.Rules.Where(r=>r.Active).OrderBy(r=>r.SortOrder).ThenBy(r=>r.Id).Select(Describe))}):null;
     public static async Task<Dictionary<long,SnsEvaluationDto>> EvaluateAsync(AppDbContext db,ICollection<long> ids)
     {
         if(ids.Count==0)return new();
-        var headers=await db.SnsHeaders.AsNoTracking().Where(x=>ids.Contains(x.Id)).Include(x=>x.Jenis)
-            .Include(x=>x.Details).ThenInclude(x=>x.Parameter).AsSplitQuery().ToListAsync();
-        return headers.ToDictionary(x=>x.Id,Evaluate);
-    }
-
-    public static string? RuleJson(SnsJenis jenis)
-    {
-        var definition=Definition(jenis.Code,jenis.Name);
-        return definition==null?null:JsonSerializer.Serialize(definition,new JsonSerializerOptions{PropertyNamingPolicy=JsonNamingPolicy.CamelCase});
+        var headers=await db.SnsHeaders.AsNoTracking().Where(h=>ids.Contains(h.Id)).Include(h=>h.Jenis).ThenInclude(k=>k!.Rules).Include(h=>h.Details).ThenInclude(d=>d.Parameter).AsSplitQuery().ToListAsync();
+        return headers.ToDictionary(h=>h.Id,Evaluate);
     }
 }
