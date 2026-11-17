@@ -16,7 +16,7 @@ namespace AuthUtility.Api.Controllers;
 [ApiController]
 [Route("api/sensus/master")]
 [Authorize]
-public class SensusMasterController(AppDbContext db, IPermissionService permissions) : ControllerBase
+public partial class SensusMasterController(AppDbContext db, IPermissionService permissions) : ControllerBase
 {
     /* =========================================================
        JENIS SENSUS
@@ -36,7 +36,7 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
         var error = await ValidateJenis(body, null);
         if (error != null) return BadRequest(error);
 
-        var entity = new SnsJenis();
+        var entity = new SnsJenis { BusinessSeedVersion = 1 }; // New admin types are configured through master, not legacy migration.
         ApplyJenis(entity, body);
         db.SnsJenis.Add(entity);
         await db.SaveChangesAsync();
@@ -134,6 +134,8 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
     {
         var list = await db.SnsJenis.AsNoTracking()
             .Include(x => x.Parameters)
+            .Include(x => x.Rules)
+            .AsSplitQuery()
             .Where(x => !activeOnly || x.Active)
             .OrderByDescending(x => x.Id)
             .ToListAsync();
@@ -145,10 +147,11 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
                     .OrderByDescending(p => p.Id)
                     .Select(p => new SnsParameterDto(
                         p.Id, p.JenisId, p.Code, p.Name, p.Satuan, p.TipeData, p.Opsi, p.Wajib, p.IsIndikator,
-                        p.AmbangSedang, p.AmbangBerat, p.Active))
+                        p.AmbangSedang, p.AmbangBerat, p.Active,p.FormScope))
                     .ToList(),
-                SensusHptEvaluation.Definition(x.Code,x.Name)?.EvaluationType ?? "NONE",
-                SensusHptEvaluation.RuleJson(x)))
+                x.Rules.Any(r=>r.Active)?"MASTER_RULE":"NONE",
+                SensusHptEvaluation.RuleJson(x),x.Form2Enabled,x.ReportGroup,
+                x.Rules.Where(r=>!activeOnly||r.Active).OrderBy(r=>r.SortOrder).ThenBy(r=>r.Id).Select(RuleDto).ToList()))
             .ToList();
     }
 
@@ -161,6 +164,7 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
 
     private async Task<object?> ValidateJenis(SaveSnsJenisRequest body, int? id)
     {
+        if(body.ReportGroup!=null && !new[]{"HAMA","PENYAKIT","TANAMAN","LAINNYA"}.Contains(body.ReportGroup))return new{message="Kelompok report tidak valid."};
         if (string.IsNullOrWhiteSpace(body.Code) || body.Code.Trim().Length > 30 ||
             string.IsNullOrWhiteSpace(body.Name) || body.Name.Trim().Length > 150)
             return new { message = "Kode (maks. 30) dan nama (maks. 150) wajib diisi." };
@@ -178,6 +182,8 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
 
     private static void ApplyJenis(SnsJenis entity, SaveSnsJenisRequest body)
     {
+        entity.Form2Enabled=body.Form2Enabled??entity.Form2Enabled;
+        entity.ReportGroup=body.ReportGroup??entity.ReportGroup;
         entity.Code = body.Code.Trim().ToUpperInvariant();
         entity.Name = body.Name.Trim();
         entity.Kategori = body.Kategori.Trim().ToUpperInvariant();
@@ -189,6 +195,7 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
 
     private async Task<object?> ValidateParameter(int jenisId, SaveSnsParameterRequest body, int? id)
     {
+        if(body.FormScope!=null && !new[]{"ALL","FORM1","FORM2"}.Contains(body.FormScope))return new{message="Scope parameter harus ALL, FORM1 atau FORM2."};
         if (string.IsNullOrWhiteSpace(body.Code) || body.Code.Trim().Length > 30 ||
             string.IsNullOrWhiteSpace(body.Name) || body.Name.Trim().Length > 150)
             return new { message = "Kode (maks. 30) dan nama (maks. 150) wajib diisi." };
@@ -212,6 +219,7 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
 
     private static void ApplyParameter(SnsParameter entity, SaveSnsParameterRequest body)
     {
+        entity.FormScope=body.FormScope??entity.FormScope;
         entity.Code = body.Code.Trim().ToUpperInvariant();
         entity.Name = body.Name.Trim();
         entity.Satuan = string.IsNullOrWhiteSpace(body.Satuan) ? null : body.Satuan.Trim();

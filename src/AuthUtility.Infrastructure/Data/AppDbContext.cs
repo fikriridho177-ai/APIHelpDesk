@@ -69,6 +69,7 @@ public class AppDbContext : DbContext
     public DbSet<SnsAfdeling> SnsAfdelings => Set<SnsAfdeling>();
     public DbSet<SnsBlok> SnsBloks => Set<SnsBlok>();
     public DbSet<SnsJenis> SnsJenis => Set<SnsJenis>();
+    public DbSet<SnsHptRule> SnsHptRules => Set<SnsHptRule>();
     public DbSet<SnsParameter> SnsParameters => Set<SnsParameter>();
     public DbSet<SnsHeader> SnsHeaders => Set<SnsHeader>();
     public DbSet<SnsDetail> SnsDetails => Set<SnsDetail>();
@@ -407,6 +408,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<SnsJenis>(entity =>
         {
             entity.ToTable("MstHpt");
+            entity.HasMany(x => x.Rules).WithOne().HasForeignKey(x => x.JenisId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Parameters)
                 .WithOne()
                 .HasForeignKey(x => x.JenisId)
@@ -415,9 +417,18 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<SnsParameter>().ToTable("MstParameterHpt");
 
+        modelBuilder.Entity<SnsHptRule>(entity =>
+        {
+            entity.ToTable("MstHptRule");
+            entity.HasIndex(x => new { x.JenisId, x.Active });
+            entity.HasIndex(x => x.SeedKey).IsUnique();
+            entity.Property(x => x.ThresholdValue).HasPrecision(19, 6);
+        });
+
         modelBuilder.Entity<SnsHeader>(entity =>
         {
             entity.ToTable("SnsHeader");
+            entity.Property(x => x.LuasHa).HasPrecision(18, 4);
             entity.HasOne(x => x.Jenis).WithMany().HasForeignKey(x => x.JenisId);
             entity.HasOne(x => x.Blok).WithMany().HasForeignKey(x => x.BlokId);
             entity.HasOne(x => x.Petugas).WithMany().HasForeignKey(x => x.PetugasUserId);

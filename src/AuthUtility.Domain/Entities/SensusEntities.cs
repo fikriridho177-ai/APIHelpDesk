@@ -81,10 +81,15 @@ public class SnsJenis
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public ICollection<SnsParameter> Parameters { get; set; } = new List<SnsParameter>();
+    public bool Form2Enabled { get; set; }
+    public string ReportGroup { get; set; } = "LAINNYA";
+    public int BusinessSeedVersion { get; set; }
+    public ICollection<SnsHptRule> Rules { get; set; } = new List<SnsHptRule>();
 }
 
 public class SnsParameter
 {
+    public string FormScope { get; set; } = "ALL";
     public int Id { get; set; }
     public int JenisId { get; set; }
     public string Code { get; set; } = "";
@@ -103,6 +108,20 @@ public class SnsParameter
 
 public class SnsHeader
 {
+    public string JenisForm { get; set; } = "FORM1";
+    public string? StatusLahan { get; set; }
+    public string? StatusLahanSumber { get; set; }
+    public string? FaseTanaman { get; set; }
+    public decimal? LuasHa { get; set; }
+    public int? JumlahPokokPersil { get; set; }
+    public string? BulanTanam { get; set; }
+    public int? JumlahJalur { get; set; }
+    public int? PohonMatiPetir { get; set; }
+    public int? PohonMatiHpt { get; set; }
+    public int? PohonMatiLain { get; set; }
+    public string? Pengendalian { get; set; }
+    public string? MusuhAlami { get; set; }
+    public string? Cuaca { get; set; }
     public long Id { get; set; }
     public string? SensusNo { get; set; }
     public Guid ClientUuid { get; set; }

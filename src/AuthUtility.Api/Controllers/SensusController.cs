@@ -478,12 +478,12 @@ public partial class SensusController(
             tingkat.TryGetValue(x.Id, out var t) ? t.Tingkat : SnsTingkat.Kosong,
             x.SubmittedAt,
             x.ApprovedAt,
-            evaluations?.GetValueOrDefault(x.Id));
+            evaluations?.GetValueOrDefault(x.Id),SensusBusinessContext.Dto(x));
 
     private async Task<SnsDetailDto?> BuildDetail(long id)
     {
         var header = await db.SnsHeaders.AsNoTracking()
-            .Include(x => x.Jenis)
+            .Include(x => x.Jenis).ThenInclude(x => x!.Rules)
             .Include(x => x.Petugas)
             .Include(x => x.ApprovedBy)
             .Include(x => x.Details).ThenInclude(x => x.Parameter)

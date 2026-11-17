@@ -21,7 +21,8 @@ public partial class PersilReader(MyPADDbContext myPad, RSUPPKBDbContext rsuppkb
     // Detail = semua kolom tabel sumber (nama kolom asli -> nilai), hanya diisi bila ListAsync(..., withDetail: true).
     public record Persil(string Sumber, string Kode, string? Afdeling, string? Wilayah, double? Latitude, double? Longitude, string? PersilId,
         [property: JsonPropertyName("persil"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PersilKode = null,
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, object?>? Detail = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, object?>? Detail = null,
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SensusPersilContext? Sensus = null);
 
     // Kolom yang dianggap "persil" (diambil yang pertama ada di tabel).
     private static readonly string[] PersilColumns = ["KodePersil", "Persil", "NamaPersil", "NoPersil"];

@@ -16,7 +16,8 @@ public record SnsParameterDto(
     bool IsIndikator,
     decimal? AmbangSedang,
     decimal? AmbangBerat,
-    bool Active
+    bool Active,
+    string FormScope = "ALL"
 );
 
 public record SnsJenisDto(
@@ -30,7 +31,10 @@ public record SnsJenisDto(
     bool Active,
     List<SnsParameterDto> Parameters,
     string EvaluationType = "NONE",
-    string? EvaluationRuleJson = null
+    string? EvaluationRuleJson = null,
+    bool Form2Enabled = false,
+    string ReportGroup = "LAINNYA",
+    List<SnsRuleDto>? Rules = null
 );
 
 // Jenis sensus untuk halaman sub-layanan RNA + hak user di halaman tersebut.
@@ -38,6 +42,8 @@ public record SnsJenisPageDto(SnsJenisDto Jenis, bool CanRead, bool CanApprove, 
 
 public class SaveSnsJenisRequest
 {
+    public bool? Form2Enabled { get; set; }
+    public string? ReportGroup { get; set; }
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public string Kategori { get; set; } = "HPT";
@@ -49,6 +55,7 @@ public class SaveSnsJenisRequest
 
 public class SaveSnsParameterRequest
 {
+    public string? FormScope { get; set; }
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public string? Satuan { get; set; }
@@ -86,7 +93,8 @@ public record SnsListItemDto(
     string Tingkat,
     DateTime SubmittedAt,
     DateTime? ApprovedAt,
-    SnsEvaluationDto? Evaluation = null
+    SnsEvaluationDto? Evaluation = null,
+    SnsBusinessContextDto? Business = null
 );
 
 public record SnsDetailValueDto(
@@ -114,7 +122,8 @@ public record SnsParameterSummaryDto(
 );
 
 public record SnsFotoDto(long Id, string FileUrl, string? Keterangan, decimal? Latitude, decimal? Longitude, DateTime? TakenAt);
-public record SnsEvaluationDto(string EvaluationType, bool? PerluPengendalian, decimal? Nilai, string? Satuan, string Description, string? Message = null);
+public record SnsEvaluationDto(string EvaluationType, bool? PerluPengendalian, decimal? Nilai, string? Satuan, string Description, string? Message = null,
+    string? ResultCode = null,string? Color = null,int? RuleId = null);
 
 public record SnsLogDto(long Id, string Action, string? FromStatus, string? ToStatus, string? Note, string UserName, DateTime CreatedAt);
 
@@ -239,6 +248,7 @@ public class SnsMobileFotoRequest
 
 public class SnsMobileSubmitRequest
 {
+    public SnsBusinessInput? Business { get; set; }
     public Guid ClientUuid { get; set; }
     public int? JenisId { get; set; }
     public string? JenisCode { get; set; }

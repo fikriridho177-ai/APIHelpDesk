@@ -50,7 +50,7 @@ public class SensusMobileController(
 
         try
         {
-            var rows = await persilReader.ListAsync(source, wilayah);
+            var rows = await persilReader.ListSensusAsync(source, wilayah);
             var terpotong = rows.Count > PersilReader.MaxRows;
             if (terpotong) rows.RemoveAt(rows.Count - 1);
             return Ok(new { sumber = source.Key, source.Komoditas, total = rows.Count, terpotong, rows });
@@ -90,6 +90,9 @@ public class SensusMobileController(
             .FirstOrDefaultAsync(x => x.Active &&
                                       (body.JenisId != null ? x.Id == body.JenisId : x.Code == (body.JenisCode ?? "").Trim().ToUpper()));
         if (jenis == null) return BadRequest(new { message = "Jenis sensus tidak ditemukan / tidak aktif." });
+        var jenisForm=SensusBusinessContext.Form(body.Business,existing);
+        var businessError=SensusBusinessContext.Validate(body.Business,jenis,jenisForm);
+        if(businessError!=null)return BadRequest(new{message=businessError});
 
         // Persil harus ada & aktif di MyPAD / RSUPPKB.
         var source = PersilReader.Find(body.PersilSumber);
@@ -99,7 +102,7 @@ public class SensusMobileController(
         PersilReader.Persil? persil;
         try
         {
-            persil = await persilReader.FindAsync(source, body.PersilId);
+            persil = await persilReader.FindSensusAsync(source, body.PersilId);
         }
         catch (DbException error)
         {
@@ -117,7 +120,7 @@ public class SensusMobileController(
             return BadRequest(new { message = "Jumlah pokok terserang tidak boleh melebihi pokok sampel." });
 
         // Validasi & petakan detail ke parameter.
-        var parameters = jenis.Parameters.Where(p => p.Active).ToList();
+        var parameters = jenis.Parameters.Where(p => SensusBusinessContext.ParameterFor(p,jenisForm)).ToList();
         var details = new List<SnsDetail>();
 
         foreach (var d in body.Details)
@@ -161,6 +164,8 @@ public class SensusMobileController(
 
         var header = existing ?? new SnsHeader { ClientUuid = body.ClientUuid, PetugasUserId = userId };
         var fromStatus = existing?.Status;
+        if(existing!=null && (header.PersilSumber!=source.Key || header.PersilId!=(persil.PersilId??body.PersilId.Trim())))
+            SensusBusinessContext.Apply(header,new SnsBusinessInput{JenisForm=jenisForm},null);
 
         header.JenisId = jenis.Id;
         header.PersilSumber = source.Key;
@@ -177,6 +182,7 @@ public class SensusMobileController(
         header.Longitude = body.Longitude;
         header.Catatan = body.Catatan?.Trim();
         header.DeviceInfo = body.DeviceInfo?.Trim();
+        SensusBusinessContext.Apply(header,body.Business,persil.Sensus);
         header.Status = SnsStatus.Submitted;
         header.SubmittedAt = DateTime.UtcNow;
 
