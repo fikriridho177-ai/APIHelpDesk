@@ -32,8 +32,8 @@ COPY --from=build /app/publish .
 
 # Firmware packages and Sensus photos are mounted or written at runtime.
 # Prepare all writable paths for the non-root ASP.NET runtime user.
-RUN mkdir -p /app/firmware /app/wwwroot/uploads/sensus \
-    && chown -R $APP_UID:$APP_UID /app/firmware /app/wwwroot
+RUN mkdir -p /app/firmware /app/wwwroot/uploads/sensus /app/App_Data/wad-photos \
+    && chown -R $APP_UID:$APP_UID /app/firmware /app/wwwroot /app/App_Data
 
 USER $APP_UID
 ENTRYPOINT ["dotnet", "AuthUtility.Api.dll"]

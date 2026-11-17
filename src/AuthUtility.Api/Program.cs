@@ -80,6 +80,7 @@ builder.Services.AddDbContext<RSUPPKBDbContext>(options =>
     options.UseSqlServer(SqlServerConnectionString.Get(builder.Configuration, "RSUPPKBConnection")));
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddHostedService<AuthUtility.Api.Wad.WadPhotoCleanupService>();
 builder.Services.AddScoped<IIotDeviceCredentialService, IotDeviceCredentialService>();
 builder.Services.Configure<IotDeviceOptions>(builder.Configuration.GetSection("IoT"));
 builder.Services.Configure<IotFirmwareOptions>(builder.Configuration.GetSection("IoT:Firmware"));

@@ -255,6 +255,50 @@ public class IotDeviceController(
         return await GetPayloads(loggerId, take, format, false);
     }
 
+    [HttpGet("{loggerId:int}/history/pivot")]
+    public async Task<IActionResult> GetPivotHistory(
+        int loggerId, string period = "day", string? anchorDate = null,
+        string aggregation = "sample", string aggregationMode = "average",
+        int page = 1, int pageSize = 25, string sort = "desc", long? snapshotRawId = null,
+        string? from = null, string? to = null)
+    {
+        if (!await HasAccess()) return Forbid();
+        if (loggerId <= 0 || page < 1 || pageSize is < 1 or > 500 || snapshotRawId < 0 ||
+            sort is not ("asc" or "desc") || aggregation is not ("sample" or "hour" or "day" or "month") ||
+            !IotHistoryAggregationMode.TryParse(aggregationMode, out var mode) ||
+            !IotHistoryPeriodDefinition.TryCreate(period, out var definition))
+            return BadRequest(new { message = "Parameter rentang, interval, pengurutan, atau halaman tidak valid." });
+        var anchor = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        if (anchorDate != null && !IotHistoryPeriodDefinition.TryParseAnchorDate(anchorDate, out anchor))
+            return BadRequest(new { message = "Tanggal acuan harus berformat yyyy-MM-dd (WIB)." });
+        if (anchor.Year < 1900 || anchor.Year > 9998)
+            return BadRequest(new { message = "Tanggal acuan di luar rentang yang didukung." });
+        var window = definition.Resolve(DateTime.UtcNow.AddHours(7), anchor);
+        try
+        {
+            var connection = db.Database.GetDbConnection();
+            if (connection.State != ConnectionState.Open) await connection.OpenAsync(HttpContext.RequestAborted);
+            await using var command = connection.CreateCommand();
+            command.CommandText = IotHistoryPivot.Sql(sort == "asc");
+            command.CommandTimeout = 120;
+            AddParam(command, "@loggerId", loggerId, DbType.Int32);
+            AddParam(command, "@from", window.From, DbType.DateTime2);
+            AddParam(command, "@to", window.To, DbType.DateTime2);
+            AddParam(command, "@aggregation", aggregation, DbType.String);
+            AddParam(command, "@aggregationMode", mode.Code, DbType.String);
+            AddParam(command, "@offset", ((long)page - 1) * pageSize, DbType.Int64);
+            AddParam(command, "@pageSize", pageSize, DbType.Int32);
+            AddParam(command, "@snapshotRawId", snapshotRawId, DbType.Int64);
+            await using var reader = await command.ExecuteReaderAsync(HttpContext.RequestAborted);
+            return Ok(await IotHistoryPivot.Read(reader, loggerId, page, pageSize, aggregation, HttpContext.RequestAborted));
+        }
+        catch (DbException error)
+        {
+            logger.LogError(error, "Gagal membaca pivot history LoggerID {LoggerId}", loggerId);
+            return StatusCode(503, new { message = "Riwayat pivot sensor gagal dimuat." });
+        }
+    }
+
     // =====================================================
     // GET /api/iot/devices/3/parameters
     // Metadata parameter untuk UI.

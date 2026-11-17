@@ -11,6 +11,7 @@
 **/obj/
 publish/
 artifacts/
+**/App_Data/wad-photos/
 
 # Local configuration and secrets
 .env

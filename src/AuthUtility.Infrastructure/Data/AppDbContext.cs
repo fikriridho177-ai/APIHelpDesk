@@ -93,6 +93,11 @@ public class AppDbContext : DbContext
     public DbSet<QcFinding> QcFindings => Set<QcFinding>();
     public DbSet<QcHistory> QcHistories => Set<QcHistory>();
 
+    // Laporan lapangan WAD (PostgreSQL HelpDesk). Lihat 2026-11-16-wad-reporting.sql
+    public DbSet<WadObject> WadObjects => Set<WadObject>();
+    public DbSet<WadReport> WadReports => Set<WadReport>();
+    public DbSet<WadReportPhoto> WadReportPhotos => Set<WadReportPhoto>();
+
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
@@ -772,6 +777,84 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // WadObject — master bangunan/patok/persil/projek WAD
+        modelBuilder.Entity<WadObject>(entity =>
+        {
+            entity.ToTable("WadObject");
+            entity.Property(x => x.MeasurementMethod).HasMaxLength(30);
+            entity.Property(x => x.VerifyDropCm).HasPrecision(14, 3);
+            entity.Property(x => x.CriticalDropCm).HasPrecision(14, 3);
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Module, x.Code }).IsUnique();
+            entity.HasIndex(x => x.Module);
+
+            entity.Property(x => x.Module).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Code).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.ObjectType).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Wilayah).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Location).HasMaxLength(200);
+            entity.Property(x => x.ReferenceValueCm).HasPrecision(14, 3);
+            entity.Property(x => x.AreaHa).HasPrecision(12, 4);
+            entity.Property(x => x.PicName).HasMaxLength(150);
+            entity.Property(x => x.TargetQty).HasPrecision(14, 3);
+            entity.Property(x => x.Unit).HasMaxLength(30);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+        });
+
+        // WadReport — satu laporan lapangan untuk satu objek
+        modelBuilder.Entity<WadReport>(entity =>
+        {
+            entity.ToTable("WadReport");
+            entity.HasIndex(x => new { x.CreatedByUserId, x.RequestId }).IsUnique();
+            entity.Property(x => x.MeasurementMethod).HasMaxLength(30);
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Module, x.ObservedDate });
+            entity.HasIndex(x => x.ObjectId);
+
+            entity.Property(x => x.Module).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Condition).HasMaxLength(30);
+            entity.Property(x => x.WaterLevelCm).HasPrecision(10, 2);
+            entity.Property(x => x.MeasurementValue).HasPrecision(14, 3);
+            entity.Property(x => x.MeasurementUnit).HasMaxLength(10);
+            entity.Property(x => x.MeasuredValueCm).HasPrecision(14, 3);
+            entity.Property(x => x.ReferenceValueCm).HasPrecision(14, 3);
+            entity.Property(x => x.DropCm).HasPrecision(14, 3);
+            entity.Property(x => x.FloodAreaHa).HasPrecision(12, 4);
+            entity.Property(x => x.FloodHeightCm).HasPrecision(10, 2);
+            entity.Property(x => x.WorkDescription).HasMaxLength(2000);
+            entity.Property(x => x.RealizationQty).HasPrecision(14, 3);
+            entity.Property(x => x.RealizationUnit).HasMaxLength(30);
+            entity.Property(x => x.Constraints).HasMaxLength(2000);
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.Property(x => x.CreatedByName).HasMaxLength(150).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(x => x.Object)
+                .WithMany()
+                .HasForeignKey(x => x.ObjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(x => x.Photos)
+                .WithOne(x => x.Report)
+                .HasForeignKey(x => x.ReportId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WadReportPhoto>(entity =>
+        {
+            entity.ToTable("WadReportPhoto");
+            entity.HasIndex(x => new { x.ReportId, x.RequestId }).IsUnique();
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.ReportId);
+
+            entity.Property(x => x.FileUrl).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Keterangan).HasMaxLength(200);
+            entity.Property(x => x.Phase).HasMaxLength(20);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
         });
     }
 }

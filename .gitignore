@@ -30,6 +30,7 @@ logs/
 # Publish output
 publish/
 artifacts/
+**/App_Data/wad-photos/
 .deploy/
 **/.tmp-*/
 
