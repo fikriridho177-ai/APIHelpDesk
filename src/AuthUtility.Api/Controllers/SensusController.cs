@@ -73,7 +73,8 @@ public partial class SensusController(
             .ToListAsync();
 
         var tingkat = await SensusHelper.HitungTingkatAsync(db, rows.Select(x => x.Id).ToList());
-        return Ok(rows.Select(x => ToListItem(x, tingkat)).ToList());
+        var evaluation = await SensusHptEvaluation.EvaluateAsync(db,rows.Select(x=>x.Id).ToList());
+        return Ok(rows.Select(x => ToListItem(x, tingkat, evaluation)).ToList());
     }
 
     // Halaman sensus per jenis: sub-layanan RNA (mis. /layanan/rna/sensus-hpt/sensus-ulat-api)
@@ -188,6 +189,12 @@ public partial class SensusController(
     {
         if (!await permissions.HasPermissionAsync(User, SnsMenu.Monitoring, MenuPermission.Read)) return Forbid();
 
+        return await BuildMonitoring(jenisId, wilayah, dateFrom, dateTo, hariTerlambat, sumber);
+    }
+
+    private async Task<IActionResult> BuildMonitoring(int? jenisId, string? wilayah, DateOnly? dateFrom, DateOnly? dateTo, int hariTerlambat, string sumber)
+    {
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
         dateTo ??= today;
         dateFrom ??= dateTo.Value.AddDays(-29);
@@ -248,7 +255,8 @@ public partial class SensusController(
     [HttpGet("analisis")]
     public async Task<IActionResult> GetAnalisis(int jenisId, string? wilayah, DateOnly? dateFrom, DateOnly? dateTo)
     {
-        if (!await permissions.HasPermissionAsync(User, SnsMenu.Analisis, MenuPermission.Read) &&
+        if (!await permissions.HasPermissionAsync(User, SnsMenu.Monitoring, MenuPermission.Read) &&
+            !await permissions.HasPermissionAsync(User, SnsMenu.Analisis, MenuPermission.Read) &&
             !await CanJenis(jenisId, MenuPermission.Read))
             return Forbid();
 
@@ -279,6 +287,7 @@ public partial class SensusController(
             .ToListAsync();
 
         var headerIds = headers.Select(x => x.Id).ToList();
+        var evaluations = await SensusHptEvaluation.EvaluateAsync(db,headerIds);
         var nilai = indikator == null || headerIds.Count == 0
             ? new Dictionary<long, decimal?>()
             : await db.SnsDetails.AsNoTracking()
@@ -313,7 +322,7 @@ public partial class SensusController(
                     g.Sum(x => x.JumlahPokokTerserang),
                     Persen(g.Sum(x => x.JumlahPokokTerserang), g.Sum(x => x.JumlahPokokSampel)),
                     rata,
-                    Tingkat(rata));
+                    Tingkat(rata), evaluations.GetValueOrDefault(g.OrderByDescending(x=>x.TanggalSensus).ThenByDescending(x=>x.Id).First().Id));
             })
             .OrderByDescending(x => Array.IndexOf(SnsTingkat.Urutan, x.Tingkat))
             .ThenByDescending(x => x.RataIndikator ?? 0)
@@ -446,7 +455,8 @@ public partial class SensusController(
         });
     }
 
-    private static SnsListItemDto ToListItem(SnsHeader x, Dictionary<long, (string Tingkat, decimal? Rata)> tingkat) =>
+    private static SnsListItemDto ToListItem(SnsHeader x, Dictionary<long, (string Tingkat, decimal? Rata)> tingkat,
+        IReadOnlyDictionary<long,SnsEvaluationDto>? evaluations = null) =>
         new(
             x.Id,
             x.SensusNo,
@@ -467,7 +477,8 @@ public partial class SensusController(
             x.Status,
             tingkat.TryGetValue(x.Id, out var t) ? t.Tingkat : SnsTingkat.Kosong,
             x.SubmittedAt,
-            x.ApprovedAt);
+            x.ApprovedAt,
+            evaluations?.GetValueOrDefault(x.Id));
 
     private async Task<SnsDetailDto?> BuildDetail(long id)
     {
@@ -522,7 +533,7 @@ public partial class SensusController(
         var canApprove = header.Status == SnsStatus.Submitted && await CanApprove(header.JenisId);
 
         return new SnsDetailDto(
-            ToListItem(header, tingkat),
+            ToListItem(header, tingkat, new Dictionary<long,SnsEvaluationDto>{{header.Id,SensusHptEvaluation.Evaluate(header)}}),
             header.Latitude,
             header.Longitude,
             header.Catatan,

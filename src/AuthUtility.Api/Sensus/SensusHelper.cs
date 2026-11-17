@@ -9,6 +9,7 @@ namespace AuthUtility.Api.Sensus;
 // Kode menu sensus (UtlMenu), diatur lewat Hak Akses > Akses Menu.
 public static class SnsMenu
 {
+    public const string Dashboard = "SNS_DASHBOARD";
     public const string Approval = "SNS_APPROVAL";
     public const string Monitoring = "SNS_MONITORING";
     public const string Analisis = "SNS_ANALISIS";
@@ -16,7 +17,7 @@ public static class SnsMenu
     public const string MasterJenis = "SNS_MASTER_JENIS";
     public const string Mobile = "SNS_MOBILE";
 
-    public static readonly string[] All = { Approval, Monitoring, Analisis, MasterLokasi, MasterJenis, Mobile };
+    public static readonly string[] All = { Dashboard, Approval, Monitoring, Analisis, MasterLokasi, MasterJenis, Mobile };
 }
 
 public static class SnsTingkat

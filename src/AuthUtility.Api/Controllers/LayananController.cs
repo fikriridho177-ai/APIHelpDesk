@@ -16,7 +16,7 @@ namespace AuthUtility.Api.Controllers;
 [ApiController]
 [Route("api/layanan")]
 [Authorize]
-public class LayananController(AppDbContext db) : ControllerBase
+public partial class LayananController(AppDbContext db) : ControllerBase
 {
     private const int MaxListSize = 500;
 
@@ -57,20 +57,24 @@ public class LayananController(AppDbContext db) : ControllerBase
             .Select(g => new { g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Key, x => x.Count);
 
+        var legacySensusCodes = (await db.SnsJenis.AsNoTracking().Where(h => h.MenuCode != null)
+            .Select(h => h.MenuCode!).ToListAsync()).ToHashSet();
+
         var visible = access.Menus.Values
-            .Where(menu => access.Has(menu.Id, MenuPermission.View) && !menu.Code.StartsWith(LayananAccess.PageCodePrefix))
+            .Where(menu => access.Has(menu.Id, MenuPermission.View) && !menu.Code.StartsWith(LayananAccess.PageCodePrefix) && !menu.Code.StartsWith("LYN_RNA_"))
+            .Where(menu => !legacySensusCodes.Contains(menu.Code) || menu.Code == "LYN_RNA" || menu.Code.StartsWith("SNS_"))
             .Select(menu => new LynServiceDto(
                 menu.Id, menu.ParentId, menu.Code, menu.Name, menu.Route, menu.Icon,
                 menu.FullName, menu.Description, menu.Color, menu.MenuType, menu.SortOrder,
                 new LynPermissionDto(
                     access.Has(menu.Id, MenuPermission.View),
-                    access.Has(menu.Id, MenuPermission.Create),
+                    access.AllowsNewRequest(menu.Id) && access.Has(menu.Id, MenuPermission.Create),
                     access.Has(menu.Id, MenuPermission.Read),
                     access.Has(menu.Id, MenuPermission.Update),
                     access.Has(menu.Id, MenuPermission.Delete),
                     access.Has(menu.Id, MenuPermission.Approve),
                     access.Has(menu.Id, MenuPermission.Export)),
-                jenisCounts.GetValueOrDefault(menu.Id)))
+                access.AllowsNewRequest(menu.Id) ? jenisCounts.GetValueOrDefault(menu.Id) : 0))
             .OrderBy(x => x.SortOrder)
             .ThenBy(x => x.Name)
             .ToList();
@@ -163,6 +167,7 @@ public class LayananController(AppDbContext db) : ControllerBase
             : access.Menus.Values.FirstOrDefault(x => x.Code == body.MenuCode && access.IsService(x));
         if (menu == null) return BadRequest(new { message = "Layanan tidak ditemukan atau tidak aktif." });
         if (!access.Has(menu.Id, MenuPermission.Create)) return NoAccess("mengajukan layanan ini");
+        if (!access.AllowsNewRequest(menu.Id)) return BadRequest(new { message = "Formulir pengajuan hanya tersedia untuk GIS. Gunakan halaman operasional divisi ini." });
 
         static string Clean(string? value) => (value ?? "").Trim();
 
@@ -430,7 +435,8 @@ public class LayananController(AppDbContext db) : ControllerBase
        HELPER
     ========================================================= */
 
-    private async Task<List<LynRequest>> QueryVisible(LayananAccess access, bool mine)
+    private async Task<List<LynRequest>> QueryVisible(LayananAccess access, bool mine,
+        ICollection<int>? menuIds = null, DateTime? fromUtc = null, DateTime? toUtc = null)
     {
         var me = access.UserId;
         // Menu divisi (tiket dengan jenis permintaan) maupun sub-layanan (tiket model lama).
@@ -441,11 +447,15 @@ public class LayananController(AppDbContext db) : ControllerBase
                 .Select(m => m.Id)
                 .ToList();
 
-        var candidates = await db.LynRequests
+        var query = db.LynRequests
             .AsNoTracking()
             .Include(x => x.Requester)
             .Include(x => x.Jenis)
-            .Where(x => x.RequesterUserId == me || handlerMenuIds.Contains(x.MenuId))
+            .Where(x => x.RequesterUserId == me || handlerMenuIds.Contains(x.MenuId));
+        if (menuIds != null) query = query.Where(x => menuIds.Contains(x.MenuId));
+        if (fromUtc != null) query = query.Where(x => x.CreatedAt >= fromUtc);
+        if (toUtc != null) query = query.Where(x => x.CreatedAt < toUtc);
+        var candidates = await query
             .OrderByDescending(x => x.Id)
             .ToListAsync();
 
