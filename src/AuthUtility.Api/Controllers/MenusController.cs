@@ -732,7 +732,8 @@ public async Task<IActionResult> GetNavigation()
 
     var allMenus = await _db.Menus
         .AsNoTracking()
-        .Where(x => x.Active)
+        .Where(x => x.Active && !x.Code.StartsWith("LYN_RNA_") &&
+            !_db.SnsJenis.Any(h => h.MenuCode == x.Code && x.Code != "LYN_RNA" && x.Code != "SNS" && !x.Code.StartsWith("SNS_")))
         .OrderBy(x => x.SortOrder)
         .ThenBy(x => x.Name)
         .Select(x =>

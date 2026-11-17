@@ -301,6 +301,10 @@ using (var scope = app.Services.CreateScope())
 
     if (await db.Database.CanConnectAsync())
     {
+        await AuthUtility.Api.Dashboards.DivisionDashboardMenuSync.EnsureAsync(db);
+        if (await AuthUtility.Api.Sensus.SensusWebMenuSync.EnsureAsync(db))
+            app.Logger.LogInformation("Menu web RNA telah disinkronkan ke UtlMenu untuk Management Menu dan Hak Akses.");
+
         var adminGroup = await db.Groups
             .FirstOrDefaultAsync(x => x.Code == "ADMIN");
 

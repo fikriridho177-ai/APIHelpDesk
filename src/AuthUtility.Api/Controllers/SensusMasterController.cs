@@ -146,7 +146,9 @@ public class SensusMasterController(AppDbContext db, IPermissionService permissi
                     .Select(p => new SnsParameterDto(
                         p.Id, p.JenisId, p.Code, p.Name, p.Satuan, p.TipeData, p.Opsi, p.Wajib, p.IsIndikator,
                         p.AmbangSedang, p.AmbangBerat, p.Active))
-                    .ToList()))
+                    .ToList(),
+                SensusHptEvaluation.Definition(x.Code,x.Name)?.EvaluationType ?? "NONE",
+                SensusHptEvaluation.RuleJson(x)))
             .ToList();
     }
 

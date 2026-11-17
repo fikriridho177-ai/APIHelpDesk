@@ -202,7 +202,8 @@ public class GroupsController(
         }
 
         await using var tx = await db.Database.BeginTransactionAsync();
-        var old = await db.GroupMenus.Where(x => x.GroupId == groupId).ToListAsync();
+        var activeMenuIds = menuById.Keys.ToList();
+        var old = await db.GroupMenus.Where(x => x.GroupId == groupId && activeMenuIds.Contains(x.MenuId)).ToListAsync();
         db.GroupMenus.RemoveRange(old);
 
         var rows = requested.Values

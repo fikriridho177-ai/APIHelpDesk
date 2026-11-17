@@ -97,10 +97,11 @@ public partial class SensusController
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard(int? jenisId, string? wilayah, DateOnly? dateFrom, DateOnly? dateTo, string sumber = "KLP", int hariTerlambat = 30)
     {
+        if (!await permissions.HasPermissionAsync(User, SnsMenu.Dashboard, MenuPermission.Read)) return Forbid();
         var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
         dateTo ??= today;
         dateFrom ??= new DateOnly(today.Year, today.Month, 1).AddMonths(-5);
-        var result = await GetMonitoring(jenisId, wilayah, dateFrom, dateTo, hariTerlambat, sumber);
+        var result = await BuildMonitoring(jenisId, wilayah, dateFrom, dateTo, hariTerlambat, sumber);
         if (result is not OkObjectResult { Value: SnsMonitoringDto monitoring }) return result;
         var headers = await Filter(db.SnsHeaders.AsNoTracking(), jenisId, wilayah, dateFrom, dateTo).Include(x => x.Jenis).ToListAsync();
         var approvedIds = headers.Where(x => x.Status == SnsStatus.Approved).Select(x => x.Id).ToList();

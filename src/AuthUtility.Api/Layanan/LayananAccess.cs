@@ -138,6 +138,9 @@ public class LayananAccess
     // Kunci antrian: id menu divisi (fallback: menu tiket itu sendiri).
     public int GetDivisionKey(int menuId) => GetDivision(menuId)?.Id ?? menuId;
 
+    // Pengajuan layanan hanya dipakai GIS. Divisi lain menggunakan transaksi operasional masing-masing.
+    public bool AllowsNewRequest(int menuId) => GetDivision(menuId)?.Code == "LYN_GIS";
+
     public UtlMenu? GetDivision(int menuId)
     {
         var visited = new HashSet<int>();

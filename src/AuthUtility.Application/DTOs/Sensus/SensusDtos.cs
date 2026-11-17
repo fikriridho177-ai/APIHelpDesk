@@ -28,7 +28,9 @@ public record SnsJenisDto(
     string? MenuCode,
     string? Description,
     bool Active,
-    List<SnsParameterDto> Parameters
+    List<SnsParameterDto> Parameters,
+    string EvaluationType = "NONE",
+    string? EvaluationRuleJson = null
 );
 
 // Jenis sensus untuk halaman sub-layanan RNA + hak user di halaman tersebut.
@@ -83,7 +85,8 @@ public record SnsListItemDto(
     string Status,
     string Tingkat,
     DateTime SubmittedAt,
-    DateTime? ApprovedAt
+    DateTime? ApprovedAt,
+    SnsEvaluationDto? Evaluation = null
 );
 
 public record SnsDetailValueDto(
@@ -111,6 +114,7 @@ public record SnsParameterSummaryDto(
 );
 
 public record SnsFotoDto(long Id, string FileUrl, string? Keterangan, decimal? Latitude, decimal? Longitude, DateTime? TakenAt);
+public record SnsEvaluationDto(string EvaluationType, bool? PerluPengendalian, decimal? Nilai, string? Satuan, string Description, string? Message = null);
 
 public record SnsLogDto(long Id, string Action, string? FromStatus, string? ToStatus, string? Note, string UserName, DateTime CreatedAt);
 
@@ -190,7 +194,8 @@ public record SnsAnalisisPersilDto(
     int TotalPokokTerserang,
     decimal PersenTerserang,
     decimal? RataIndikator,
-    string Tingkat
+    string Tingkat,
+    SnsEvaluationDto? Evaluation = null
 );
 
 public record SnsTrenDto(string Periode, int JumlahSensus, decimal PersenTerserang, decimal? RataIndikator);
