@@ -273,7 +273,26 @@ public class IotDeviceController(
             return BadRequest(new { message = "Tanggal acuan harus berformat yyyy-MM-dd (WIB)." });
         if (anchor.Year < 1900 || anchor.Year > 9998)
             return BadRequest(new { message = "Tanggal acuan di luar rentang yang didukung." });
-        var window = definition.Resolve(DateTime.UtcNow.AddHours(7), anchor);
+
+        var hasFrom = !string.IsNullOrWhiteSpace(from);
+        var hasTo = !string.IsNullOrWhiteSpace(to);
+        DateOnly rangeFrom = default, rangeTo = default;
+        if (hasFrom || hasTo)
+        {
+            if (!IotHistoryPeriodDefinition.TryParseAnchorDate(from, out rangeFrom) ||
+                !IotHistoryPeriodDefinition.TryParseAnchorDate(to, out rangeTo) ||
+                rangeFrom.Year is < 1900 or > 9998 || rangeTo.Year is < 1900 or > 9998)
+                return BadRequest(new { message = "Rentang kustom harus berformat yyyy-MM-dd (WIB)." });
+            if (rangeFrom > rangeTo)
+                return BadRequest(new { message = "Tanggal mulai tidak boleh melewati tanggal akhir." });
+        }
+
+        // Tanggal kustom memakai kalender WIB inklusif; akhir hari menjadi awal hari berikutnya.
+        var window = hasFrom || hasTo
+            ? definition.Resolve(DateTime.UtcNow.AddHours(7), anchor,
+                rangeFrom.ToDateTime(TimeOnly.MinValue),
+                rangeTo.AddDays(1).ToDateTime(TimeOnly.MinValue))
+            : definition.Resolve(DateTime.UtcNow.AddHours(7), anchor);
         try
         {
             var connection = db.Database.GetDbConnection();

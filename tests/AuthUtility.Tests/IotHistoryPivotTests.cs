@@ -55,6 +55,7 @@ public sealed class IotHistoryPivotTests
         Assert.Equal(new DateTime(2026, 11, 15, 17, 5, 0, DateTimeKind.Utc), row.Ts);
         Assert.Equal(DateTimeKind.Utc, row.Ts.Kind);
         Assert.Equal(Enumerable.Range(5, 10), result.Parameters.Select(x => x.SensorParameterId));
+        Assert.All(result.Parameters, parameter => Assert.True(parameter.Active));
     }
 
     [Fact]
@@ -105,6 +106,9 @@ public sealed class IotHistoryPivotTests
         Assert.Contains("R.ProcessedAt DESC, R.HasilID DESC, H.ReceivedAt DESC", sql);
         Assert.Contains("H.RawID DESC, D.RawDtlID DESC", sql);
         Assert.Contains("H.RawID <= @watermark", sql);
+        Assert.Contains("R.StatusHasil = 'OK'", sql);
+        Assert.Contains("DATEADD(day, -30, @now)", sql);
+        Assert.Contains("GROUP BY D.SensorParameterID", sql);
         Assert.Contains("ORDER BY Bucket DESC", sql);
         Assert.Contains("ORDER BY Bucket ASC", IotHistoryPivot.Sql(true));
     }

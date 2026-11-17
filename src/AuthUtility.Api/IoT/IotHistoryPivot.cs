@@ -11,6 +11,9 @@ public static class IotHistoryPivot
     public static string Sql(bool ascending) => $$"""
         DECLARE @watermark bigint = COALESCE(@snapshotRawId,
             (SELECT MAX(RawID) FROM dbo.TrnLoggerRawHdr WHERE LoggerID = @loggerId));
+        DECLARE @now datetime2 = DATEADD(hour, 7, SYSUTCDATETIME());
+        -- Kolom hanya untuk sensor yang masih mengirim hasil valid (contoh AWLC tanpa suhu/kelembapan).
+        DECLARE @activeSince datetime2 = DATEADD(day, -30, @now);
         SELECT H.RawID, H.LoggerID, H.TanggalSensor, H.ReceivedAt,
             CASE @aggregation
                 WHEN 'hour' THEN DATETIME2FROMPARTS(YEAR(H.TanggalSensor), MONTH(H.TanggalSensor), DAY(H.TanggalSensor), DATEPART(hour, H.TanggalSensor), 0, 0, 0, 7)
@@ -26,10 +29,15 @@ public static class IotHistoryPivot
         SELECT COUNT_BIG(*) AS Total, COALESCE(@watermark, 0) AS SnapshotRawId FROM #HistoryTimes;
 
         WITH ParameterIds AS (
-            SELECT SensorParameterID FROM dbo.vwLoggerDataDetail WHERE LoggerID = @loggerId
-            UNION
-            SELECT D.SensorParameterID FROM #HistoryHeaders H
+            SELECT D.SensorParameterID
+            FROM dbo.TrnLoggerRawHdr H
             INNER JOIN dbo.TrnLoggerRawDtl D ON D.RawID = H.RawID
+            INNER JOIN dbo.TrnLoggerHasil R ON R.RawDtlID = D.RawDtlID
+            WHERE H.LoggerID = @loggerId AND H.RawID <= @watermark
+              AND H.TanggalSensor >= @activeSince AND H.TanggalSensor <= @now
+              AND R.IsCurrent = 1
+              AND R.StatusHasil = 'OK' AND R.NilaiHasil IS NOT NULL
+            GROUP BY D.SensorParameterID
         )
         SELECT P.SensorParameterID, P.ParameterCode, P.NamaParameter, V.Satuan
         FROM ParameterIds I
@@ -81,7 +89,7 @@ public static class IotHistoryPivot
         await reader.NextResultAsync(ct);
         var parameters = new List<Parameter>();
         while (await reader.ReadAsync(ct))
-            parameters.Add(new Parameter(reader.GetInt32(0), Text(reader, 1), Text(reader, 2), Text(reader, 3)));
+            parameters.Add(new Parameter(reader.GetInt32(0), Text(reader, 1), Text(reader, 2), Text(reader, 3), true));
         await reader.NextResultAsync(ct);
         var rows = new List<Row>();
         Row? current = null;
@@ -101,7 +109,7 @@ public static class IotHistoryPivot
     }
 
     private static string? Text(DbDataReader reader, int index) => reader.IsDBNull(index) ? null : reader.GetString(index).Trim();
-    public sealed record Parameter(int SensorParameterId, string? ParameterCode, string? NamaParameter, string? Satuan);
+    public sealed record Parameter(int SensorParameterId, string? ParameterCode, string? NamaParameter, string? Satuan, bool Active);
     public sealed record Row(int LoggerId, DateTime Ts, Dictionary<string, string?> Data);
     public sealed record Result(int LoggerId, long Total, int Page, int PageSize, long SnapshotRawId, string Aggregation, string TimeZone, IReadOnlyList<Parameter> Parameters, IReadOnlyList<Row> Data);
 }
