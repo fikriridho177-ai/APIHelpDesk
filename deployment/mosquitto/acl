@@ -1,0 +1,10 @@
+# ACL Mosquitto untuk HelpDesk-ASD.
+# DataLogger dipakai firmware; WebViewer adalah akun baca-saja untuk browser
+# (nilainya di-embed saat build sebagai VITE_MQTT_USERNAME/VITE_MQTT_PASSWORD).
+
+user DataLogger
+topic readwrite rsup/wad/devices/#
+
+user WebViewer
+topic read rsup/wad/devices/+/status
+topic read rsup/wad/devices/+/ota/status

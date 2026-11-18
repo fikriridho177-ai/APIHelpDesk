@@ -18,6 +18,8 @@ public sealed class IotManagementController(
     IPermissionService permissions,
     IIotDeviceCredentialService credentials,
     IotFirmwareService firmware,
+    IIotMqttPublisher mqttPublisher,
+    IConfiguration configuration,
     ILogger<IotManagementController> logger
 ) : ControllerBase
 {
@@ -558,7 +560,52 @@ public sealed class IotManagementController(
         }
 
         await db.SaveChangesAsync(HttpContext.RequestAborted);
+
+        foreach (var job in jobs)
+        {
+            var device = devices.First(x => x.Id == job.DeviceAgentId);
+            await PublishOtaCommandAsync(device, job, package);
+        }
+
         return Ok(jobs.Select(ToOtaJobDto));
+    }
+
+    /// <summary>Alias endpoint publik sesuai kontrak Hybrid MQTT.</summary>
+    [HttpPost("/api/iot/ota/assign")]
+    public Task<IActionResult> AssignOta([FromBody] IotOtaCreateRequest request) => CreateOta(request);
+
+    private async Task PublishOtaCommandAsync(
+        IotDeviceAgent device,
+        IotOtaJob job,
+        IotFirmwarePackage package)
+    {
+        // Di belakang reverse proxy, Request.Scheme bisa tetap http. URL unduh
+        // yang dipakai perangkat sebaiknya eksplisit agar tidak salah skema.
+        var configuredBase = configuration["IOT_OTA_PUBLIC_BASE_URL"]?.Trim();
+        var baseUrl = string.IsNullOrWhiteSpace(configuredBase)
+            ? $"{Request.Scheme}://{Request.Host}"
+            : configuredBase.TrimEnd('/');
+        var downloadUrl = $"{baseUrl}/api/iot/ota/download/{job.JobNumber}";
+        var payload = new Dictionary<string, object?>
+        {
+            ["job_id"] = job.JobNumber,
+            ["target_version"] = package.Version,
+            ["firmware_url"] = downloadUrl,
+            ["sha256"] = package.Sha256,
+            ["size_bytes"] = package.SizeBytes
+        };
+
+        var published = await mqttPublisher.PublishOtaCommandAsync(
+            device.DeviceId,
+            payload,
+            HttpContext.RequestAborted);
+        if (!published)
+        {
+            logger.LogWarning(
+                "Job OTA {JobNumber} untuk {DeviceId} tersimpan, tetapi perintah MQTT belum terkirim.",
+                job.JobNumber,
+                device.DeviceId);
+        }
     }
 
     [HttpGet("ota")]
@@ -596,7 +643,8 @@ public sealed class IotManagementController(
     {
         if (await permissions.IsSuperAdminAsync(User))
             return true;
-        return await permissions.HasPermissionAsync(User, "WAD_ECS_PERANGKAT", permission)
+        return await permissions.HasPermissionAsync(User, "WAD_ECS_DEVICE_MANAGEMENT", permission)
+            || await permissions.HasPermissionAsync(User, "WAD_ECS_PERANGKAT", permission)
             || await permissions.HasPermissionAsync(User, "WAD_ECS_STASIUN", permission);
     }
 
@@ -699,7 +747,8 @@ public sealed class IotManagementController(
         LastFirmwareVersion = x.LastFirmwareVersion,
         LastIpAddress = x.LastIpAddress,
         LastRssi = x.LastRssi,
-        LastUptimeSeconds = x.LastUptimeSeconds
+        LastUptimeSeconds = x.LastUptimeSeconds,
+        LastBatteryVolt = x.LastBatteryVolt
     };
 
     private static IotConfigurationDto ToConfigurationDto(IotDeviceConfiguration x) => new()
@@ -756,6 +805,7 @@ public sealed class IotManagementController(
     private static IotOtaJobDto ToOtaJobDto(IotOtaJob x) => new()
     {
         Id = x.Id,
+        JobNumber = x.JobNumber,
         DeviceAgentId = x.DeviceAgentId,
         FirmwarePackageId = x.FirmwarePackageId,
         Status = x.Status,

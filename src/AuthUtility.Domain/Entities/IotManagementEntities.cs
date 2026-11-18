@@ -74,6 +74,8 @@ public class IotDeviceAgent
 
     public long? LastUptimeSeconds { get; set; }
 
+    public double? LastBatteryVolt { get; set; }
+
     public string? CapabilitiesJson { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -254,6 +256,9 @@ public class IotFirmwarePackage
 public class IotOtaJob
 {
     public Guid Id { get; set; }
+
+    /// <summary>Nomor publik job untuk topic MQTT dan URL unduhan firmware.</summary>
+    public long JobNumber { get; set; }
 
     public Guid DeviceAgentId { get; set; }
 

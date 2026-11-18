@@ -35,6 +35,12 @@ public class IotDeviceController(
         "WAD_ECS_CURAH_HUJAN",
         "WAD_ECS_TMAK",
         "WAD_ECS_KELEMBAPAN",
+        "WAD_ECS_PENGAMATAN_AIR",
+        "WAD_ECS_SUBSIDEN_GAMBUT",
+        "WAD_ECS_LAHAN_TERGENANG",
+        "WAD_ECS_PROJEK",
+        "WAD_ECS_PERANGKAT",
+        "WAD_ECS_DEVICE_MANAGEMENT",
     };
 
     private async Task<bool> HasAccess()

@@ -51,7 +51,7 @@ CROSS JOIN (VALUES
     ('WAD_ECS_MONITOR_CH',        'Monitor Curah Hujan',          '/ecs/monitor-curahhujan',    'cloud-rain',      'Monitor curah hujan.',                                             5),
     ('WAD_ECS_DATA_HISTORIS',     'Data Historis',                '/ecs/data-historis',         'database',        'Riwayat pembacaan sensor dari detail sensor.',                     6),
     ('WAD_ECS_KALENDER_CH',       'Kalender Data Sensor',         '/ecs/kalender-curah-hujan',  'calendar',        'Telusuri pembacaan harian berdasarkan parameter dan titik.',       7),
-    ('WAD_ECS_PETA',              'Peta Sensor',                  '/ecs/peta',                  'map',             'Peta titik sensor yang memiliki koordinat valid.',                 8),
+    ('WAD_ECS_PETA',              'Peta Pemantauan WAD',          '/ecs/peta',                  'map',             'Peta titik logger IoT, pengamatan manual, dan data lapangan berkoordinat.', 8),
     ('WAD_ECS_CURAH_HUJAN',       'Curah Hujan',                  '/ecs/curahhujan',            'cloud-rain',      'Data curah hujan.',                                                9),
     ('WAD_ECS_TMAK',              'Tinggi Muka Air Kanal (TMAK)', '/ecs/tmak',                  'waves',           'Tinggi muka air kanal.',                                          10),
     ('WAD_ECS_KELEMBAPAN',        'Kelembaban Tanah',             '/ecs/kelembapan',            'sprout',          'Kelembaban tanah.',                                               11)
@@ -71,6 +71,15 @@ WHERE g."Code" = 'ADMIN'
       SELECT 1 FROM "UtlGroupMenu" gm
       WHERE gm."GroupId" = g."Id" AND gm."MenuId" = m."Id"
   );
+
+-- Peta WAD kini memuat logger, pengamatan manual, dan data lapangan;
+-- selaraskan nama menu lama ("Peta Sensor") pada database yang sudah terpasang.
+UPDATE "UtlMenu"
+SET "Name" = 'Peta Pemantauan WAD',
+    "Description" = 'Peta titik logger IoT, pengamatan manual, dan data lapangan berkoordinat.'
+WHERE "Code" = 'WAD_ECS_PETA'
+  AND ("Name" IS DISTINCT FROM 'Peta Pemantauan WAD'
+       OR "Description" IS DISTINCT FROM 'Peta titik logger IoT, pengamatan manual, dan data lapangan berkoordinat.');
 
 COMMIT;
 

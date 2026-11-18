@@ -210,6 +210,34 @@ Local verification on 2026-11-16 used authenticated UI requests to the developme
 
 The local verification does not verify live mounts. On 2026-11-16, a request from the development machine to `https://asd.rsuppkb.co.id` timed out, and the new `/api/wad/objects` endpoint on the known Dokploy Backend returned 404 before deployment. The target hostname routing, actual persistent mount, physical mobile camera, and redeploy survival must therefore be checked on the deployment host/device before claiming production readiness.
 
+## Real-time MQTT bridge and OTA
+
+Before deploying this API version, back up PostgreSQL and manually run `sql/2026-11-17-iot-mqtt-bridge.sql`. It is additive/idempotent: it adds `IotOtaJob.JobNumber` (identity, unique index) and `IotDeviceAgent.LastBatteryVolt`. It does not change permissions or device records.
+
+Broker requirements: MQTT over TCP `1883` for ESP devices and MQTT over WebSocket `9001` for the browser. A ready-to-edit Eclipse Mosquitto config lives in `deployment/mosquitto/mosquitto.conf`, with `deployment/mosquitto/acl` granting firmware read/write on `rsup/wad/devices/#` and a browser account read-only on the status topics. It enables persistence and retain, and it keeps anonymous access disabled:
+
+```powershell
+docker run --rm -v "${PWD}/deployment/mosquitto:/work" eclipse-mosquitto:2 sh -c `
+  "mosquitto_passwd -c -b /work/passwd DataLogger 'GANTI-PASSWORD' && mosquitto_passwd -b /work/passwd WebViewer 'GANTI-PASSWORD-WEB'"
+docker run --name helpdesk-mosquitto --restart unless-stopped `
+  -p 1883:1883 -p 9001:9001 `
+  -v ${PWD}/deployment/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro `
+  -v ${PWD}/deployment/mosquitto/acl:/mosquitto/config/acl:ro `
+  -v ${PWD}/deployment/mosquitto/passwd:/mosquitto/config/passwd:ro `
+  -v helpdesk_mosquitto:/mosquitto/data `
+  eclipse-mosquitto:2
+```
+
+The browser build embeds `VITE_MQTT_USERNAME`/`VITE_MQTT_PASSWORD`, so they are visible to any signed-in user and must belong to the read-only `WebViewer` account. Keep the firmware `DataLogger` credentials only on the device and in the Backend.
+
+Set on the **Backend**: `MQTT_BROKER_URL=mqtt://<broker-host>:1883`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_TOPIC_PREFIX=rsup/wad`, and `IOT_OTA_PUBLIC_BASE_URL=https://<public-api-origin>`. Leave `MQTT_BROKER_URL` empty to disable the bridge: the API still starts and OTA assignment returns a stored job with a warning instead of a published command.
+
+Set on the **Frontend** build (Dokploy build args or the `web` build args in `docker-compose.yml`): `VITE_MQTT_WS_URL=wss://<public-origin>/mqtt`, `VITE_MQTT_TOPIC_PREFIX=rsup/wad`, plus `VITE_MQTT_USERNAME`/`VITE_MQTT_PASSWORD` for the read-only `WebViewer` account. The frontend subscribes read-only to `…/devices/+/status` and `…/devices/+/ota/status`; if the socket is unavailable it falls back to REST polling, so leaving `VITE_MQTT_WS_URL` empty is a valid polling-only deployment.
+
+To serve the WebSocket same-origin, uncomment the `/mqtt` block in `nginx.conf`, define `MQTT_UPSTREAM` (the file is rendered as a template), and terminate TLS at the proxy. Devices download firmware from `GET /api/iot/ota/download/{job_number}` using `X-Device-ID` and `X-Device-Key`; the URL published in the OTA command uses `IOT_OTA_PUBLIC_BASE_URL` so a proxied `http` request scheme cannot leak into the device command. Devices must store `device_id` and `device_key` in NVS/EEPROM because OTA reboots must preserve them.
+
+Verification after deployment: publish a retained `online` status for a provisioned device, confirm `IotDeviceAgent` status/last seen/firmware/IP/RSSI/battery and a telemetry report row appear, stop the publisher and confirm the LWT marks the device offline, then submit an OTA assignment and watch `DOWNLOADING → FLASHING → REBOOTING → SUCCESS` arrive on `ota/status`. Firmware downloads require the device key; a request with only `X-Device-ID` must return `401`.
+
 ## Troubleshooting
 
 ### Frontend build cannot find `MyHelpDesk` in the local stack

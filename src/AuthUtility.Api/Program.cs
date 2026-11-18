@@ -86,6 +86,20 @@ builder.Services.Configure<IotDeviceOptions>(builder.Configuration.GetSection("I
 builder.Services.Configure<IotFirmwareOptions>(builder.Configuration.GetSection("IoT:Firmware"));
 builder.Services.AddScoped<IotFirmwareService>();
 
+// Hybrid MQTT: topik rsup/wad/devices/{device_id}/... untuk status, telemetry,
+// dan perintah OTA. API tetap menjadi satu-satunya penulis ke PostgreSQL.
+builder.Services.Configure<IotMqttOptions>(options =>
+{
+    var section = builder.Configuration.GetSection("IoT:Mqtt");
+    options.BrokerUrl = builder.Configuration["MQTT_BROKER_URL"] ?? section["BrokerUrl"] ?? "";
+    options.Username = builder.Configuration["MQTT_USERNAME"] ?? section["Username"] ?? "";
+    options.Password = builder.Configuration["MQTT_PASSWORD"] ?? section["Password"] ?? "";
+    options.TopicPrefix = builder.Configuration["MQTT_TOPIC_PREFIX"] ?? section["TopicPrefix"] ?? "rsup/wad";
+});
+builder.Services.AddSingleton<MqttBridgeService>();
+builder.Services.AddSingleton<IIotMqttPublisher>(sp => sp.GetRequiredService<MqttBridgeService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttBridgeService>());
+
 // QC module helpers (Api/Qc). Number generator, status engine, approval flow config.
 builder.Services.AddScoped<QcNumberGenerator>();
 builder.Services.AddScoped<QcStatusEngine>();

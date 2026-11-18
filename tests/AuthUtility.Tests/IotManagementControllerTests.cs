@@ -10,6 +10,7 @@ using AuthUtility.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -382,6 +383,8 @@ public sealed class IotManagementControllerTests
             new FakePermissionService(allow),
             credentials,
             firmware,
+            new FakeMqttPublisher(),
+            new ConfigurationBuilder().Build(),
             NullLogger<IotManagementController>.Instance);
         controller.ControllerContext = new ControllerContext
         {
@@ -397,6 +400,16 @@ public sealed class IotManagementControllerTests
         new(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options);
+
+    private sealed class FakeMqttPublisher : IIotMqttPublisher
+    {
+        public bool IsConnected => true;
+
+        public Task<bool> PublishOtaCommandAsync(
+            string deviceId,
+            IReadOnlyDictionary<string, object?> payload,
+            CancellationToken cancellationToken = default) => Task.FromResult(true);
+    }
 
     private sealed class FakePermissionService(bool allow) : IPermissionService
     {

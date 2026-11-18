@@ -369,6 +369,47 @@ public sealed class IotAgentController(
         }
     }
 
+    [HttpGet("/api/iot/ota/download/{jobNumber:long}")]
+    public async Task<IActionResult> DownloadOtaByJobNumber(long jobNumber)
+    {
+        var declaredDeviceId = Request.Headers["X-Device-ID"].FirstOrDefault()?.Trim();
+        if (string.IsNullOrWhiteSpace(declaredDeviceId))
+            return Unauthorized(new { message = "Header X-Device-ID wajib diisi." });
+
+        var authentication = await AuthenticateAsync();
+        if (authentication.Error is not null)
+            return authentication.Error;
+
+        var device = authentication.Device!;
+        if (!string.Equals(device.DeviceId, declaredDeviceId, StringComparison.OrdinalIgnoreCase))
+            return Forbid();
+
+        var job = await db.IotOtaJobs
+            .Include(x => x.FirmwarePackage)
+            .FirstOrDefaultAsync(x => x.JobNumber == jobNumber
+                && x.DeviceAgentId == device.Id,
+                HttpContext.RequestAborted);
+        if (job is null)
+            return NotFound(new { message = "Job OTA tidak ditemukan untuk perangkat ini." });
+        if (job.Status is IotOtaStatus.Succeeded or IotOtaStatus.Failed)
+            return Conflict(new { message = $"Job OTA sudah selesai dengan status {job.Status}." });
+
+        try
+        {
+            var service = firmware ?? new IotFirmwareService(db);
+            var path = service.GetSafeFilePath(job.FirmwarePackage);
+            if (!System.IO.File.Exists(path))
+                return NotFound(new { message = "File firmware tidak ditemukan." });
+
+            Response.Headers["X-Firmware-Sha256"] = job.FirmwarePackage.Sha256;
+            return PhysicalFile(path, "application/octet-stream", job.FirmwarePackage.FileName, enableRangeProcessing: true);
+        }
+        catch (IotFirmwareValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("configuration/{version:int}/ack")]
     public async Task<IActionResult> AcknowledgeConfiguration(
         int version,

@@ -99,6 +99,15 @@ public class AppDbContext : DbContext
     public DbSet<WadReport> WadReports => Set<WadReport>();
     public DbSet<WadReportPhoto> WadReportPhotos => Set<WadReportPhoto>();
 
+    // Data operasional riil WAD (impor paket Helpdesk ASD).
+    public DbSet<WadBuilding> WadBuildings => Set<WadBuilding>();
+    public DbSet<WadOverflowLog> WadOverflowLogs => Set<WadOverflowLog>();
+    public DbSet<WadOverflowLogPhoto> WadOverflowLogPhotos => Set<WadOverflowLogPhoto>();
+    public DbSet<WadSubsidenObservation> WadSubsidenObservations => Set<WadSubsidenObservation>();
+    public DbSet<WadSubsidenPhoto> WadSubsidenPhotos => Set<WadSubsidenPhoto>();
+    public DbSet<WadSiponInspection> WadSiponInspections => Set<WadSiponInspection>();
+    public DbSet<WadFloodedLandObservation> WadFloodedLandObservations => Set<WadFloodedLandObservation>();
+
 
     protected override void OnModelCreating(
         ModelBuilder modelBuilder
@@ -581,6 +590,8 @@ public class AppDbContext : DbContext
             entity.ToTable("IotOtaJob");
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => new { x.DeviceAgentId, x.Status });
+            entity.HasIndex(x => x.JobNumber).IsUnique();
+            entity.Property(x => x.JobNumber).ValueGeneratedOnAdd();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
             entity.Property(x => x.FailureReason).HasMaxLength(2000);
             entity.Property(x => x.CurrentFirmwareVersion).HasMaxLength(128);
@@ -866,6 +877,143 @@ public class AppDbContext : DbContext
             entity.Property(x => x.Keterangan).HasMaxLength(200);
             entity.Property(x => x.Phase).HasMaxLength(20);
             entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+        });
+
+        modelBuilder.Entity<WadBuilding>(entity =>
+        {
+            entity.ToTable("mst_wad_bangunan_air");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.KodeAset).IsUnique();
+            entity.HasIndex(x => new { x.Wilayah, x.SortOrder });
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.KodeAset).HasColumnName("kode_aset").HasMaxLength(40);
+            entity.Property(x => x.Wilayah).HasColumnName("wilayah").HasMaxLength(40);
+            entity.Property(x => x.Kanal).HasColumnName("kanal").HasMaxLength(150);
+            entity.Property(x => x.NamaBangunan).HasColumnName("nama_bangunan").HasMaxLength(200);
+            entity.Property(x => x.UkuranDimensi).HasColumnName("ukuran_dimensi").HasMaxLength(80);
+            entity.Property(x => x.JumlahPapan).HasColumnName("jumlah_papan");
+            entity.Property(x => x.JenisBangunan).HasColumnName("jenis_bangunan").HasMaxLength(40);
+            entity.Property(x => x.RefTmakLokasi).HasColumnName("ref_tmak_lokasi").HasMaxLength(150);
+            entity.Property(x => x.RefTpmatLokasi).HasColumnName("ref_tpmat_lokasi").HasMaxLength(150);
+            entity.Property(x => x.Aktif).HasColumnName("aktif");
+            entity.Property(x => x.KondisiTerakhir).HasColumnName("kondisi_terakhir").HasMaxLength(250);
+            entity.Property(x => x.SortOrder).HasColumnName("sort_order");
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnName("updated_at").HasColumnType("timestamptz");
+        });
+
+        modelBuilder.Entity<WadOverflowLog>(entity =>
+        {
+            entity.ToTable("trx_wad_log_overflow");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.KodeAset, x.TanggalLog });
+            entity.HasIndex(x => x.RequestId).IsUnique();
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.KodeAset).HasColumnName("kode_aset").HasMaxLength(40);
+            entity.Property(x => x.Minggu).HasColumnName("minggu").HasMaxLength(5);
+            entity.Property(x => x.TanggalLog).HasColumnName("tanggal_log");
+            entity.Property(x => x.StatusOperasi).HasColumnName("status_operasi").HasMaxLength(10);
+            entity.Property(x => x.DetailBukaan).HasColumnName("detail_bukaan").HasMaxLength(250);
+            entity.Property(x => x.KondisiFisik).HasColumnName("kondisi_fisik").HasMaxLength(250);
+            entity.Property(x => x.PetugasNama).HasColumnName("petugas_nama").HasMaxLength(150);
+            entity.Property(x => x.PemeriksaNama).HasColumnName("pemeriksa_nama").HasMaxLength(150);
+            entity.Property(x => x.RequestId).HasColumnName("request_id");
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+            entity.HasOne(x => x.Building)
+                .WithMany(x => x.Logs)
+                .HasForeignKey(x => x.KodeAset)
+                .HasPrincipalKey(x => x.KodeAset)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.Photos)
+                .WithOne(x => x.Log)
+                .HasForeignKey(x => x.LogId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WadOverflowLogPhoto>(entity =>
+        {
+            entity.ToTable("trx_wad_log_overflow_foto");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.LogId);
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.LogId).HasColumnName("log_id");
+            entity.Property(x => x.FileUrl).HasColumnName("file_url").HasMaxLength(500);
+            entity.Property(x => x.Keterangan).HasColumnName("keterangan").HasMaxLength(200);
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+        });
+
+        modelBuilder.Entity<WadSubsidenObservation>(entity =>
+        {
+            entity.ToTable("trx_wad_subsiden");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.KodePatok, x.Periode }).IsUnique();
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.KodePatok).HasColumnName("kode_patok").HasMaxLength(60);
+            entity.Property(x => x.LintangRaw).HasColumnName("lintang_raw").HasMaxLength(40);
+            entity.Property(x => x.Lintang).HasColumnName("lintang").HasPrecision(10, 6);
+            entity.Property(x => x.BujurRaw).HasColumnName("bujur_raw").HasMaxLength(40);
+            entity.Property(x => x.Bujur).HasColumnName("bujur").HasPrecision(10, 6);
+            entity.Property(x => x.Wilayah).HasColumnName("wilayah").HasMaxLength(40);
+            entity.Property(x => x.Blok).HasColumnName("blok").HasMaxLength(60);
+            entity.Property(x => x.TahunTanam).HasColumnName("tahun_tanam");
+            entity.Property(x => x.KedalamanGambut).HasColumnName("kedalaman_gambut").HasMaxLength(30);
+            entity.Property(x => x.Periode).HasColumnName("periode").HasMaxLength(10);
+            entity.Property(x => x.PeriodeLabel).HasColumnName("periode_label").HasMaxLength(40);
+            entity.Property(x => x.NilaiCm).HasColumnName("nilai_cm").HasPrecision(10, 2);
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+        });
+
+        modelBuilder.Entity<WadSubsidenPhoto>(entity =>
+        {
+            entity.ToTable("trx_wad_subsiden_foto");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.KodePatok, x.Periode });
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.KodePatok).HasColumnName("kode_patok").HasMaxLength(60);
+            entity.Property(x => x.Periode).HasColumnName("periode").HasMaxLength(10);
+            entity.Property(x => x.FileUrl).HasColumnName("file_url").HasMaxLength(500);
+            entity.Property(x => x.Keterangan).HasColumnName("keterangan").HasMaxLength(200);
+            entity.Property(x => x.SortOrder).HasColumnName("sort_order");
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+        });
+
+        modelBuilder.Entity<WadSiponInspection>(entity =>
+        {
+            entity.ToTable("trx_wad_sipon");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.Persil).HasColumnName("persil").HasMaxLength(80);
+            entity.Property(x => x.Lintang).HasColumnName("lintang").HasPrecision(10, 6);
+            entity.Property(x => x.Bujur).HasColumnName("bujur").HasPrecision(10, 6);
+            entity.Property(x => x.Tanggal).HasColumnName("tanggal");
+            entity.Property(x => x.Kondisi).HasColumnName("kondisi").HasMaxLength(4);
+            entity.Property(x => x.TmaInletCm).HasColumnName("tma_inlet_cm").HasPrecision(8, 2);
+            entity.Property(x => x.TmaOutletCm).HasColumnName("tma_outlet_cm").HasPrecision(8, 2);
+            entity.Property(x => x.TanggulInlet).HasColumnName("tanggul_inlet").HasMaxLength(4);
+            entity.Property(x => x.TanggulOutlet).HasColumnName("tanggul_outlet").HasMaxLength(4);
+            entity.Property(x => x.Komponen).HasColumnName("komponen").HasColumnType("jsonb");
+            entity.Property(x => x.Keterangan).HasColumnName("keterangan").HasMaxLength(1000);
+            entity.Property(x => x.CreatedBy).HasColumnName("created_by").HasMaxLength(150);
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
+        });
+
+        modelBuilder.Entity<WadFloodedLandObservation>(entity =>
+        {
+            entity.ToTable("trx_wad_lahan_tergenang");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasColumnName("id");
+            entity.Property(x => x.Persil).HasColumnName("persil").HasMaxLength(80);
+            entity.Property(x => x.Lintang).HasColumnName("lintang").HasPrecision(10, 6);
+            entity.Property(x => x.Bujur).HasColumnName("bujur").HasPrecision(10, 6);
+            entity.Property(x => x.Tanggal).HasColumnName("tanggal");
+            entity.Property(x => x.Kondisi).HasColumnName("kondisi").HasMaxLength(4);
+            entity.Property(x => x.TmatCm).HasColumnName("tmat_cm").HasPrecision(8, 2);
+            entity.Property(x => x.LuasHa).HasColumnName("luas_ha").HasPrecision(10, 4);
+            entity.Property(x => x.AksesJalan).HasColumnName("akses_jalan").HasMaxLength(4);
+            entity.Property(x => x.Tanggul).HasColumnName("tanggul").HasMaxLength(4);
+            entity.Property(x => x.Keterangan).HasColumnName("keterangan").HasMaxLength(1000);
+            entity.Property(x => x.CreatedBy).HasColumnName("created_by").HasMaxLength(150);
+            entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasColumnType("timestamptz");
         });
     }
 }

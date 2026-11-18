@@ -4,6 +4,7 @@
     <EmbeddedResource Include="Sensus/sensus-business-output.sql" LogicalName="Sensus.BusinessSchema.sql" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.33" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
+    <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
     <ProjectReference Include="..\AuthUtility.Application\AuthUtility.Application.csproj" />
     <ProjectReference Include="..\AuthUtility.Infrastructure\AuthUtility.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.33" />

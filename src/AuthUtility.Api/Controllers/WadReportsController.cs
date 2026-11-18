@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AuthUtility.Api.Controllers;
 
 // Laporan lapangan WAD (pengamatan air, subsiden gambut, lahan tergenang, progres projek).
-// Semua modul memakai pintu akses menu WAD_ECS_STASIUN yang sama dengan halaman frontend.
+// Setiap modul memeriksa kode menu WAD-nya sendiri agar hak per jabatan berlaku.
 [ApiController]
 [Route("api/wad")]
 [Authorize]
@@ -23,7 +23,7 @@ public class WadReportsController(
     ILogger<WadReportsController> logger
 ) : ControllerBase
 {
-    private const string MenuCode = "WAD_ECS_STASIUN";
+    private const string DashboardMenu = "WAD_ECS_DASHBOARD";
     private const int MaxPageSize = 50;
 
     private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -35,9 +35,9 @@ public class WadReportsController(
     [HttpGet("objects")]
     public async Task<IActionResult> GetObjects(string module, string? wilayah, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Read)) return Forbid();
         var normalizedModule = NormalizeModule(module);
         if (normalizedModule == null) return BadRequest(new { message = "Modul laporan tidak dikenal." });
+        if (!await HasPermission(MenuCodeForModule(normalizedModule), MenuPermission.Read)) return Forbid();
 
         var q = db.WadObjects.AsNoTracking().Where(x => x.Active && x.Module == normalizedModule);
         if (!string.IsNullOrWhiteSpace(wilayah)) q = q.Where(x => x.Wilayah == wilayah.Trim());
@@ -100,9 +100,9 @@ public class WadReportsController(
         DateOnly? from, DateOnly? to, int page = 1, int pageSize = 10,
         CancellationToken ct = default)
     {
-        if (!await HasPermission(MenuPermission.Read)) return Forbid();
         var normalizedModule = NormalizeModule(module);
         if (normalizedModule == null) return BadRequest(new { message = "Modul laporan tidak dikenal." });
+        if (!await HasPermission(MenuCodeForModule(normalizedModule), MenuPermission.Read)) return Forbid();
 
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
@@ -134,13 +134,14 @@ public class WadReportsController(
     [HttpGet("reports/{id:long}")]
     public async Task<IActionResult> GetReport(long id, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Read)) return Forbid();
         var report = await db.WadReports.AsNoTracking()
             .Include(x => x.Object)
             .Include(x => x.Photos)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (report == null) return NotFound(new { message = "Laporan tidak ditemukan." });
-        var canEdit = await HasPermission(MenuPermission.Update)
+        var menuCode = MenuCodeForModule(report.Module);
+        if (!await HasPermission(menuCode, MenuPermission.Read)) return Forbid();
+        var canEdit = await HasPermission(menuCode, MenuPermission.Update)
             && (report.CreatedByUserId == CurrentUserId || await permissions.IsSuperAdminAsync(User));
         return Ok(ToDto(report) with { CanEdit = canEdit });
     }
@@ -148,12 +149,12 @@ public class WadReportsController(
     [HttpPost("reports")]
     public async Task<IActionResult> CreateReport([FromBody] WadReportInput input, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Create)) return Forbid();
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == CurrentUserId && x.Active, ct);
         if (user == null) return Forbid();
 
         var obj = await db.WadObjects.FirstOrDefaultAsync(x => x.Id == input.ObjectId && x.Active, ct);
         if (obj == null) return BadRequest(new { message = "Objek/lokasi tidak ditemukan pada data master." });
+        if (!await HasPermission(MenuCodeForModule(obj.Module), MenuPermission.Create)) return Forbid();
 
         var error = Validate(obj.Module, input, obj);
         if (error != null) return BadRequest(new { message = error });
@@ -187,12 +188,12 @@ public class WadReportsController(
     [HttpPut("reports/{id:long}")]
     public async Task<IActionResult> UpdateReport(long id, [FromBody] WadReportInput input, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Update)) return Forbid();
         var report = await db.WadReports
             .Include(x => x.Object)
             .Include(x => x.Photos)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (report == null) return NotFound(new { message = "Laporan tidak ditemukan." });
+        if (!await HasPermission(MenuCodeForModule(report.Module), MenuPermission.Update)) return Forbid();
         if (report.CreatedByUserId != CurrentUserId && !await permissions.IsSuperAdminAsync(User)) return Forbid();
 
         var obj = await db.WadObjects.FirstOrDefaultAsync(x => x.Id == input.ObjectId && x.Active, ct);
@@ -218,11 +219,21 @@ public class WadReportsController(
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(
-        string module, string? wilayah, DateOnly? from, DateOnly? to, int? objectId, string? condition, string? objectType, CancellationToken ct)
+        string? module, string? wilayah, DateOnly? from, DateOnly? to, int? objectId, string? condition, string? objectType,
+        CancellationToken ct = default,
+        [FromServices] MyKTTATestDbContext? iotDb = null)
     {
-        if (!await HasPermission(MenuPermission.Read)) return Forbid();
+        if (string.IsNullOrWhiteSpace(module))
+        {
+            if (!await HasPermission(DashboardMenu, MenuPermission.Read)) return Forbid();
+            if (iotDb == null)
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = "Sumber data logger WAD tidak tersedia." });
+            return Ok(await WadDashboardService.BuildAsync(db, iotDb, ct));
+        }
+
         var normalizedModule = NormalizeModule(module);
         if (normalizedModule == null) return BadRequest(new { message = "Modul laporan tidak dikenal." });
+        if (!await HasPermission(MenuCodeForModule(normalizedModule), MenuPermission.Read)) return Forbid();
 
         var objectsQuery = db.WadObjects.AsNoTracking().Where(x => x.Active && x.Module == normalizedModule);
         if (!string.IsNullOrWhiteSpace(wilayah)) objectsQuery = objectsQuery.Where(x => x.Wilayah == wilayah.Trim());
@@ -341,7 +352,6 @@ public class WadReportsController(
     public async Task<IActionResult> UploadPhoto(
         long id, IFormFile file, [FromForm] string? keterangan, [FromForm] string? phase, [FromForm] Guid requestId, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Create) && !await HasPermission(MenuPermission.Update)) return Forbid();
         if (file == null) return BadRequest(new { message = "Pilih berkas foto." });
         if (requestId == Guid.Empty) return BadRequest(new { message = "RequestId foto wajib diisi." });
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -351,6 +361,8 @@ public class WadReportsController(
             .Include(x => x.Photos)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (report == null) return NotFound(new { message = "Laporan tidak ditemukan." });
+        if (!await HasPermission(MenuCodeForModule(report.Module), MenuPermission.Create)
+            && !await HasPermission(MenuCodeForModule(report.Module), MenuPermission.Update)) return Forbid();
         if (report.CreatedByUserId != CurrentUserId && !await permissions.IsSuperAdminAsync(User)) return Forbid();
         var existing = report.Photos.FirstOrDefault(x => x.RequestId == requestId);
         if (existing != null) return Ok(new WadPhotoDto(existing.Id, existing.Keterangan, existing.Phase, existing.SortOrder, PhotoUrl(existing.Id)));
@@ -423,11 +435,11 @@ public class WadReportsController(
     [HttpDelete("reports/{id:long}/photos/{photoId:long}")]
     public async Task<IActionResult> DeletePhoto(long id, long photoId, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Update)) return Forbid();
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({id})", ct);
         var report = await db.WadReports.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (report == null) return NotFound(new { message = "Laporan tidak ditemukan." });
+        if (!await HasPermission(MenuCodeForModule(report.Module), MenuPermission.Update)) return Forbid();
         if (report.CreatedByUserId != CurrentUserId && !await permissions.IsSuperAdminAsync(User)) return Forbid();
 
         var photo = await db.WadReportPhotos.FirstOrDefaultAsync(x => x.Id == photoId && x.ReportId == id, ct);
@@ -453,9 +465,11 @@ public class WadReportsController(
     [HttpGet("photos/{photoId:long}")]
     public async Task<IActionResult> GetPhoto(long photoId, CancellationToken ct)
     {
-        if (!await HasPermission(MenuPermission.Read)) return Forbid();
-        var photo = await db.WadReportPhotos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == photoId, ct);
+        var photo = await db.WadReportPhotos.AsNoTracking()
+            .Include(x => x.Report)
+            .FirstOrDefaultAsync(x => x.Id == photoId, ct);
         if (photo == null) return NotFound();
+        if (!await HasPermission(MenuCodeForModule(photo.Report?.Module), MenuPermission.Read)) return Forbid();
 
         var path = WadPhotoPolicy.ResolvePath(WadPhotoPolicy.Root(configuration, environment), photo.FileUrl);
         var contentType = path == null ? null : WadPhotoPolicy.ContentType(path);
@@ -470,8 +484,17 @@ public class WadReportsController(
        HELPER
     ========================================================= */
 
-    private Task<bool> HasPermission(MenuPermission permission) =>
-        permissions.HasPermissionAsync(User, MenuCode, permission);
+    private Task<bool> HasPermission(string menuCode, MenuPermission permission) =>
+        permissions.HasPermissionAsync(User, menuCode, permission);
+
+    private static string MenuCodeForModule(string? module) => module switch
+    {
+        WadReportModule.Water => "WAD_ECS_PENGAMATAN_AIR",
+        WadReportModule.Peat => "WAD_ECS_SUBSIDEN_GAMBUT",
+        WadReportModule.Flood => "WAD_ECS_LAHAN_TERGENANG",
+        WadReportModule.Project => "WAD_ECS_PROJEK",
+        _ => "WAD_ECS_STASIUN"
+    };
 
     private static string? NormalizeModule(string module)
     {

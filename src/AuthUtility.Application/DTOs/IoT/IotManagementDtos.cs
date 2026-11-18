@@ -21,6 +21,7 @@ public sealed record IotDeviceDto
     public string? LastIpAddress { get; init; }
     public int? LastRssi { get; init; }
     public long? LastUptimeSeconds { get; init; }
+    public double? LastBatteryVolt { get; init; }
 }
 
 public sealed record IotDeviceProvisionRequest
@@ -112,6 +113,7 @@ public sealed record IotFirmwareDto
 public sealed record IotOtaJobDto
 {
     public Guid Id { get; init; }
+    public long JobNumber { get; init; }
     public Guid DeviceAgentId { get; init; }
     public Guid FirmwarePackageId { get; init; }
     public IotOtaStatus Status { get; init; }
