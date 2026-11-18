@@ -122,6 +122,19 @@ public class SensusBusinessTests
         Assert.IsType<NoContentResult>(await controller.DisableRule(rule.Id));Assert.False((await db.SnsHptRules.SingleAsync()).Active);Assert.Single((await SensusMasterController.QueryJenis(db,false)).Single().Rules!);
     }
     [Fact]
+    public async Task SaveRuleAcceptsEmptyOptionalFormAndCanonicalizesTextWithoutChangingThreshold()
+    {
+        await using var db=Db();db.SnsJenis.Add(new(){Id=1,Code="NEW",Name="Jenis admin"});await db.SaveChangesAsync();
+        var controller=new SensusMasterController(db,new Permissions(true,false,true));
+        var body=new SaveSnsRuleRequest{ParameterCode=" persen_terserang ",Operator=" >= ",Aggregation="avg",ThresholdValue=5,ThresholdUnit=" % ",JenisForm="",StatusLahan=" ",ConditionParameterCode="",ConditionOperator="",ConditionValue="",ResultCode="perlu_pengendalian",Color="RED",ElseColor="GREEN",Message=" Kendalikan. ",ElseMessage=" Monitoring. "};
+        var response=Assert.IsType<OkObjectResult>(await controller.CreateRule(1,body));var saved=Assert.IsType<SnsRuleDto>(response.Value);
+        Assert.Equal(5,saved.ThresholdValue);Assert.Equal(">=",saved.Operator);Assert.Equal("PERSEN_TERSERANG",saved.ParameterCode);Assert.Equal("red",saved.Color);Assert.Null(saved.JenisForm);Assert.Null(saved.ConditionParameterCode);
+        body.JenisForm=" form2 ";Assert.IsType<OkObjectResult>(await controller.UpdateRule(saved.Id,body));Assert.Equal("FORM2",(await db.SnsHptRules.SingleAsync()).JenisForm);
+        body.ConditionParameterCode="PERSEN_TERSERANG";body.ConditionOperator=">=";body.ConditionValue="1,5";
+        Assert.IsType<OkObjectResult>(await controller.UpdateRule(saved.Id,body));Assert.Equal("1.5",(await db.SnsHptRules.SingleAsync()).ConditionValue);
+        body.Operator="!=";Assert.IsType<BadRequestObjectResult>(await controller.UpdateRule(saved.Id,body));
+    }
+    [Fact]
     public async Task ApprovedQueryMatchesPureProjectionAndProvidesFixtureForFrontendExports()
     {
         await using var db=Db();db.Users.AddRange(new UtlUser{Id=1,UserId="petugas",Name="Petugas nyata",PasswordHash="test",GroupId=1},new UtlUser{Id=2,UserId="approver",Name="Approver nyata",PasswordHash="test",GroupId=1});

@@ -55,7 +55,7 @@ public static class SensusHptEvaluation
         if(Numbers.Contains(r.ConditionParameterCode) || h.Details.Any(d=>d.Parameter?.Active==true && d.Parameter.Code.Equals(r.ConditionParameterCode,StringComparison.OrdinalIgnoreCase) && d.Parameter.TipeData=="NUMBER"))
         {
             var value=Number(h,r.ConditionParameterCode,r.Aggregation);
-            return value.HasValue && decimal.TryParse(r.ConditionValue,NumberStyles.Float,CultureInfo.InvariantCulture,out var expected)?Compare(value.Value,r.ConditionOperator!,expected):null;
+            return value.HasValue && decimal.TryParse(r.ConditionValue?.Replace(',','.'),NumberStyles.Float,CultureInfo.InvariantCulture,out var expected)?Compare(value.Value,r.ConditionOperator!,expected):null;
         }
         var text=Text(h,r.ConditionParameterCode);
         return text!=null && r.ConditionOperator=="="?text.Equals(r.ConditionValue,StringComparison.OrdinalIgnoreCase):null;

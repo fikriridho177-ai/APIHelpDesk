@@ -26,12 +26,6 @@ public class AppDbContext : DbContext
     public DbSet<UtlPasswordHistory> PasswordHistories =>
         Set<UtlPasswordHistory>();
 
-    public DbSet<MstCompany> Companies =>
-        Set<MstCompany>();
-
-    public DbSet<MstDepartment> Departments =>
-        Set<MstDepartment>();
-
     public DbSet<MstItemSubCategory> ItemSubCategories =>
         Set<MstItemSubCategory>();
 
@@ -141,21 +135,6 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<UtlPasswordHistory>()
             .ToTable("UtlPasswordHistory");
-
-        modelBuilder.Entity<MstCompany>()
-            .ToTable("MstCompany");
-
-        modelBuilder.Entity<MstDepartment>()
-            .ToTable("MstDepartment");
-
-        // Master Company/Department lokal tidak lagi menjadi sumber relasi scope.
-        // Ignore navigation collections agar EF Core tidak membuat shadow FK
-        // MstCompanyId / MstDepartmentId pada UtlGroupCompany/UtlGroupDepartment.
-        modelBuilder.Entity<MstCompany>()
-            .Ignore(x => x.GroupCompanies);
-
-        modelBuilder.Entity<MstDepartment>()
-            .Ignore(x => x.GroupDepartments);
 
         modelBuilder.Entity<MstItemSubCategory>()
             .ToTable("MstItemSubCategory");
@@ -301,7 +280,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ChatGroup>(entity =>
         {
-            entity.ToTable("ChatGroup");
+            entity.ToTable("UtlChatGroup");
 
             entity.HasMany(x => x.Roles)
                 .WithOne()
@@ -316,13 +295,13 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ChatRole>(entity =>
         {
-            entity.ToTable("ChatRole");
+            entity.ToTable("UtlChatRole");
             entity.Property(x => x.Permissions).HasConversion<long>();
         });
 
         modelBuilder.Entity<ChatMember>(entity =>
         {
-            entity.ToTable("ChatMember");
+            entity.ToTable("UtlChatMember");
             entity.HasKey(x => new { x.GroupId, x.UserId });
 
             entity.HasOne(x => x.User)
@@ -337,7 +316,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ChatMessage>(entity =>
         {
-            entity.ToTable("ChatMessage");
+            entity.ToTable("TrnChatMessage");
 
             entity.HasOne(x => x.Sender)
                 .WithMany()
@@ -352,7 +331,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<LynRequest>(entity =>
         {
-            entity.ToTable("LynRequest");
+            entity.ToTable("TrnLynRequest");
 
             entity.HasOne(x => x.Menu)
                 .WithMany()
@@ -374,7 +353,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<LynJenisPermintaan>(entity =>
         {
-            entity.ToTable("LynJenisPermintaan");
+            entity.ToTable("MstLynJenisPermintaan");
 
             entity.HasOne(x => x.DivisionMenu)
                 .WithMany()
@@ -383,7 +362,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<LynRequestLog>(entity =>
         {
-            entity.ToTable("LynRequestLog");
+            entity.ToTable("HistoryLynRequestLog");
 
             entity.HasOne(x => x.User)
                 .WithMany()
@@ -396,17 +375,17 @@ public class AppDbContext : DbContext
            Lihat POSTGRES_SENSUS_MIGRATION.sql
         ===================================================== */
 
-        modelBuilder.Entity<SnsKebun>().ToTable("SnsKebun");
+        modelBuilder.Entity<SnsKebun>().ToTable("MstSnsKebun");
 
         modelBuilder.Entity<SnsAfdeling>(entity =>
         {
-            entity.ToTable("SnsAfdeling");
+            entity.ToTable("MstSnsAfdeling");
             entity.HasOne(x => x.Kebun).WithMany().HasForeignKey(x => x.KebunId);
         });
 
         modelBuilder.Entity<SnsBlok>(entity =>
         {
-            entity.ToTable("SnsBlok");
+            entity.ToTable("MstSnsBlok");
             entity.HasOne(x => x.Afdeling).WithMany().HasForeignKey(x => x.AfdelingId);
         });
 
@@ -420,7 +399,7 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<SnsParameter>().ToTable("MstParameterHpt");
+        modelBuilder.Entity<SnsParameter>().ToTable("MstHptParameter");
 
         modelBuilder.Entity<SnsHptRule>(entity =>
         {
@@ -432,7 +411,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<SnsHeader>(entity =>
         {
-            entity.ToTable("SnsHeader");
+            entity.ToTable("TrnSnsHeader");
             entity.Property(x => x.LuasHa).HasPrecision(18, 4);
             entity.HasOne(x => x.Jenis).WithMany().HasForeignKey(x => x.JenisId);
             entity.HasOne(x => x.Blok).WithMany().HasForeignKey(x => x.BlokId);
@@ -452,15 +431,15 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<SnsDetail>(entity =>
         {
-            entity.ToTable("SnsDetail");
+            entity.ToTable("TrnSnsDetail");
             entity.HasOne(x => x.Parameter).WithMany().HasForeignKey(x => x.ParameterId);
         });
 
-        modelBuilder.Entity<SnsFoto>().ToTable("SnsFoto");
+        modelBuilder.Entity<SnsFoto>().ToTable("TrnSnsFoto");
 
         modelBuilder.Entity<SnsLog>(entity =>
         {
-            entity.ToTable("SnsLog");
+            entity.ToTable("HistorySnsLog");
             entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
         });
 
@@ -632,7 +611,7 @@ public class AppDbContext : DbContext
         // QcForm — master jenis pemeriksaan
         modelBuilder.Entity<QcForm>(entity =>
         {
-            entity.ToTable("QcForm");
+            entity.ToTable("MstQcForm");
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.Code).IsUnique();
             entity.Property(x => x.Code).HasMaxLength(64).IsRequired();
@@ -646,7 +625,7 @@ public class AppDbContext : DbContext
         // QcInspection — satu tabel transaksi utama
         modelBuilder.Entity<QcInspection>(entity =>
         {
-            entity.ToTable("QcInspection");
+            entity.ToTable("TrnQcInspection");
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.InspectionNo).IsUnique();
             entity.HasIndex(x => x.FormId);
@@ -700,7 +679,7 @@ public class AppDbContext : DbContext
         // QcApproval — satu row per (InspectionId, Level)
         modelBuilder.Entity<QcApproval>(entity =>
         {
-            entity.ToTable("QcApproval");
+            entity.ToTable("TrnQcApproval");
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => new { x.InspectionId, x.Level }).IsUnique();
             entity.HasIndex(x => x.Status);
@@ -731,7 +710,7 @@ public class AppDbContext : DbContext
         // QcFinding — temuan
         modelBuilder.Entity<QcFinding>(entity =>
         {
-            entity.ToTable("QcFinding");
+            entity.ToTable("TrnQcFinding");
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.FindingNo).IsUnique();
             entity.HasIndex(x => x.InspectionId);
@@ -770,7 +749,7 @@ public class AppDbContext : DbContext
         // QcHistory — audit trail (immutable)
         modelBuilder.Entity<QcHistory>(entity =>
         {
-            entity.ToTable("QcHistory");
+            entity.ToTable("HistoryQcInspection");
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => new { x.InspectionId, x.CreatedAt });
 

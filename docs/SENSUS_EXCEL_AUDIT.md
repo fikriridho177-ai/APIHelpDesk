@@ -4,7 +4,7 @@ Audit sebelum perubahan source: seluruh 20 sheet pada masing-masing workbook, fo
 
 ## Pola bersama
 
-Satu transaksi SnsHeader/SnsDetail per jenis HPT dengan dimensi persil, wilayah, status lahan, jenis form dan periode. Workbook adalah output, bukan model tabel. KIN memiliki satu rekap/memo; W1 memisahkan output Organik/Non-Organik. Tidak ada kebutuhan tabel per wilayah/status/form.
+Satu transaksi TrnSnsHeader/TrnSnsDetail per jenis HPT dengan dimensi persil, wilayah, status lahan, jenis form dan periode. Workbook adalah output, bukan model tabel. KIN memiliki satu rekap/memo; W1 memisahkan output Organik/Non-Organik. Tidak ada kebutuhan tabel per wilayah/status/form.
 
 ## Rekap hama dan Penyakit IM KIN.xlsx
 
@@ -71,4 +71,4 @@ SHA-256: 39d107facd95cd72f04b68d2a5f152fcec5ed822149de975196ff6eae2183edd
 
 ## Desain data
 
-MstHpt dan tabel parameter existing MstParameterHpt dipertahankan (nama konsep bisnis: MstHptParameter). Tambahkan MstHptRule; transaksi tetap SnsHeader/SnsDetail/SnsFoto/SnsLog. Tambahkan snapshot status lahan/sumber, jenis form, konteks persil dan pengamatan umum pada header existing, serta scope parameter form pada master. Tidak ada tabel wilayah/organik/form baru.
+MstHpt dan tabel parameter existing (kini `MstHptParameter`) dipertahankan. Tambahkan MstHptRule; transaksi tetap TrnSnsHeader/TrnSnsDetail/TrnSnsFoto/HistorySnsLog. Tambahkan snapshot status lahan/sumber, jenis form, konteks persil dan pengamatan umum pada header existing, serta scope parameter form pada master. Tidak ada tabel wilayah/organik/form baru.

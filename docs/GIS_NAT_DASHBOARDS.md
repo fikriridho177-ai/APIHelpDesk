@@ -4,7 +4,7 @@ Implementasi dashboard menggunakan tabel existing; tidak menambah tabel dashboar
 
 ## Analisis sumber NAT
 
-Pemeriksaan controller, entity/DbSet, reader dan pemakaian NAT di frontend menemukan `UtlMenu` divisi `LYN_NAT`, master `LynJenisPermintaan`, dan riwayat `LynRequest`. Tidak ditemukan reader/entity transaksi alat, jam operasi, produktivitas atau biaya NAT. Karena itu dashboard NAT secara eksplisit menampilkan **master dan riwayat tiket**, bukan statistik penggunaan alat. Pembuatan pengajuan baru NAT tetap tidak ditambahkan/diaktifkan.
+Pemeriksaan controller, entity/DbSet, reader dan pemakaian NAT di frontend menemukan `UtlMenu` divisi `LYN_NAT`, master `MstLynJenisPermintaan`, dan riwayat `TrnLynRequest`. Tidak ditemukan reader/entity transaksi alat, jam operasi, produktivitas atau biaya NAT. Karena itu dashboard NAT secara eksplisit menampilkan **master dan riwayat tiket**, bukan statistik penggunaan alat. Pembuatan pengajuan baru NAT tetap tidak ditambahkan/diaktifkan.
 
 ## KPI dan chart
 
@@ -22,9 +22,9 @@ Tanpa riwayat, diagram menampilkan keadaan kosong. Rata-rata penyelesaian tanpa 
 - `GET /api/divisi/nat/dashboard?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD`
 - GIS peta memakai endpoint existing `GET /api/gis/layers`, hanya ketika `GIS_PETA.Read` diizinkan.
 
-Endpoint divisi berada pada partial LayananController agar bisa memakai query `QueryVisible` dan klasifikasi divisi existing. Query SQL yang dihasilkan EF membaca `LynRequest` dengan join pemohon `UtlUser` dan jenis `LynJenisPermintaan`; dibatasi MenuId divisi dan rentang UTC dari tanggal WIB. Owner/handler serta filter departemen tetap melalui `LayananAccess.CanSee` existing. Tiket divisi lain tidak ikut dihitung; tidak memakai batas daftar 500 tiket.
+Endpoint divisi berada pada partial LayananController agar bisa memakai query `QueryVisible` dan klasifikasi divisi existing. Query SQL yang dihasilkan EF membaca `TrnLynRequest` dengan join pemohon `UtlUser` dan jenis `MstLynJenisPermintaan`; dibatasi MenuId divisi dan rentang UTC dari tanggal WIB. Owner/handler serta filter departemen tetap melalui `LayananAccess.CanSee` existing. Tiket divisi lain tidak ikut dihitung; tidak memakai batas daftar 500 tiket.
 
-Master jenis: `LynJenisPermintaan WHERE Active AND DivisionMenuId = Id divisi`, diurutkan SortOrder/Name. Tabel `UtlMenu` existing menentukan relasi divisi/menu. Perhitungan status, deadline, dan hari penyelesaian memakai `LynReportCalculator` existing. Agregasi dashboard tidak memerlukan view/SP baru.
+Master jenis: `MstLynJenisPermintaan WHERE Active AND DivisionMenuId = Id divisi`, diurutkan SortOrder/Name. Tabel `UtlMenu` existing menentukan relasi divisi/menu. Perhitungan status, deadline, dan hari penyelesaian memakai `LynReportCalculator` existing. Agregasi dashboard memakai query EF existing; view read-only `VwLynRequestMonitoring` disediakan untuk konsumen monitoring/analisis.
 
 Katalog GIS memakai WebGisReader existing: `app.layers WHERE state='READY' AND is_visible=true`; vektor atau raster yang managedBy/stage-nya sesuai query existing. Read-only; tidak menambah akses PostGIS dan tidak mengubah query tile. Kegagalan katalog peta tidak menggagalkan ringkasan pekerjaan.
 
