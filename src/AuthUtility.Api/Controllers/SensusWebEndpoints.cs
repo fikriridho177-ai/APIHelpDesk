@@ -19,7 +19,7 @@ public partial class SensusController
     {
         // Lock the same header approval updates, so status changes cannot race photo writes.
         if (db.Database.IsNpgsql())
-            return (await db.SnsHeaders.FromSqlInterpolated($"SELECT * FROM \"SnsHeader\" WHERE \"Id\" = {id} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
+            return (await db.SnsHeaders.FromSqlInterpolated($"SELECT * FROM \"TrnSnsHeader\" WHERE \"Id\" = {id} FOR UPDATE").ToListAsync(ct)).SingleOrDefault();
         return await db.SnsHeaders.FirstOrDefaultAsync(x => x.Id == id, ct);
     }
 

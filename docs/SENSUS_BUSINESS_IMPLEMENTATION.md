@@ -12,7 +12,7 @@ Mapping **seluruh 20 sheet KIN dan 20 sheet Wilayah 1**, rentang, peran input/re
 
 ## Data yang digunakan
 
-Transaksi tetap `SnsHeader`, `SnsDetail`, `SnsFoto`, `SnsLog`. Tidak ada tabel transaksi berdasarkan wilayah, status lahan atau form; approval/foto dan permission tidak diganti.
+Transaksi tetap `TrnSnsHeader`, `TrnSnsDetail`, `TrnSnsFoto`, `HistorySnsLog`. Tidak ada tabel transaksi berdasarkan wilayah, status lahan atau form; approval/foto dan permission tidak diganti.
 
 Existing header: `JenisId`, `PersilSumber`, `PersilId`, `PersilKode`, `KodeWilayah`, `KodeAfdeling`, `TanggalSensus`, `JumlahPokokSampel`, `JumlahPokokTerserang`, `PetugasUserId`, `ApprovedByUserId`, `ApprovedAt`, `Status`.
 
@@ -30,7 +30,7 @@ Tambahan snapshot pada **header existing**:
 
 Persil dibaca lewat metode khusus Sensus pada `PersilReader`, menggunakan query existing dengan detail sumber. Alias status yang dikenali: StatusLahan/JenisLahan/StatusOrganik/OrganicStatus/KodeStatusLahan, atau IsOrganic/IsOrganik/Organik. O/N/R dinormalisasi. Jika sumber tidak menyediakan informasi, UI mengizinkan fallback; tidak otomatis menganggap Non-Organik. Field yang ada di sumber terkunci di UI dan diutamakan kembali oleh server.
 
-`MstHpt` dan tabel parameter **existing `MstParameterHpt`** digunakan. SQL menyediakan alias view `MstHptParameter` jika nama itu belum ada, tanpa menyalin data. Master mendapat `Form2Enabled`, `ReportGroup`; parameter mendapat `FormScope` ALL/FORM1/FORM2. Nilai dinamis tetap disimpan di detail existing. Form 2 ulat mencakup jalur/pohon, jenis ulat, telur, ulat kecil/besar/mati, pupa hidup/kosong/mati, pelepah dan catatan sesuai contoh. Tidak diturunkan nilai per pelepah dari hitungan per pohon.
+`MstHpt` dan tabel parameter `MstHptParameter` digunakan. Tabel parameter existing di-rename dari `MstParameterHpt` oleh migrasi penamaan tabel; tidak ada duplikasi data. Master mendapat `Form2Enabled`, `ReportGroup`; parameter mendapat `FormScope` ALL/FORM1/FORM2. Nilai dinamis tetap disimpan di detail existing. Form 2 ulat mencakup jalur/pohon, jenis ulat, telur, ulat kecil/besar/mati, pupa hidup/kosong/mati, pelepah dan catatan sesuai contoh. Tidak diturunkan nilai per pelepah dari hitungan per pohon.
 
 ## Master rule dan migrasi
 
@@ -57,7 +57,9 @@ Contoh TIRATHABA yang bisa diatur admin di Master Jenis & Parameter:
 
 Ambang seed mempertahankan flowchart/evaluasi existing: Plesispa TM >5%, Oryctes TM >3%, keduanya TBM >=1 pohon; Ulat Api/Kantong AVG >=5 ulat/pelepah; Rayap >=1 pohon; Tirathaba >=5%; penyakit yang disebut flowchart >0 pohon terserang. Memo Excel berbeda pada batas Oryctes/Tirathaba; belum ada keputusan baru sehingga existing dipertahankan dan perbedaan dilaporkan. Rekomendasi metode/dosis dapat dimasukkan admin berdasarkan referensi bisnis yang sah.
 
-SQL idempotent: `src/AuthUtility.Api/Sensus/sensus-business-output.sql` (embedded). `SensusBusinessSetup.EnsureAsync` dipanggil saat startup API setelah database dapat dihubungi. Script mengubah header/master existing, membuat master rule/index dan alias view, lalu seed dijalankan. **Penerapan dan eksekusi SQL pada PostgreSQL operasional belum terverifikasi dari lingkungan agent karena koneksi jaringan ditolak.** Restart API pada host yang memiliki akses DB diperlukan untuk penerapan; log startup perlu diperiksa. Uji idempotensi seed memakai EF InMemory; uji script memeriksa resource/guard, bukan eksekusi PostgreSQL.
+Penamaan tabel: hentikan API, jalankan `sql/2026-11-18_rename_tables_category_prefix.sql`, lalu `sql/2026-11-18_monitoring_views.sql`, baru jalankan API versi baru. Script startup sudah memakai `MstHptParameter` dan `TrnSnsHeader`, jadi urutan ini wajib. Rollback tersedia di `sql/2026-11-18_rename_tables_rollback.sql`; objek WAD dan IoT tidak termasuk cakupan rename.
+
+SQL idempotent: `src/AuthUtility.Api/Sensus/sensus-business-output.sql` (embedded). `SensusBusinessSetup.EnsureAsync` dipanggil saat startup API setelah database dapat dihubungi. Script mengubah header/master existing, membuat master rule/index, lalu seed dijalankan. **Penerapan dan eksekusi SQL pada PostgreSQL operasional belum terverifikasi dari lingkungan agent karena koneksi jaringan ditolak.** Restart API pada host yang memiliki akses DB diperlukan untuk penerapan; log startup perlu diperiksa. Uji idempotensi seed memakai EF InMemory; uji script memeriksa resource/guard, bukan eksekusi PostgreSQL.
 
 ## Query/API laporan
 
@@ -65,7 +67,7 @@ SQL idempotent: `src/AuthUtility.Api/Sensus/sensus-business-output.sql` (embedde
 
 ```sql
 -- Bentuk logis query dasar (filter opsional diterapkan hanya bila diisi):
-SELECT h.* FROM "SnsHeader" h
+SELECT h.* FROM "TrnSnsHeader" h
 WHERE h."Status" = 'APPROVED'
   AND h."TanggalSensus" BETWEEN @dateFrom AND @dateTo
   -- AND h."KodeWilayah" = @wilayah
@@ -141,3 +143,10 @@ Frontend (path relatif MyHelpDesk):
 - `docs/superpowers/plans/2026-11-17-sensus-business-reports.md`
 
 Dua workbook input tetap tidak diubah dan tetap untracked sebagaimana saat tugas dimulai. Tidak ada perubahan source bisnis QC/GIS/WAD/NAT, navbar, approval flow atau foto.
+
+
+## Perbaikan penyimpanan rule
+
+Tambah/ubah rule menormalisasi teks kode, operator, agregasi, warna, serta field opsional kosong sebelum validasi. Frontend mengirim hanya field request, membersihkan kondisi yang tidak dipilih, dan memvalidasi parameter aktif, angka, prioritas, serta rekomendasi sebelum POST/PUT. Ambang dan whitelist operator tidak berubah. Kegagalan reload daftar sesudah penyimpanan sukses tidak lagi ditampilkan sebagai kegagalan save.
+
+Uji regresi mencakup respons 400 sebelum normalisasi, create/update sesudah perbaikan, validasi MVC untuk payload form, serta penolakan operator invalid. Focused backend 52/52 dan frontend 26/26 lulus. Frontend tests tambahan: tests/sensusRuleForm.test.mjs dan tests/sensusApiError.test.mjs. Verifikasi memakai EF InMemory/MVC; request pengguna pada server berjalan belum dapat diulang dari sandbox. Restart API dan muat ulang frontend untuk memakai kode terbaru.

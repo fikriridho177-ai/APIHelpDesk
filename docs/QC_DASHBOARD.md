@@ -8,7 +8,9 @@ Diagram: pie status inspeksi; bar per form dan wilayah; line tren tanggal inspek
 
 Endpoint baru read-only: `GET /api/qc/dashboard?dateFrom=YYYY-MM-DD&dateTo=YYYY-MM-DD`.
 
-Sumber: `QcInspection` join `QcForm`, dan `QcFinding` yang InspectionId-nya termasuk inspeksi terpilih. Periode default 180 hari dan maksimal 366 hari, berdasarkan InspectionDate. Temuan mengikuti periode inspeksi induk, bukan CreatedAt temuan. Status dan keterlambatan menggunakan kondisi saat ini/WIB. Definisi terbuka/terlambat tetap mengikuti daftar existing: Status != CLOSED dan TargetDate < hari ini. VERIFIED masih terbuka sampai CLOSED; target null atau hari ini tidak terlambat.
+View monitoring read-only tersedia untuk konsumen analisis: `VwQcInspectionMonitoring` (inspeksi + form + hitungan temuan terbuka/terlambat) dan `VwQcFindingMonitoring` (temuan + inspeksi + PIC + flag overdue). Endpoint dashboard memakai query EF existing; view tidak mengubah kontrak API.
+
+Sumber: `TrnQcInspection` join `MstQcForm`, dan `TrnQcFinding` yang InspectionId-nya termasuk inspeksi terpilih. Periode default 180 hari dan maksimal 366 hari, berdasarkan InspectionDate. Temuan mengikuti periode inspeksi induk, bukan CreatedAt temuan. Status dan keterlambatan menggunakan kondisi saat ini/WIB. Definisi terbuka/terlambat tetap mengikuti daftar existing: Status != CLOSED dan TargetDate < hari ini. VERIFIED masih terbuka sampai CLOSED; target null atau hari ini tidak terlambat.
 
 Hak akses: `QC_DASHBOARD.View` dan `.Read`, lalu cakupan owner/handler memakai QcAccess existing. Hak dashboard tidak otomatis membuat pengguna menjadi handler. Tidak ada batas 500 baris untuk angka agregat; DataJson tidak dimuat. Query finding memakai EXISTS terhadap query inspeksi yang sudah difilter. Tidak ada tabel/dashboard menu baru karena QC_DASHBOARD sudah existing.
 
