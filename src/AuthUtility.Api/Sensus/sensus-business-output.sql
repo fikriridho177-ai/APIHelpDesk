@@ -3,7 +3,7 @@ SELECT pg_advisory_xact_lock(20261117, 1);
 ALTER TABLE "MstHpt" ADD COLUMN IF NOT EXISTS "Form2Enabled" boolean NOT NULL DEFAULT false;
 ALTER TABLE "MstHpt" ADD COLUMN IF NOT EXISTS "ReportGroup" text NOT NULL DEFAULT 'LAINNYA';
 ALTER TABLE "MstHpt" ADD COLUMN IF NOT EXISTS "BusinessSeedVersion" integer NOT NULL DEFAULT 0;
-ALTER TABLE "MstParameterHpt" ADD COLUMN IF NOT EXISTS "FormScope" text NOT NULL DEFAULT 'ALL';
+ALTER TABLE "MstHptParameter" ADD COLUMN IF NOT EXISTS "FormScope" text NOT NULL DEFAULT 'ALL';
 -- Preserve a previously created rule master using the alternative business FK name.
 DO $$ BEGIN
  IF EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid=to_regclass('"MstHptRule"') AND attname='HptId' AND NOT attisdropped)
@@ -33,25 +33,19 @@ ALTER TABLE "MstHptRule" ADD COLUMN IF NOT EXISTS "SortOrder" integer NOT NULL D
 ALTER TABLE "MstHptRule" ADD COLUMN IF NOT EXISTS "SeedKey" text;
 CREATE UNIQUE INDEX IF NOT EXISTS "IX_MstHptRule_SeedKey" ON "MstHptRule"("SeedKey");
 CREATE INDEX IF NOT EXISTS "IX_MstHptRule_JenisId_Active" ON "MstHptRule"("JenisId","Active");
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "JenisForm" text NOT NULL DEFAULT 'FORM1';
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "StatusLahan" text;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "StatusLahanSumber" text;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "FaseTanaman" text;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "LuasHa" numeric(18,4);
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "JumlahPokokPersil" integer;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "BulanTanam" text;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "JumlahJalur" integer;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "PohonMatiPetir" integer;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "PohonMatiHpt" integer;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "PohonMatiLain" integer;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "Pengendalian" text;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "MusuhAlami" text;
-ALTER TABLE "SnsHeader" ADD COLUMN IF NOT EXISTS "Cuaca" text;
-CREATE INDEX IF NOT EXISTS "IX_SnsHeader_BusinessReport" ON "SnsHeader"("TanggalSensus","KodeWilayah","StatusLahan","JenisForm","JenisId") WHERE "Status"='APPROVED';
--- Business name compatibility without creating a duplicate parameter master/table.
-DO $$ BEGIN
- IF to_regclass('"MstHptParameter"') IS NULL THEN
-   CREATE VIEW "MstHptParameter" AS SELECT * FROM "MstParameterHpt";
- END IF;
-END $$;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "JenisForm" text NOT NULL DEFAULT 'FORM1';
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "StatusLahan" text;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "StatusLahanSumber" text;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "FaseTanaman" text;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "LuasHa" numeric(18,4);
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "JumlahPokokPersil" integer;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "BulanTanam" text;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "JumlahJalur" integer;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "PohonMatiPetir" integer;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "PohonMatiHpt" integer;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "PohonMatiLain" integer;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "Pengendalian" text;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "MusuhAlami" text;
+ALTER TABLE "TrnSnsHeader" ADD COLUMN IF NOT EXISTS "Cuaca" text;
+CREATE INDEX IF NOT EXISTS "IX_TrnSnsHeader_BusinessReport" ON "TrnSnsHeader"("TanggalSensus","KodeWilayah","StatusLahan","JenisForm","JenisId") WHERE "Status"='APPROVED';
 COMMIT;

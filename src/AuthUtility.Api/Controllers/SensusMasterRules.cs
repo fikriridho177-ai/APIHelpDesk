@@ -15,6 +15,7 @@ public partial class SensusMasterController
     {
         if(!await Can(SnsMenu.MasterJenis,MenuPermission.Update))return Forbid();
         if(!await db.SnsJenis.AnyAsync(k=>k.Id==jenisId))return NotFound();
+        NormalizeRule(body);
         var error=await ValidateRule(jenisId,body);if(error!=null)return BadRequest(new{message=error});
         var entity=new SnsHptRule{JenisId=jenisId};ApplyRule(entity,body);db.SnsHptRules.Add(entity);await db.SaveChangesAsync();return Ok(RuleDto(entity));
     }
@@ -23,6 +24,7 @@ public partial class SensusMasterController
     {
         if(!await Can(SnsMenu.MasterJenis,MenuPermission.Update))return Forbid();
         var entity=await db.SnsHptRules.FindAsync(id);if(entity==null)return NotFound();
+        NormalizeRule(body);
         var error=await ValidateRule(entity.JenisId,body);if(error!=null)return BadRequest(new{message=error});
         ApplyRule(entity,body);await db.SaveChangesAsync();return Ok(RuleDto(entity));
     }
@@ -31,6 +33,15 @@ public partial class SensusMasterController
     {
         if(!await Can(SnsMenu.MasterJenis,MenuPermission.Update))return Forbid();
         var entity=await db.SnsHptRules.FindAsync(id);if(entity==null)return NotFound();entity.Active=false;await db.SaveChangesAsync();return NoContent();
+    }
+    private static void NormalizeRule(SaveSnsRuleRequest r)
+    {
+        static string? Optional(string? value)=>string.IsNullOrWhiteSpace(value)?null:value.Trim();
+        r.ParameterCode=(r.ParameterCode??"").Trim().ToUpperInvariant();r.Operator=(r.Operator??"").Trim();
+        r.Aggregation=(r.Aggregation??"").Trim().ToUpperInvariant();r.ResultCode=(r.ResultCode??"").Trim().ToUpperInvariant();
+        r.Color=(r.Color??"").Trim().ToLowerInvariant();r.ElseColor=(r.ElseColor??"").Trim().ToLowerInvariant();
+        r.JenisForm=Optional(r.JenisForm)?.ToUpperInvariant();r.StatusLahan=Optional(r.StatusLahan);
+        r.ConditionParameterCode=Optional(r.ConditionParameterCode)?.ToUpperInvariant();r.ConditionOperator=Optional(r.ConditionOperator);r.ConditionValue=Optional(r.ConditionValue);
     }
     private async Task<string?> ValidateRule(int jenisId,SaveSnsRuleRequest r)
     {
@@ -49,7 +60,12 @@ public partial class SensusMasterController
         if(r.ConditionParameterCode.Length>60||!SensusHptEvaluation.Operators.Contains(r.ConditionOperator)||string.IsNullOrWhiteSpace(r.ConditionValue)||r.ConditionValue.Length>150)return "Kondisi rule tidak lengkap.";
         key=r.ConditionParameterCode.Trim().ToUpperInvariant();var p=parameters.FirstOrDefault(p=>p.Code.Equals(key,StringComparison.OrdinalIgnoreCase));
         if(SensusHptEvaluation.Numbers.Contains(key)||p?.TipeData=="NUMBER")
-            return decimal.TryParse(r.ConditionValue,NumberStyles.Float,CultureInfo.InvariantCulture,out _)?null:"Kondisi numerik harus berisi angka.";
+        {
+            var value=(r.ConditionValue??"").Replace(',','.').Trim();
+            if(!decimal.TryParse(value,NumberStyles.Float,CultureInfo.InvariantCulture,out _))return "Kondisi numerik harus berisi angka.";
+            r.ConditionValue=value;
+            return null;
+        }
         if(!SensusHptEvaluation.Texts.Contains(key)&&p==null)return "Parameter kondisi tidak aktif/tidak dikenal.";
         if(r.ConditionOperator!="=")return "Kondisi teks menggunakan operator =.";
         if(p?.TipeData=="OPTION"&&!(p.Opsi??"").Split(',').Any(v=>v.Trim().Equals(r.ConditionValue.Trim(),StringComparison.OrdinalIgnoreCase)))return "Nilai kondisi tidak termasuk pilihan master.";

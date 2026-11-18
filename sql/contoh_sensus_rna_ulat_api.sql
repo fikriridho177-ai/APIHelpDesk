@@ -25,7 +25,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "MstHpt" WHERE "Code" = 'ULAT_API');
 -- TipeData: NUMBER, TEXT, BOOLEAN, OPTION.
 -- IsIndikator + ambang: rata-rata nilai >= AmbangBerat -> BERAT, >= AmbangSedang -> SEDANG,
 -- > 0 -> RINGAN, 0 -> NIHIL. Indikator utama analisis = parameter indikator dengan Id terkecil.
-INSERT INTO "MstParameterHpt"
+INSERT INTO "MstHptParameter"
     ("JenisId", "Code", "Name", "Satuan", "TipeData", "Opsi", "Wajib", "IsIndikator", "AmbangSedang", "AmbangBerat", "Active")
 SELECT j."Id", p.code, p.name, p.satuan, p.tipe, p.opsi, p.wajib, p.indikator, p.sedang, p.berat, true
 FROM "MstHpt" j
@@ -36,12 +36,12 @@ CROSS JOIN (VALUES
     ('KET',       'Keterangan',              NULL,   'TEXT',   NULL,                 false, false, NULL, NULL)
 ) AS p(code, name, satuan, tipe, opsi, wajib, indikator, sedang, berat)
 WHERE j."Code" = 'ULAT_API'
-  AND NOT EXISTS (SELECT 1 FROM "MstParameterHpt" x WHERE x."JenisId" = j."Id" AND x."Code" = p.code);
+  AND NOT EXISTS (SELECT 1 FROM "MstHptParameter" x WHERE x."JenisId" = j."Id" AND x."Code" = p.code);
 
 
 -- ---------------------------------------------------------------------
 -- BAGIAN 2: SATU KIRIMAN SENSUS DARI LAPANGAN
--- 3 pokok sampel, 2 terserang. Nilai per pokok di SnsDetail ("NoPokok").
+-- 3 pokok sampel, 2 terserang. Nilai per pokok di TrnSnsDetail ("NoPokok").
 -- ---------------------------------------------------------------------
 
 DO $$
@@ -65,7 +65,7 @@ BEGIN
     SELECT "Id" INTO v_jenis_id FROM "MstHpt" WHERE "Code" = 'ULAT_API';
 
     -- Header: satu baris per kiriman sensus.
-    INSERT INTO "SnsHeader"
+    INSERT INTO "TrnSnsHeader"
         ("ClientUuid", "JenisId", "PersilSumber", "PersilId", "PersilKode", "KodeWilayah", "KodeAfdeling",
          "Komoditas", "TanggalSensus", "PetugasUserId", "JumlahPokokSampel", "JumlahPokokTerserang",
          "Latitude", "Longitude", "Catatan", "DeviceInfo", "Status", "SubmittedAt", "CreatedAt")
@@ -76,12 +76,12 @@ BEGIN
     RETURNING "Id" INTO v_header_id;
 
     -- Nomor sensus sama seperti yang dibuat API: SNS-yyMMdd-000123 (waktu WIB).
-    UPDATE "SnsHeader"
+    UPDATE "TrnSnsHeader"
     SET "SensusNo" = 'SNS-' || to_char(now() AT TIME ZONE 'Asia/Jakarta', 'YYMMDD') || '-' || lpad(v_header_id::text, 6, '0')
     WHERE "Id" = v_header_id;
 
     -- Detail: nilai tiap parameter per pokok.
-    INSERT INTO "SnsDetail" ("HeaderId", "ParameterId", "NoPokok", "NilaiAngka", "NilaiTeks")
+    INSERT INTO "TrnSnsDetail" ("HeaderId", "ParameterId", "NoPokok", "NilaiAngka", "NilaiTeks")
     SELECT v_header_id, p."Id", d.no_pokok, d.angka, d.teks
     FROM (VALUES
         ('JML_ULAT',  1, 12::numeric, NULL),
@@ -94,14 +94,14 @@ BEGIN
         ('FASE',      3, NULL,        'Ngengat'),
         ('KET',       3, NULL,        'Pokok sehat')
     ) AS d(code, no_pokok, angka, teks)
-    JOIN "MstParameterHpt" p ON p."JenisId" = v_jenis_id AND p."Code" = d.code;
+    JOIN "MstHptParameter" p ON p."JenisId" = v_jenis_id AND p."Code" = d.code;
 
     -- Foto (opsional).
-    INSERT INTO "SnsFoto" ("HeaderId", "FileUrl", "Keterangan", "Latitude", "Longitude", "TakenAt")
+    INSERT INTO "TrnSnsFoto" ("HeaderId", "FileUrl", "Keterangan", "Latitude", "Longitude", "TakenAt")
     VALUES (v_header_id, '/uploads/sensus/contoh-ulat-api.jpg', 'Pokok 1', -0.512345, 101.456789, now());
 
     -- Riwayat.
-    INSERT INTO "SnsLog" ("HeaderId", "UserId", "Action", "FromStatus", "ToStatus", "Note", "CreatedAt")
+    INSERT INTO "HistorySnsLog" ("HeaderId", "UserId", "Action", "FromStatus", "ToStatus", "Note", "CreatedAt")
     VALUES (v_header_id, v_user_id, 'SUBMIT', NULL, 'SUBMITTED', 'Contoh data dari SQL.', now());
 
     RAISE NOTICE 'Sensus contoh dibuat, Id = %', v_header_id;
@@ -112,14 +112,14 @@ END $$;
 -- CEK HASIL
 -- ---------------------------------------------------------------------
 -- SELECT h."SensusNo", h."PersilKode", h."Status", p."Name", d."NoPokok", d."NilaiAngka", d."NilaiTeks"
--- FROM "SnsHeader" h
--- JOIN "SnsDetail" d ON d."HeaderId" = h."Id"
--- JOIN "MstParameterHpt" p ON p."Id" = d."ParameterId"
+-- FROM "TrnSnsHeader" h
+-- JOIN "TrnSnsDetail" d ON d."HeaderId" = h."Id"
+-- JOIN "MstHptParameter" p ON p."Id" = d."ParameterId"
 -- WHERE h."DeviceInfo" = 'manual-sql'
 -- ORDER BY h."Id" DESC, d."NoPokok", p."Id";
 
 -- HAPUS DATA CONTOH (detail/foto ikut terhapus bila FK cascade; kalau tidak, hapus manual dulu):
--- DELETE FROM "SnsLog"    WHERE "HeaderId" IN (SELECT "Id" FROM "SnsHeader" WHERE "DeviceInfo" = 'manual-sql');
--- DELETE FROM "SnsDetail" WHERE "HeaderId" IN (SELECT "Id" FROM "SnsHeader" WHERE "DeviceInfo" = 'manual-sql');
--- DELETE FROM "SnsFoto"   WHERE "HeaderId" IN (SELECT "Id" FROM "SnsHeader" WHERE "DeviceInfo" = 'manual-sql');
--- DELETE FROM "SnsHeader" WHERE "DeviceInfo" = 'manual-sql';
+-- DELETE FROM "HistorySnsLog"    WHERE "HeaderId" IN (SELECT "Id" FROM "TrnSnsHeader" WHERE "DeviceInfo" = 'manual-sql');
+-- DELETE FROM "TrnSnsDetail" WHERE "HeaderId" IN (SELECT "Id" FROM "TrnSnsHeader" WHERE "DeviceInfo" = 'manual-sql');
+-- DELETE FROM "TrnSnsFoto"   WHERE "HeaderId" IN (SELECT "Id" FROM "TrnSnsHeader" WHERE "DeviceInfo" = 'manual-sql');
+-- DELETE FROM "TrnSnsHeader" WHERE "DeviceInfo" = 'manual-sql';
