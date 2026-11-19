@@ -68,13 +68,16 @@ public partial class SensusController(
         var rows = await query
             .OrderByDescending(x => x.TanggalSensus).ThenByDescending(x => x.Id)
             .Take(MaxListSize)
-            .Include(x => x.Jenis)
+            .Include(x => x.Jenis).ThenInclude(x=>x!.Rules)
+            .Include(x => x.HptDetails).ThenInclude(x => x.Hpt).ThenInclude(x => x!.Rules)
+            .Include(x => x.Details).ThenInclude(d=>d.Parameter)
             .Include(x => x.Petugas)
+            .AsSplitQuery()
             .ToListAsync();
 
-        var tingkat = await SensusHelper.HitungTingkatAsync(db, rows.Select(x => x.Id).ToList());
-        var evaluation = await SensusHptEvaluation.EvaluateAsync(db,rows.Select(x=>x.Id).ToList());
-        return Ok(rows.Select(x => ToListItem(x, tingkat, evaluation)).ToList());
+        var tingkat = await SensusHelper.HitungTingkatAsync(db, rows.Select(x => x.Id).ToList(),jenisId);
+        var evaluation = await SensusHptEvaluation.EvaluateAsync(db,rows.Select(x=>x.Id).ToList(),jenisId);
+        return Ok(rows.Select(x => ToListItem(ForListScope(x,jenisId), tingkat, evaluation)).ToList());
     }
 
     // Halaman sensus per jenis: sub-layanan RNA (mis. /layanan/rna/sensus-hpt/sensus-ulat-api)
@@ -115,16 +118,21 @@ public partial class SensusController(
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetDetail(long id)
     {
-        var jenisId = await db.SnsHeaders.Where(x => x.Id == id).Select(x => (int?)x.JenisId).FirstOrDefaultAsync();
-        if (jenisId == null) return NotFound(new { message = "Data sensus tidak ditemukan." });
+        var header = await db.SnsHeaders.AsNoTracking().Include(x=>x.HptDetails).FirstOrDefaultAsync(x=>x.Id==id);
+        if (header == null) return NotFound(new { message = "Data sensus tidak ditemukan." });
 
         var ownerCanRead = await db.SnsHeaders.AnyAsync(x => x.Id == id && x.PetugasUserId == SensusHelper.CurrentUserId(User))
             && await permissions.HasPermissionAsync(User, SnsMenu.Mobile, MenuPermission.Create);
-        if (!ownerCanRead && !await CanAny(MenuPermission.Read, SnsMenu.Approval, SnsMenu.Monitoring, SnsMenu.Analisis) &&
-            !await CanJenis(jenisId.Value, MenuPermission.Read))
-            return Forbid();
+        HashSet<int>? visibleHpts = null;
+        if (!ownerCanRead && !await CanAny(MenuPermission.Read, SnsMenu.Approval, SnsMenu.Monitoring, SnsMenu.Analisis))
+        {
+            visibleHpts = new();
+            foreach(var hptId in HeaderHptIds(header))
+                if(await CanJenis(hptId,MenuPermission.Read)) visibleHpts.Add(hptId);
+            if(visibleHpts.Count==0) return Forbid();
+        }
 
-        var detail = await BuildDetail(id);
+        var detail = await BuildDetail(id,visibleHpts);
         return detail == null ? NotFound(new { message = "Data sensus tidak ditemukan." }) : Ok(detail);
     }
 
@@ -142,9 +150,9 @@ public partial class SensusController(
         if (transition.NoteRequired && string.IsNullOrWhiteSpace(note))
             return BadRequest(new { message = "Catatan wajib diisi untuk menolak / meminta revisi." });
 
-        var header = await db.SnsHeaders.FirstOrDefaultAsync(x => x.Id == id);
+        var header = await db.SnsHeaders.Include(x=>x.HptDetails).FirstOrDefaultAsync(x => x.Id == id);
         if (header == null) return NotFound(new { message = "Data sensus tidak ditemukan." });
-        if (!await CanApprove(header.JenisId)) return NoAccess("menyetujui sensus");
+        if (!await CanApproveHeader(header)) return NoAccess("menyetujui sensus");
         if (header.Status != SnsStatus.Submitted)
             return BadRequest(new { message = $"Sensus berstatus {header.Status} tidak dapat diproses lagi." });
 
@@ -162,15 +170,15 @@ public partial class SensusController(
 
         var headers = await db.SnsHeaders
             .Where(x => body.Ids.Contains(x.Id) && x.Status == SnsStatus.Submitted)
+            .Include(x=>x.HptDetails)
             .ToListAsync();
 
         // Hanya sensus yang boleh di-approve user (Approval Sensus atau Approve di menu jenisnya).
-        var allowedJenis = new HashSet<int>();
-        foreach (var jenisId in headers.Select(x => x.JenisId).Distinct())
-            if (await CanApprove(jenisId)) allowedJenis.Add(jenisId);
-
-        if (headers.Count > 0 && allowedJenis.Count == 0) return NoAccess("menyetujui sensus");
-        headers = headers.Where(x => allowedJenis.Contains(x.JenisId)).ToList();
+        var allowed = new List<SnsHeader>();
+        foreach(var header in headers)
+            if(await CanApproveHeader(header)) allowed.Add(header);
+        if(headers.Count>0 && allowed.Count==0) return NoAccess("menyetujui sensus");
+        headers = allowed;
 
         foreach (var header in headers)
             ApplyAction(header, "APPROVE", SnsStatus.Approved, body.Note?.Trim());
@@ -202,16 +210,14 @@ public partial class SensusController(
         var source = PersilReader.Find(sumber);
         if (source == null) return BadRequest(new { message = "Sumber persil tidak dikenal." });
 
-        var rows = await Filter(db.SnsHeaders.AsNoTracking(), jenisId, wilayah, dateFrom, dateTo)
-            .Select(x => new MonitoringRow(
-                x.Status,
-                x.TanggalSensus,
-                x.JenisId,
-                x.Jenis!.Name,
-                x.PetugasUserId,
-                x.Petugas!.Name,
-                x.KodeWilayah ?? "(kosong)"))
-            .ToListAsync();
+        var monitoringHeaders = await Filter(db.SnsHeaders.AsNoTracking(), jenisId, wilayah, dateFrom, dateTo)
+            .Include(x=>x.Jenis).Include(x=>x.Petugas).Include(x=>x.HptDetails).ThenInclude(d=>d.Hpt)
+            .AsSplitQuery().ToListAsync();
+        MonitoringRow Row(SnsHeader x)=>new(x.Status,x.TanggalSensus,x.JenisId??0,x.Jenis?.Name??"Seluruh HPT",
+            x.PetugasUserId,x.Petugas?.Name??"",x.KodeWilayah??"(kosong)");
+        var rows=monitoringHeaders.Select(Row).ToList();
+        var perHpt=monitoringHeaders.SelectMany(SensusParcelHpt.Expand)
+            .Where(x=>jenisId==null||x.JenisId==jenisId).Select(Row).ToList();
 
         int CountOf(string s) => rows.Count(x => x.Status == s);
 
@@ -239,7 +245,7 @@ public partial class SensusController(
             CountOf(SnsStatus.Approved),
             CountOf(SnsStatus.Rejected),
             CountOf(SnsStatus.Revisi),
-            CountBy(rows, x => x.JenisId.ToString(), x => x.JenisName),
+            CountBy(perHpt, x => x.JenisId.ToString(), x => x.JenisName),
             CountBy(rows, x => x.PetugasUserId.ToString(), x => x.PetugasName),
             CountBy(rows, x => x.Wilayah, x => x.Wilayah),
             perHari,
@@ -282,12 +288,15 @@ public partial class SensusController(
                 x.KodeAfdeling,
                 x.TanggalSensus,
                 x.JumlahPokokSampel,
-                x.JumlahPokokTerserang
+                JumlahPokokTerserang=x.HptDetails.Any(d=>d.HptId==jenisId)
+                    ? x.HptDetails.Where(d=>d.HptId==jenisId).Select(d=>d.JumlahSerangan).First()
+                    : x.JumlahPokokTerserang
             })
             .ToListAsync();
 
         var headerIds = headers.Select(x => x.Id).ToList();
-        var evaluations = await SensusHptEvaluation.EvaluateAsync(db,headerIds);
+        var evaluations = await SensusHptEvaluation.EvaluateAsync(db,headerIds,jenisId);
+        var headerLevels = await SensusHelper.HitungTingkatAsync(db,headerIds,jenisId);
         var nilai = indikator == null || headerIds.Count == 0
             ? new Dictionary<long, decimal?>()
             : await db.SnsDetails.AsNoTracking()
@@ -314,6 +323,7 @@ public partial class SensusController(
             {
                 var first = g.First();
                 var rata = Rata(g.Select(x => x.Id));
+                var latestId=g.OrderByDescending(x=>x.TanggalSensus).ThenByDescending(x=>x.Id).First().Id;
                 return new SnsAnalisisPersilDto(
                     first.PersilSumber, first.PersilId, first.PersilKode, first.KodeWilayah, first.KodeAfdeling,
                     g.Count(),
@@ -322,7 +332,7 @@ public partial class SensusController(
                     g.Sum(x => x.JumlahPokokTerserang),
                     Persen(g.Sum(x => x.JumlahPokokTerserang), g.Sum(x => x.JumlahPokokSampel)),
                     rata,
-                    Tingkat(rata), evaluations.GetValueOrDefault(g.OrderByDescending(x=>x.TanggalSensus).ThenByDescending(x=>x.Id).First().Id));
+                    headerLevels.TryGetValue(latestId,out var level)?level.Tingkat:Tingkat(rata), evaluations.GetValueOrDefault(latestId));
             })
             .OrderByDescending(x => Array.IndexOf(SnsTingkat.Urutan, x.Tingkat))
             .ThenByDescending(x => x.RataIndikator ?? 0)
@@ -342,7 +352,7 @@ public partial class SensusController(
         // Sebaran tingkat serangan per sensus.
         var sebaran = SnsTingkat.Urutan.ToDictionary(t => t, _ => 0);
         foreach (var h in headers)
-            sebaran[Tingkat(nilai.GetValueOrDefault(h.Id))]++;
+            sebaran[headerLevels.TryGetValue(h.Id,out var level)?level.Tingkat:Tingkat(nilai.GetValueOrDefault(h.Id))]++;
 
         return Ok(new SnsAnalisisDto(
             jenis.Id,
@@ -383,7 +393,7 @@ public partial class SensusController(
 
     private static IQueryable<SnsHeader> Filter(IQueryable<SnsHeader> query, int? jenisId, string? wilayah, DateOnly? dateFrom, DateOnly? dateTo)
     {
-        if (jenisId != null) query = query.Where(x => x.JenisId == jenisId);
+        if (jenisId != null) query = query.Where(x => x.HptDetails.Any(d=>d.HptId==jenisId) || !x.HptDetails.Any() && x.JenisId == jenisId);
         if (!string.IsNullOrWhiteSpace(wilayah)) query = query.Where(x => x.KodeWilayah == wilayah);
         if (dateFrom != null) query = query.Where(x => x.TanggalSensus >= dateFrom);
         if (dateTo != null) query = query.Where(x => x.TanggalSensus <= dateTo);
@@ -407,12 +417,18 @@ public partial class SensusController(
             .Take(PersilReader.MaxRows)
             .ToList();
 
-        var terakhir = await db.SnsHeaders.AsNoTracking()
+        var recentQuery = db.SnsHeaders.AsNoTracking()
             .Where(x => x.PersilSumber == source.Key && (x.Status == SnsStatus.Approved || x.Status == SnsStatus.Submitted))
-            .Where(x => jenisId == null || x.JenisId == jenisId)
+            .Where(x => wilayah==null || x.KodeWilayah==wilayah);
+        var childDates=await recentQuery.SelectMany(x=>x.HptDetails.Select(d=>new {x.PersilId,JenisId=d.HptId,x.TanggalSensus}))
+            .Where(x=>jenisId==null||x.JenisId==jenisId)
             .GroupBy(x => new { x.PersilId, x.JenisId })
             .Select(g => new { g.Key.PersilId, g.Key.JenisId, Last = g.Max(x => x.TanggalSensus) })
-            .ToDictionaryAsync(x => (x.PersilId, x.JenisId), x => x.Last);
+            .ToListAsync();
+        var legacyDates=await recentQuery.Where(x=>!x.HptDetails.Any() && x.JenisId!=null && (jenisId==null||x.JenisId==jenisId))
+            .GroupBy(x=>new{x.PersilId,JenisId=x.JenisId!.Value})
+            .Select(g=>new{g.Key.PersilId,g.Key.JenisId,Last=g.Max(x=>x.TanggalSensus)}).ToListAsync();
+        var terakhir=childDates.Concat(legacyDates).GroupBy(x=>(x.PersilId,x.JenisId)).ToDictionary(g=>g.Key,g=>g.Max(x=>x.Last));
 
         var batas = today.AddDays(-hari);
 
@@ -460,9 +476,9 @@ public partial class SensusController(
         new(
             x.Id,
             x.SensusNo,
-            x.JenisId,
-            x.Jenis?.Name ?? "",
-            x.Jenis?.Kategori ?? "",
+            x.JenisId ?? 0,
+            x.Jenis?.Name ?? string.Join(", ",x.HptDetails.Select(d=>d.Hpt?.Name ?? d.HptId.ToString())),
+            x.Jenis?.Kategori ?? "HPT",
             x.PersilSumber,
             x.PersilId,
             x.PersilKode,
@@ -478,12 +494,13 @@ public partial class SensusController(
             tingkat.TryGetValue(x.Id, out var t) ? t.Tingkat : SnsTingkat.Kosong,
             x.SubmittedAt,
             x.ApprovedAt,
-            evaluations?.GetValueOrDefault(x.Id),SensusBusinessContext.Dto(x));
+            evaluations?.GetValueOrDefault(x.Id),SensusBusinessContext.Dto(x),SensusParcelHpt.Dtos(x));
 
-    private async Task<SnsDetailDto?> BuildDetail(long id)
+    private async Task<SnsDetailDto?> BuildDetail(long id,HashSet<int>? visibleHpts=null)
     {
         var header = await db.SnsHeaders.AsNoTracking()
             .Include(x => x.Jenis).ThenInclude(x => x!.Rules)
+            .Include(x => x.HptDetails).ThenInclude(x => x.Hpt).ThenInclude(x=>x!.Rules)
             .Include(x => x.Petugas)
             .Include(x => x.ApprovedBy)
             .Include(x => x.Details).ThenInclude(x => x.Parameter)
@@ -493,7 +510,16 @@ public partial class SensusController(
 
         if (header == null) return null;
 
-        var tingkat = await SensusHelper.HitungTingkatAsync(db, new[] { id });
+        var canApprove = header.Status == SnsStatus.Submitted && await CanApproveHeader(header);
+        if(visibleHpts!=null)
+        {
+            header.HptDetails=header.HptDetails.Where(d=>visibleHpts.Contains(d.HptId)).ToList();
+            header.Details=header.Details.Where(d=>d.Parameter!=null && visibleHpts.Contains(d.Parameter.JenisId)).ToList();
+            if(header.JenisId.HasValue && !visibleHpts.Contains(header.JenisId.Value)) {header.JenisId=null;header.Jenis=null;}
+            if(header.HptDetails.Count==1) header=ForListScope(header,header.HptDetails.Single().HptId);
+        }
+
+        var tingkat = new Dictionary<long,(string Tingkat,decimal? Rata)>{{id,SensusParcelHpt.Level(header)}};
 
         var details = header.Details
             .OrderBy(x => x.NoPokok ?? 0).ThenBy(x => x.ParameterId)
@@ -530,8 +556,6 @@ public partial class SensusController(
             .Select(x => new SnsLogDto(x.Id, x.Action, x.FromStatus, x.ToStatus, x.Note, x.User!.Name, x.CreatedAt))
             .ToListAsync();
 
-        var canApprove = header.Status == SnsStatus.Submitted && await CanApprove(header.JenisId);
-
         return new SnsDetailDto(
             ToListItem(header, tingkat, new Dictionary<long,SnsEvaluationDto>{{header.Id,SensusHptEvaluation.Evaluate(header)}}),
             header.Latitude,
@@ -548,7 +572,8 @@ public partial class SensusController(
                 .ToList(),
             logs,
             await CanEditPhotos(header),
-            ownerCanAccessUuid(header) ? header.ClientUuid : null);
+            ownerCanAccessUuid(header) ? header.ClientUuid : null,
+            (await SensusMasterController.QueryJenis(db,activeOnly:false)).Where(k=>HeaderHptIds(header).Contains(k.Id)).ToList());
     }
 
     private bool ownerCanAccessUuid(SnsHeader header) => header.PetugasUserId == SensusHelper.CurrentUserId(User);
@@ -559,6 +584,29 @@ public partial class SensusController(
     private async Task<bool> CanApprove(int jenisId) =>
         await permissions.HasPermissionAsync(User, SnsMenu.Approval, MenuPermission.Approve) ||
         await CanJenis(jenisId, MenuPermission.Approve);
+
+    private static IEnumerable<int> HeaderHptIds(SnsHeader header) => header.HptDetails.Count>0
+        ? header.HptDetails.Select(d=>d.HptId).Distinct()
+        : header.JenisId.HasValue ? new[]{header.JenisId.Value} : Array.Empty<int>();
+
+    private async Task<bool> CanApproveHeader(SnsHeader header)
+    {
+        if(await permissions.HasPermissionAsync(User,SnsMenu.Approval,MenuPermission.Approve)) return true;
+        var ids=HeaderHptIds(header).ToList();
+        if(ids.Count==0) return false;
+        foreach(var id in ids) if(!await CanJenis(id,MenuPermission.Approve)) return false;
+        return true;
+    }
+
+    private static SnsHeader ForListScope(SnsHeader header,int? hptId)
+    {
+        if(hptId==null || header.HptDetails.Count==0) return header;
+        var child=header.HptDetails.FirstOrDefault(d=>d.HptId==hptId);
+        if(child==null) return header;
+        var scoped=SensusParcelHpt.ForHpt(header,child);
+        scoped.HptDetails=new List<SnsHptDetail>{child};
+        return scoped;
+    }
 
     private async Task<bool> CanAny(MenuPermission permission, params string[] menuCodes)
     {

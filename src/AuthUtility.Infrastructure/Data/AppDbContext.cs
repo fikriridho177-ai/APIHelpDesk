@@ -67,6 +67,7 @@ public class AppDbContext : DbContext
     public DbSet<SnsParameter> SnsParameters => Set<SnsParameter>();
     public DbSet<SnsHeader> SnsHeaders => Set<SnsHeader>();
     public DbSet<SnsDetail> SnsDetails => Set<SnsDetail>();
+    public DbSet<SnsHptDetail> SnsHptDetails => Set<SnsHptDetail>();
     public DbSet<SnsFoto> SnsFotos => Set<SnsFoto>();
     public DbSet<SnsLog> SnsLogs => Set<SnsLog>();
 
@@ -432,10 +433,21 @@ public class AppDbContext : DbContext
                 .HasForeignKey(x => x.HeaderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasMany(x => x.HptDetails).WithOne().HasForeignKey(x => x.HeaderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasMany(x => x.Fotos)
                 .WithOne()
                 .HasForeignKey(x => x.HeaderId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SnsHptDetail>(entity =>
+        {
+            entity.ToTable("TrnSnsHptDetail");
+            entity.HasIndex(x => new { x.HeaderId, x.HptId }).IsUnique();
+            entity.HasOne(x => x.Hpt).WithMany().HasForeignKey(x => x.HptId).OnDelete(DeleteBehavior.Restrict);
+            entity.Property(x => x.Persentase).HasPrecision(9, 4);
         });
 
         modelBuilder.Entity<SnsDetail>(entity =>

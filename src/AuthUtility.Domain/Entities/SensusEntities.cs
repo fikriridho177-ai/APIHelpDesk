@@ -125,7 +125,7 @@ public class SnsHeader
     public long Id { get; set; }
     public string? SensusNo { get; set; }
     public Guid ClientUuid { get; set; }
-    public int JenisId { get; set; }
+    public int? JenisId { get; set; }
     public SnsJenis? Jenis { get; set; }
     // Lokasi = persil dari MyPAD / RSUPPKB (lihat PersilReader). Kode, wilayah & afdeling disalin saat sensus dikirim
     // supaya daftar / analisis tidak perlu membaca database lain.
@@ -156,7 +156,21 @@ public class SnsHeader
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public ICollection<SnsDetail> Details { get; set; } = new List<SnsDetail>();
+    public ICollection<SnsHptDetail> HptDetails { get; set; } = new List<SnsHptDetail>();
     public ICollection<SnsFoto> Fotos { get; set; } = new List<SnsFoto>();
+}
+
+// One generic observation per HPT under the parcel transaction.
+public class SnsHptDetail
+{
+    public long Id { get; set; }
+    public long HeaderId { get; set; }
+    public int HptId { get; set; }
+    public SnsJenis? Hpt { get; set; }
+    public int JumlahSerangan { get; set; }
+    public decimal? Persentase { get; set; }
+    // Immutable-at-submit audit snapshot; reports may separately evaluate current master rules.
+    public string? HasilEvaluasi { get; set; }
 }
 
 public class SnsDetail

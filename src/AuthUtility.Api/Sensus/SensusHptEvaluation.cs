@@ -63,6 +63,18 @@ public static class SensusHptEvaluation
     public static string Describe(SnsHptRule r)=>$"{(r.ConditionParameterCode==null?"":$"{r.ConditionParameterCode} {r.ConditionOperator} {r.ConditionValue}: ")}{r.Aggregation} {r.ParameterCode} {r.Operator} {r.ThresholdValue.ToString(CultureInfo.InvariantCulture)} {r.ThresholdUnit}";
     public static SnsEvaluationDto Evaluate(SnsHeader h)
     {
+        if(h.HptDetails.Count>0)
+        {
+            // HPT counts overlap; evaluate each observation against its own master rules.
+            // Unknown results rank above monitoring so missing data cannot become green.
+            return h.HptDetails.OrderBy(d=>d.HptId)
+                .Select(d=>EvaluateSingle(SensusParcelHpt.ForHpt(h,d)))
+                .OrderByDescending(e=>e.PerluPengendalian==true?2:e.PerluPengendalian==null?1:0).First();
+        }
+        return EvaluateSingle(h);
+    }
+    private static SnsEvaluationDto EvaluateSingle(SnsHeader h)
+    {
         var rules=h.Jenis?.Rules.Where(r=>r.Active).OrderBy(r=>r.SortOrder).ThenBy(r=>r.Id).ToList()??new();
         if(rules.Count==0)return new("NONE",null,null,null,"Aturan master belum ditetapkan.",Color:"gray");
         var description=string.Join("; ",rules.Select(Describe));var unknown=false;SnsHptRule? fallback=null;decimal? last=null;
@@ -85,10 +97,15 @@ public static class SensusHptEvaluation
         return new("MASTER_RULE",false,last,fallback.ThresholdUnit,description,fallback.ElseMessage,"MONITORING",fallback.ElseColor,fallback.Id);
     }
     public static string? RuleJson(SnsJenis kind)=>kind.Rules.Any(r=>r.Active)?JsonSerializer.Serialize(new{description=string.Join("; ",kind.Rules.Where(r=>r.Active).OrderBy(r=>r.SortOrder).ThenBy(r=>r.Id).Select(Describe))}):null;
-    public static async Task<Dictionary<long,SnsEvaluationDto>> EvaluateAsync(AppDbContext db,ICollection<long> ids)
+    public static async Task<Dictionary<long,SnsEvaluationDto>> EvaluateAsync(AppDbContext db,ICollection<long> ids,int? hptId=null)
     {
         if(ids.Count==0)return new();
-        var headers=await db.SnsHeaders.AsNoTracking().Where(h=>ids.Contains(h.Id)).Include(h=>h.Jenis).ThenInclude(k=>k!.Rules).Include(h=>h.Details).ThenInclude(d=>d.Parameter).AsSplitQuery().ToListAsync();
-        return headers.ToDictionary(h=>h.Id,Evaluate);
+        var headers=await db.SnsHeaders.AsNoTracking().Where(h=>ids.Contains(h.Id))
+            .Include(h=>h.Jenis).ThenInclude(k=>k!.Rules)
+            .Include(h=>h.HptDetails).ThenInclude(d=>d.Hpt).ThenInclude(k=>k!.Rules)
+            .Include(h=>h.Details).ThenInclude(d=>d.Parameter).AsSplitQuery().ToListAsync();
+        if(hptId==null)return headers.ToDictionary(h=>h.Id,Evaluate);
+        return headers.SelectMany(SensusParcelHpt.Expand).Where(h=>h.JenisId==hptId)
+            .ToDictionary(h=>h.Id,EvaluateSingle);
     }
 }

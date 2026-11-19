@@ -103,7 +103,11 @@ public partial class SensusController
         dateFrom ??= new DateOnly(today.Year, today.Month, 1).AddMonths(-5);
         var result = await BuildMonitoring(jenisId, wilayah, dateFrom, dateTo, hariTerlambat, sumber);
         if (result is not OkObjectResult { Value: SnsMonitoringDto monitoring }) return result;
-        var headers = await Filter(db.SnsHeaders.AsNoTracking(), jenisId, wilayah, dateFrom, dateTo).Include(x => x.Jenis).ToListAsync();
+        var headers = await Filter(db.SnsHeaders.AsNoTracking(), jenisId, wilayah, dateFrom, dateTo)
+            .Include(x => x.Jenis).ThenInclude(x=>x!.Rules)
+            .Include(x=>x.HptDetails).ThenInclude(d=>d.Hpt).ThenInclude(k=>k!.Rules)
+            .Include(x=>x.Details).ThenInclude(d=>d.Parameter).AsSplitQuery().ToListAsync();
+        if(jenisId!=null) headers=headers.Select(h=>ForListScope(h,jenisId)).ToList();
         var approvedIds = headers.Where(x => x.Status == SnsStatus.Approved).Select(x => x.Id).ToList();
         var tingkat = await SensusHelper.HitungTingkatAsync(db, approvedIds);
         return Ok(SensusDashboardCalculator.Build(monitoring, headers, tingkat));

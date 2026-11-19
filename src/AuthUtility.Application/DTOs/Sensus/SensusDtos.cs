@@ -94,7 +94,8 @@ public record SnsListItemDto(
     DateTime SubmittedAt,
     DateTime? ApprovedAt,
     SnsEvaluationDto? Evaluation = null,
-    SnsBusinessContextDto? Business = null
+    SnsBusinessContextDto? Business = null,
+    List<SnsHptDetailDto>? HptDetails = null
 );
 
 public record SnsDetailValueDto(
@@ -125,6 +126,16 @@ public record SnsFotoDto(long Id, string FileUrl, string? Keterangan, decimal? L
 public record SnsEvaluationDto(string EvaluationType, bool? PerluPengendalian, decimal? Nilai, string? Satuan, string Description, string? Message = null,
     string? ResultCode = null,string? Color = null,int? RuleId = null);
 
+public record SnsHptDetailDto(int HptId, string HptName, string ReportGroup, int JumlahSerangan, decimal? Persentase, SnsEvaluationDto HasilEvaluasi, SnsEvaluationDto? CurrentEvaluation = null, string Tingkat = "-");
+
+public class SnsHptInput
+{
+    [System.Text.Json.Serialization.JsonRequired]
+    public int HptId { get; set; }
+    [System.Text.Json.Serialization.JsonRequired]
+    public int JumlahSerangan { get; set; }
+}
+
 public record SnsLogDto(long Id, string Action, string? FromStatus, string? ToStatus, string? Note, string UserName, DateTime CreatedAt);
 
 public record SnsDetailDto(
@@ -141,7 +152,8 @@ public record SnsDetailDto(
     List<SnsFotoDto> Fotos,
     List<SnsLogDto> Logs,
     bool CanEditPhotos = false,
-    Guid? ClientUuid = null
+    Guid? ClientUuid = null,
+    List<SnsJenisDto>? HptMasters = null
 );
 
 public class SnsActionRequest
@@ -248,6 +260,8 @@ public class SnsMobileFotoRequest
 
 public class SnsMobileSubmitRequest
 {
+    // Null retains compatibility with Android single-HPT payloads. Empty is not a completed parcel census.
+    public List<SnsHptInput>? HptDetails { get; set; }
     public SnsBusinessInput? Business { get; set; }
     public Guid ClientUuid { get; set; }
     public int? JenisId { get; set; }
