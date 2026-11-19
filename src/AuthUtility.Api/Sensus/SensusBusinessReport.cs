@@ -52,7 +52,7 @@ public static class SensusBusinessReportQuery
     {
         var(from,to)=Period(f);var q=db.SnsHeaders.AsNoTracking().Where(h=>h.Status==SnsStatus.Approved&&h.TanggalSensus>=from&&h.TanggalSensus<=to);
         if(!string.IsNullOrWhiteSpace(f.Wilayah))q=q.Where(h=>h.KodeWilayah==f.Wilayah.Trim());
-        if(f.JenisId!=null)q=q.Where(h=>h.JenisId==f.JenisId);
+        if(f.JenisId!=null)q=q.Where(h=>h.HptDetails.Any(d=>d.HptId==f.JenisId)||!h.HptDetails.Any()&&h.JenisId==f.JenisId);
         if(f.JenisForm!=null)q=q.Where(h=>h.JenisForm==f.JenisForm);
         var land=SensusBusinessContext.NormalizeLand(f.StatusLahan);
         if(land=="BELUM_DIKETAHUI")q=q.Where(h=>h.StatusLahan==null||h.StatusLahan=="");
@@ -63,9 +63,11 @@ public static class SensusBusinessReportQuery
     {
         var q=ApprovedQuery(db,filter);
         if(await q.CountAsync(ct)>MaxRecords)return null;
-        var headers=await q.Include(h=>h.Jenis).ThenInclude(k=>k!.Rules).Include(h=>h.Details).ThenInclude(d=>d.Parameter)
+        var headers=await q.Include(h=>h.Jenis).ThenInclude(k=>k!.Rules)
+            .Include(h=>h.HptDetails).ThenInclude(d=>d.Hpt).ThenInclude(k=>k!.Rules)
+            .Include(h=>h.Details).ThenInclude(d=>d.Parameter)
             .Include(h=>h.Petugas).Include(h=>h.ApprovedBy).AsSplitQuery().ToListAsync(ct);
-        var kinds=await db.SnsJenis.AsNoTracking().Where(k=>k.Active||q.Any(h=>h.JenisId==k.Id)).OrderBy(k=>k.ReportGroup).ThenBy(k=>k.Name).ThenBy(k=>k.Id)
+        var kinds=await db.SnsJenis.AsNoTracking().Where(k=>k.Active||q.Any(h=>h.HptDetails.Any(d=>d.HptId==k.Id)||!h.HptDetails.Any()&&h.JenisId==k.Id)).OrderBy(k=>k.ReportGroup).ThenBy(k=>k.Name).ThenBy(k=>k.Id)
             .Select(k=>new SnsReportKind(k.Id,k.Code,k.Name,k.ReportGroup)).ToListAsync(ct);
         return Build(headers,kinds,filter);
     }
@@ -74,10 +76,12 @@ public static class SensusBusinessReportQuery
         var(from,to)=Period(filter);var land=SensusBusinessContext.NormalizeLand(filter.StatusLahan);
         var approved=source.Where(h=>h.Status==SnsStatus.Approved&&h.TanggalSensus>=from&&h.TanggalSensus<=to)
             .Where(h=>string.IsNullOrWhiteSpace(filter.Wilayah)||h.KodeWilayah==filter.Wilayah.Trim())
-            .Where(h=>filter.JenisId==null||h.JenisId==filter.JenisId).Where(h=>filter.JenisForm==null||h.JenisForm==filter.JenisForm)
+            .Where(h=>filter.JenisId==null||h.HptDetails.Any(d=>d.HptId==filter.JenisId)||h.HptDetails.Count==0&&h.JenisId==filter.JenisId).Where(h=>filter.JenisForm==null||h.JenisForm==filter.JenisForm)
             .Where(h=>land==null||(land=="BELUM_DIKETAHUI"?string.IsNullOrEmpty(h.StatusLahan):h.StatusLahan==land)).ToList();
         // One latest approved observation per HPT/parcel/form/land/month. No double-counted rechecks.
-        var selected=approved.GroupBy(h=>new{h.PersilSumber,h.PersilId,h.JenisId,h.JenisForm,h.StatusLahan,Month=h.TanggalSensus.ToString("yyyy-MM")})
+        var selected=approved.SelectMany(SensusParcelHpt.Expand)
+            .Where(h=>filter.JenisId==null||h.JenisId==filter.JenisId)
+            .GroupBy(h=>new{h.PersilSumber,h.PersilId,h.JenisId,h.JenisForm,h.StatusLahan,Month=h.TanggalSensus.ToString("yyyy-MM")})
             .Select(g=>g.OrderByDescending(h=>h.TanggalSensus).ThenByDescending(h=>h.Id).First()).ToList();
         var observations=selected.Select(h=>
         {
@@ -85,7 +89,7 @@ public static class SensusBusinessReportQuery
                 .Select(p=>new SnsReportParameter(p.Code,p.Name,p.Satuan,p.TipeData)).ToList();
             var details=h.Details.Where(d=>d.Parameter!=null).GroupBy(d=>d.NoPokok??0).OrderBy(g=>g.Key)
                 .Select(g=>new SnsReportSample(g.Key,g.GroupBy(d=>d.Parameter!.Code).ToDictionary(p=>p.Key,p=>(object?)p.Last().NilaiAngka??p.Last().NilaiTeks))).ToList();
-            return new SnsReportObservation(h.Id,h.SensusNo,h.TanggalSensus.ToString("yyyy-MM"),h.TanggalSensus,h.JenisId,h.Jenis?.Name??"",h.Jenis?.ReportGroup??"LAINNYA",
+            return new SnsReportObservation(h.Id,h.SensusNo,h.TanggalSensus.ToString("yyyy-MM"),h.TanggalSensus,h.JenisId??0,h.Jenis?.Name??"",h.Jenis?.ReportGroup??"LAINNYA",
                 h.PersilSumber,h.PersilId,h.PersilKode,h.KodeWilayah,h.KodeAfdeling,string.IsNullOrWhiteSpace(h.StatusLahan)?"BELUM_DIKETAHUI":h.StatusLahan,h.JenisForm,h.JumlahPokokSampel,h.JumlahPokokTerserang,
                 Percent(h.JumlahPokokTerserang,h.JumlahPokokSampel),SensusBusinessContext.Dto(h),SensusHptEvaluation.Evaluate(h),h.Petugas?.Name??"",h.ApprovedBy?.Name,h.ApprovedAt,parameters,details);
         }).OrderBy(o=>o.Periode).ThenBy(o=>o.Wilayah).ThenBy(o=>o.PersilKode).ThenBy(o=>o.PersilSumber).ThenBy(o=>o.PersilId)

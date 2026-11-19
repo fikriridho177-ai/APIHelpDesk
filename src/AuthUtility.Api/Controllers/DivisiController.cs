@@ -42,21 +42,21 @@ public class DivisiController(AppDbContext db, IPermissionService permissions) :
             j => j.Id,
             j => j.Parameters.Where(p => p.IsIndikator && p.Active).OrderBy(p => p.Id).FirstOrDefault());
 
-        var headers = await db.SnsHeaders.AsNoTracking()
+        var parcelHeaders = await db.SnsHeaders.AsNoTracking()
             .Where(h => h.TanggalSensus >= dateFrom && h.TanggalSensus <= today)
-            .Select(h => new RnaHeaderRow(h.Id, h.JenisId, h.Status, h.TanggalSensus, h.PersilSumber, h.PersilId))
+            .Select(h => new {h.Id,h.JenisId,h.Status,h.TanggalSensus,h.PersilSumber,h.PersilId,HptIds=h.HptDetails.Select(d=>d.HptId).ToList()})
             .ToListAsync();
+        var headers=parcelHeaders.SelectMany(h=>h.HptIds.Count>0?h.HptIds:h.JenisId.HasValue?new List<int>{h.JenisId.Value}:new List<int>(),
+            (h,id)=>new RnaHeaderRow(h.Id,id,h.Status,h.TanggalSensus,h.PersilSumber,h.PersilId)).ToList();
 
         var parameterIds = indikator.Values.Where(p => p != null).Select(p => p!.Id).ToList();
         var approvedIds = headers.Where(h => h.Status == SnsStatus.Approved).Select(h => h.Id).ToList();
 
-        var nilai = parameterIds.Count == 0 || approvedIds.Count == 0
-            ? new Dictionary<long, decimal?>()
-            : await db.SnsDetails.AsNoTracking()
+        var nilai = await db.SnsDetails.AsNoTracking()
                 .Where(d => approvedIds.Contains(d.HeaderId) && parameterIds.Contains(d.ParameterId) && d.NilaiAngka != null)
-                .GroupBy(d => d.HeaderId)
-                .Select(g => new { g.Key, Rata = g.Average(x => x.NilaiAngka) })
-                .ToDictionaryAsync(x => x.Key, x => x.Rata);
+                .GroupBy(d => new {d.HeaderId,d.ParameterId})
+                .Select(g => new { g.Key.HeaderId,g.Key.ParameterId, Rata = g.Average(x => x.NilaiAngka) })
+                .ToListAsync();
 
         var info = jenisList.Select(j =>
         {
@@ -69,7 +69,8 @@ public class DivisiController(AppDbContext db, IPermissionService permissions) :
         {
             dateFrom,
             dateTo = today,
-            jenis = RnaRingkasanCalculator.Build(info, headers, nilai),
+            jenis = info.SelectMany(j=>RnaRingkasanCalculator.Build(new[]{j},headers,
+                nilai.Where(v=>v.ParameterId==indikator[j.Id]?.Id).ToDictionary(v=>v.HeaderId,v=>v.Rata))).ToList(),
         });
     }
 }

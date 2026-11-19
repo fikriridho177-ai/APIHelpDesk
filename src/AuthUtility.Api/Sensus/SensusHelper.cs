@@ -80,13 +80,14 @@ public static class SensusHelper
 
     // Rata-rata parameter indikator per sensus -> tingkat serangan (yang terberat dari semua indikator).
     public static async Task<Dictionary<long, (string Tingkat, decimal? Rata)>> HitungTingkatAsync(
-        AppDbContext db, ICollection<long> headerIds)
+        AppDbContext db, ICollection<long> headerIds, int? hptId=null)
     {
         if (headerIds.Count == 0) return new();
 
         var averages = await db.SnsDetails
             .AsNoTracking()
             .Where(d => headerIds.Contains(d.HeaderId) && d.Parameter!.IsIndikator && d.NilaiAngka != null)
+            .Where(d => hptId==null || d.Parameter!.JenisId==hptId)
             .GroupBy(d => new { d.HeaderId, d.ParameterId, d.Parameter!.AmbangSedang, d.Parameter.AmbangBerat })
             .Select(g => new
             {
@@ -98,7 +99,7 @@ public static class SensusHelper
             })
             .ToListAsync();
 
-        return averages
+        var result = averages
             .GroupBy(x => x.HeaderId)
             .ToDictionary(
                 g => g.Key,
@@ -106,5 +107,18 @@ public static class SensusHelper
                     SnsTingkat.Max(g.Select(x => SnsTingkat.Hitung(x.Rata, x.AmbangSedang, x.AmbangBerat))),
                     // Rata indikator utama = indikator dengan Id terkecil (paling awal dibuat).
                     g.OrderBy(x => x.ParameterId).First().Rata));
+        var parcels=await db.SnsHeaders.AsNoTracking().Where(h=>headerIds.Contains(h.Id) && h.HptDetails.Any())
+            .Include(h=>h.HptDetails).ThenInclude(d=>d.Hpt).ThenInclude(k=>k!.Rules)
+            .Include(h=>h.Details).ThenInclude(d=>d.Parameter).AsSplitQuery().ToListAsync();
+        foreach(var parcel in parcels)
+        {
+            if(hptId==null) result[parcel.Id]=SensusParcelHpt.Level(parcel);
+            else
+            {
+                var child=parcel.HptDetails.FirstOrDefault(d=>d.HptId==hptId);
+                if(child!=null) result[parcel.Id]=SensusParcelHpt.Level(SensusParcelHpt.ForHpt(parcel,child));
+            }
+        }
+        return result;
     }
 }
