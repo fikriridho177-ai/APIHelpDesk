@@ -100,6 +100,17 @@ builder.Services.AddSingleton<MqttBridgeService>();
 builder.Services.AddSingleton<IIotMqttPublisher>(sp => sp.GetRequiredService<MqttBridgeService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttBridgeService>());
 
+// Beacon discovery dari ESP32 yang belum punya credential API. Registry
+// disimpan di memori dan dibatasi TTL agar endpoint anonim tidak menulis DB.
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<IotDiscoveryRegistry>();
+
+// Turunkan Online -> Stale -> Offline saat heartbeat berhenti, karena
+// broker bisa tidak pernah mengirim LWT (bridge mati / perangkat hilang).
+builder.Services.Configure<IotDeviceStatusSweepOptions>(
+    builder.Configuration.GetSection("IoT:StatusSweep"));
+builder.Services.AddHostedService<IotDeviceStatusSweepService>();
+
 // QC module helpers (Api/Qc). Number generator, status engine, approval flow config.
 builder.Services.AddScoped<QcNumberGenerator>();
 builder.Services.AddScoped<QcStatusEngine>();

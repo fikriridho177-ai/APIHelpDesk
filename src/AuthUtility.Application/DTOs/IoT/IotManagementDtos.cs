@@ -22,6 +22,7 @@ public sealed record IotDeviceDto
     public int? LastRssi { get; init; }
     public long? LastUptimeSeconds { get; init; }
     public double? LastBatteryVolt { get; init; }
+    public JsonElement? Capabilities { get; init; }
 }
 
 public sealed record IotDeviceProvisionRequest
@@ -59,7 +60,42 @@ public sealed record IotDeviceHeartbeatRequest
     public string? IpAddress { get; init; }
     public int? Rssi { get; init; }
     public long? UptimeSeconds { get; init; }
+    public string? MacAddress { get; init; }
+    public string? ChipId { get; init; }
+    public string? ChipModel { get; init; }
+    public int? ChipRevision { get; init; }
     public Dictionary<string, JsonElement>? Capabilities { get; init; }
+    public List<IotHardwareSensorDto>? Sensors { get; init; }
+}
+
+public sealed record IotHardwareSensorDto
+{
+    public string Key { get; init; } = "";
+    public string Label { get; init; } = "";
+    public string Interface { get; init; } = "";
+    public string Pins { get; init; } = "";
+    public string Status { get; init; } = "";
+    public string? Detail { get; init; }
+    public JsonElement? Value { get; init; }
+}
+
+public sealed record IotDeviceDiscoveryRequest
+{
+    public string DeviceId { get; init; } = "";
+    public string? DeviceType { get; init; }
+    public string? Platform { get; init; }
+    public string? BoardType { get; init; }
+    public string? BoardRevision { get; init; }
+    public string FirmwareVersion { get; init; } = "";
+    public string? IpAddress { get; init; }
+    public int? Rssi { get; init; }
+    public long? UptimeSeconds { get; init; }
+    public string? MacAddress { get; init; }
+    public string? ChipId { get; init; }
+    public string? ChipModel { get; init; }
+    public int? ChipRevision { get; init; }
+    public Dictionary<string, JsonElement>? Capabilities { get; init; }
+    public List<IotHardwareSensorDto>? Sensors { get; init; }
 }
 
 public sealed record IotDeviceHeartbeatResponse

@@ -5,6 +5,7 @@ using AuthUtility.Api.IoT;
 using AuthUtility.Application.DTOs.IoT;
 using AuthUtility.Domain.Entities;
 using AuthUtility.Infrastructure.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -16,11 +17,42 @@ namespace AuthUtility.Api.Controllers;
 public sealed class IotAgentController(
     AppDbContext db,
     IIotDeviceCredentialService credentials,
+    IotDiscoveryRegistry discoveries,
     IOptions<IotDeviceOptions> options,
     ILogger<IotAgentController> logger,
     IotFirmwareService? firmware = null
 ) : ControllerBase
 {
+    [HttpPost("discover")]
+    [AllowAnonymous]
+    [RequestSizeLimit(8 * 1024)]
+    public IActionResult Discover([FromBody] IotDeviceDiscoveryRequest request)
+    {
+        var sourceIp = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var result = discoveries.Announce(request, sourceIp);
+
+        if (result.Kind == IotDiscoveryResultKind.Invalid)
+            return BadRequest(new { message = "Payload discovery tidak valid." });
+
+        if (result.Kind == IotDiscoveryResultKind.RateLimited)
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                message = "Discovery dibatasi; coba lagi nanti."
+            });
+
+        logger.LogInformation(
+            "Discovery beacon diterima dari device {DeviceId} ({SourceIp}), status {Status}.",
+            result.Device?.DeviceId,
+            sourceIp,
+            result.Kind);
+
+        return Accepted(new
+        {
+            status = "pending",
+            receivedAt = DateTimeOffset.UtcNow
+        });
+    }
+
     [HttpPost("heartbeat")]
     public async Task<IActionResult> Heartbeat([FromBody] IotDeviceHeartbeatRequest request)
     {
@@ -57,6 +89,21 @@ public sealed class IotAgentController(
                 HttpContext.RequestAborted);
 
         UpdateLastSeen(device, request.DeviceTimestamp, request.FirmwareVersion, request.IpAddress, request.Rssi, request.UptimeSeconds, receivedAt);
+        device.CapabilitiesJson = IotHardwareSnapshot.CreateJson(
+            request.MacAddress,
+            request.ChipId,
+            request.ChipModel,
+            request.ChipRevision,
+            request.DeviceType,
+            request.Platform,
+            request.BoardType,
+            device.BoardRevision,
+            request.FirmwareVersion,
+            request.IpAddress,
+            request.Rssi,
+            request.UptimeSeconds,
+            request.Capabilities,
+            request.Sensors);
 
         var confirmingJob = await db.IotOtaJobs
             .Include(x => x.FirmwarePackage)

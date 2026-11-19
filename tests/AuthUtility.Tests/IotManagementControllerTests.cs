@@ -207,6 +207,7 @@ public sealed class IotManagementControllerTests
         var agent = new IotAgentController(
             db,
             credentials,
+            new IotDiscoveryRegistry(TimeProvider.System),
             Options.Create(new IotDeviceOptions()),
             NullLogger<IotAgentController>.Instance);
         agent.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
@@ -346,7 +347,7 @@ public sealed class IotManagementControllerTests
             await File.WriteAllBytesAsync(Path.Combine(root, package.StoragePath), new byte[] { 1, 2, 3 });
 
             var service = new IotFirmwareService(db, new IotFirmwareOptions { StoragePath = root });
-            var agent = new IotAgentController(db, credentials, Options.Create(new IotDeviceOptions()), NullLogger<IotAgentController>.Instance, service);
+            var agent = new IotAgentController(db, credentials, new IotDiscoveryRegistry(TimeProvider.System), Options.Create(new IotDeviceOptions()), NullLogger<IotAgentController>.Instance, service);
             agent.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
             agent.Request.Headers["X-Device-Key"] = firstMaterial.PlaintextKey;
 
@@ -384,6 +385,7 @@ public sealed class IotManagementControllerTests
             credentials,
             firmware,
             new FakeMqttPublisher(),
+            new IotDiscoveryRegistry(TimeProvider.System),
             new ConfigurationBuilder().Build(),
             NullLogger<IotManagementController>.Instance);
         controller.ControllerContext = new ControllerContext

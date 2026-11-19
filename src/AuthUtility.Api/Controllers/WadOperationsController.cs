@@ -41,6 +41,8 @@ public class WadOperationsController(
         [FromQuery] string? statusOperasi,
         [FromQuery] string? search,
         [FromQuery] bool? perluPerhatian,
+        [FromQuery] DateOnly? dari,
+        [FromQuery] DateOnly? sampai,
         CancellationToken ct)
     {
         if (!await HasPermission(PengamatanMenu, MenuPermission.Read)) return Forbid();
@@ -66,12 +68,37 @@ public class WadOperationsController(
             .ThenBy(x => x.KodeAset)
             .ToListAsync(ct);
 
-        var latestLogs = await db.WadOverflowLogs
-            .FromSqlRaw("""
+        var latestLogSql = (dari.HasValue, sampai.HasValue) switch
+        {
+            (true, true) => """
+                SELECT DISTINCT ON (kode_aset) *
+                FROM trx_wad_log_overflow
+                WHERE tanggal_log >= {0} AND tanggal_log <= {1}
+                ORDER BY kode_aset, tanggal_log DESC, id DESC
+                """,
+            (true, false) => """
+                SELECT DISTINCT ON (kode_aset) *
+                FROM trx_wad_log_overflow
+                WHERE tanggal_log >= {0}
+                ORDER BY kode_aset, tanggal_log DESC, id DESC
+                """,
+            (false, true) => """
+                SELECT DISTINCT ON (kode_aset) *
+                FROM trx_wad_log_overflow
+                WHERE tanggal_log <= {0}
+                ORDER BY kode_aset, tanggal_log DESC, id DESC
+                """,
+            _ => """
                 SELECT DISTINCT ON (kode_aset) *
                 FROM trx_wad_log_overflow
                 ORDER BY kode_aset, tanggal_log DESC, id DESC
-                """)
+                """,
+        };
+        var latestLogDates = new List<object>();
+        if (dari.HasValue) latestLogDates.Add(dari.Value);
+        if (sampai.HasValue) latestLogDates.Add(sampai.Value);
+        var latestLogs = await db.WadOverflowLogs
+            .FromSqlRaw(latestLogSql, latestLogDates.ToArray())
             .AsNoTracking()
             .ToListAsync(ct);
         var latestByKode = latestLogs.ToDictionary(x => x.KodeAset, StringComparer.OrdinalIgnoreCase);
@@ -130,6 +157,8 @@ public class WadOperationsController(
                 WadHydrologyReader.ToValue(building.RefTmakLokasi, tmakValues, "cm"),
                 WadHydrologyReader.ToValue(building.RefTpmatLokasi, tmatValues, "cm"),
                 rainByWilayah.GetValueOrDefault(building.Wilayah) ?? new WadAirRainValue(null, null, null, 0),
+                log?.PetugasNama,
+                log?.CreatedAt,
                 photoId != null,
                 photoId);
         }).ToList();

@@ -19,6 +19,7 @@ public sealed class IotManagementController(
     IIotDeviceCredentialService credentials,
     IotFirmwareService firmware,
     IIotMqttPublisher mqttPublisher,
+    IotDiscoveryRegistry discoveries,
     IConfiguration configuration,
     ILogger<IotManagementController> logger
 ) : ControllerBase
@@ -36,6 +37,25 @@ public sealed class IotManagementController(
         return Ok(devices.Select(ToDeviceDto));
     }
 
+    [HttpGet("discoveries")]
+    public async Task<IActionResult> ListDiscoveries()
+    {
+        if (!await HasAccess(MenuPermission.Read))
+            return Forbid();
+
+        var candidates = discoveries.Snapshot();
+        if (candidates.Count == 0)
+            return Ok(Array.Empty<IotDiscoveredDevice>());
+
+        var registeredDeviceIds = await db.IotDeviceAgents
+            .AsNoTracking()
+            .Select(x => x.DeviceId)
+            .ToListAsync(HttpContext.RequestAborted);
+        var registered = new HashSet<string>(registeredDeviceIds, StringComparer.OrdinalIgnoreCase);
+
+        return Ok(candidates.Where(entry => !registered.Contains(entry.DeviceId)));
+    }
+
     [HttpPost("devices")]
     public async Task<IActionResult> ProvisionDevice([FromBody] IotDeviceProvisionRequest request)
     {
@@ -50,8 +70,16 @@ public sealed class IotManagementController(
         if (exists)
             return Conflict(new { message = "deviceId sudah terdaftar." });
 
+        var discovered = discoveries.Find(deviceId);
+        var boardType = !string.IsNullOrWhiteSpace(request.BoardType)
+            ? request.BoardType.Trim()
+            : discovered?.BoardType ?? "";
+        var boardRevision = !string.IsNullOrWhiteSpace(request.BoardRevision)
+            ? request.BoardRevision.Trim()
+            : discovered?.BoardRevision ?? "";
+
         var now = DateTimeOffset.UtcNow;
-        var hardware = HardwareIdentityForBoard(request.BoardType);
+        var hardware = HardwareIdentityForBoard(boardType);
         var device = new IotDeviceAgent
         {
             Id = Guid.NewGuid(),
@@ -61,8 +89,8 @@ public sealed class IotManagementController(
                 ?? (string.IsNullOrWhiteSpace(request.DeviceType) ? "ESP8266" : request.DeviceType.Trim()),
             Platform = hardware?.Platform
                 ?? (string.IsNullOrWhiteSpace(request.Platform) ? "ESP8266" : request.Platform.Trim()),
-            BoardType = request.BoardType.Trim(),
-            BoardRevision = request.BoardRevision.Trim(),
+            BoardType = boardType,
+            BoardRevision = boardRevision,
             Location = request.Location.Trim(),
             Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
             // Perangkat baru harus bisa melakukan heartbeat pertama. Status
@@ -70,6 +98,7 @@ public sealed class IotManagementController(
             // provisioning sendiri bukan tindakan disable.
             Status = IotDeviceStatus.Offline,
             IsActive = true,
+            CapabilitiesJson = discovered?.Capabilities.GetRawText(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -94,8 +123,13 @@ public sealed class IotManagementController(
             DesiredStatus = IotConfigurationStatus.Applied,
             DesiredUpdatedAt = now
         });
-        AddActivity(device.Id, "device", $"Perangkat {device.Name} diprovisioning.");
+        AddActivity(device.Id, "device", discovered is null
+            ? $"Perangkat {device.Name} diprovisioning."
+            : $"Perangkat {device.Name} diprovisioning dari beacon discovery.");
         await db.SaveChangesAsync(HttpContext.RequestAborted);
+
+        if (discovered is not null)
+            discoveries.Remove(deviceId);
 
         var response = new IotDeviceProvisionResponse(ToDeviceDto(device), material.PlaintextKey);
         return CreatedAtAction(nameof(GetDevice), new { deviceId = device.DeviceId }, response);
@@ -748,7 +782,8 @@ public sealed class IotManagementController(
         LastIpAddress = x.LastIpAddress,
         LastRssi = x.LastRssi,
         LastUptimeSeconds = x.LastUptimeSeconds,
-        LastBatteryVolt = x.LastBatteryVolt
+        LastBatteryVolt = x.LastBatteryVolt,
+        Capabilities = ParseJsonElementOrNull(x.CapabilitiesJson)
     };
 
     private static IotConfigurationDto ToConfigurationDto(IotDeviceConfiguration x) => new()
@@ -844,5 +879,21 @@ public sealed class IotManagementController(
     {
         using var document = JsonDocument.Parse(json);
         return document.RootElement.Clone();
+    }
+
+    private static JsonElement? ParseJsonElementOrNull(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.Clone();
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

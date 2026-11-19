@@ -216,6 +216,7 @@ public sealed class IotAgentControllerTests
         var controller = new IotAgentController(
             db,
             service,
+            new IotDiscoveryRegistry(TimeProvider.System),
             Options.Create(options ?? new IotDeviceOptions()),
             NullLogger<IotAgentController>.Instance);
         controller.ControllerContext = new ControllerContext

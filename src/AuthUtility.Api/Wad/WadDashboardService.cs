@@ -98,6 +98,23 @@ public static class WadDashboardService
             .Select(x => x.Key)
             .FirstOrDefaultAsync(ct);
 
+        var todayWib = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        var latestManualDate = await db.WadOverflowLogs.AsNoTracking()
+            .OrderByDescending(x => x.TanggalLog)
+            .Select(x => (DateOnly?)x.TanggalLog)
+            .FirstOrDefaultAsync(ct);
+        var officerWindow = (latestManualDate ?? todayWib).AddDays(-29);
+        var recentManualRows = await db.WadOverflowLogs.AsNoTracking()
+            .Where(x => x.TanggalLog >= officerWindow)
+            .Select(x => new { x.TanggalLog, x.PetugasNama })
+            .ToListAsync(ct);
+        var activeOfficers = recentManualRows
+            .Select(x => x.PetugasNama?.Trim())
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        var reportsToday = recentManualRows.Count(x => x.TanggalLog == todayWib);
+
         return new WadHubSummaryDto(
             logger,
             new WadHubAttention(
@@ -107,7 +124,7 @@ public static class WadDashboardService
                 attentionItems),
             new WadHubServices(activeServices, totalServices),
             new WadHubCoverage(wilayah, latestWeek),
-            new WadHubFieldSummary(pengamatanUnits, subsidenStakes),
+            new WadHubFieldSummary(pengamatanUnits, subsidenStakes, activeOfficers, reportsToday),
             new WadHubDevices(deviceTotal, firmwareVersion),
             DateTime.UtcNow);
     }
@@ -137,37 +154,64 @@ public static class WadDashboardService
 
         var connection = db.Database.GetDbConnection();
         if (connection.State != ConnectionState.Open) await connection.OpenAsync(ct);
-        await using var command = connection.CreateCommand();
-        command.CommandText = sql;
-        command.CommandTimeout = 60;
-        await using var reader = await command.ExecuteReaderAsync(ct);
 
         var total = 0;
+        var activeCount = 0;
         var online = 0;
         var vendor = 0;
         DateTime? lastReadingAt = null;
-        while (await reader.ReadAsync(ct))
+        await using (var command = connection.CreateCommand())
         {
-            total += 1;
-            var active = reader.GetBoolean(0);
-            var interval = reader.GetInt32(1);
-            var sourceType = reader.IsDBNull(2) ? null : reader.GetString(2).Trim().ToUpperInvariant();
-            if (sourceType == "VENDOR") vendor += 1;
-            var age = reader.IsDBNull(3) ? (double?)null : reader.GetInt32(3);
-            if (active && age.HasValue && interval > 0 && age.Value <= interval * 2.0) online += 1;
-            if (!reader.IsDBNull(4))
+            command.CommandText = sql;
+            command.CommandTimeout = 60;
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
             {
-                var receivedAt = reader.GetDateTime(4);
-                if (lastReadingAt is null || receivedAt > lastReadingAt) lastReadingAt = receivedAt;
+                total += 1;
+                var active = reader.GetBoolean(0);
+                var interval = reader.GetInt32(1);
+                var sourceType = reader.IsDBNull(2) ? null : reader.GetString(2).Trim().ToUpperInvariant();
+                if (active) activeCount += 1;
+                if (sourceType == "VENDOR") vendor += 1;
+                var age = reader.IsDBNull(3) ? (double?)null : reader.GetInt32(3);
+                if (active && age.HasValue && interval > 0 && age.Value <= interval * 2.0) online += 1;
+                if (!reader.IsDBNull(4))
+                {
+                    var receivedAt = reader.GetDateTime(4);
+                    if (lastReadingAt is null || receivedAt > lastReadingAt) lastReadingAt = receivedAt;
+                }
             }
         }
 
+        var parameters = 0;
+        try
+        {
+            await using var paramCommand = connection.CreateCommand();
+            paramCommand.CommandText = """
+                SELECT COUNT(DISTINCT V.SensorParameterID)
+                FROM dbo.vwLoggerDataDetail AS V
+                INNER JOIN dbo.MstLogger AS L ON L.LoggerID = V.LoggerID
+                WHERE L.Aktif = 1
+                """;
+            paramCommand.CommandTimeout = 60;
+            parameters = Convert.ToInt32(await paramCommand.ExecuteScalarAsync(ct) ?? 0);
+        }
+        catch (Exception)
+        {
+            parameters = 0;
+        }
+
+        var uptime = activeCount > 0 ? Math.Round(online * 100.0 / activeCount, 1) : 0;
+
         return new WadHubLoggerSummary(
             total,
+            activeCount,
             online,
             Math.Max(0, total - online),
             Math.Max(0, total - vendor),
             vendor,
+            parameters,
+            uptime,
             lastReadingAt);
     }
 }

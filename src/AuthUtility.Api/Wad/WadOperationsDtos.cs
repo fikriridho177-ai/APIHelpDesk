@@ -2,10 +2,13 @@ namespace AuthUtility.Api.Wad;
 
 public sealed record WadHubLoggerSummary(
     int Total,
+    int Active,
     int Online,
     int Offline,
     int Internal,
     int Vendor,
+    int Parameters,
+    double UptimePercent,
     DateTime? LastReadingAt);
 
 public sealed record WadHubAttentionItem(
@@ -27,7 +30,11 @@ public sealed record WadHubServices(int Active, int Total);
 
 public sealed record WadHubCoverage(IReadOnlyList<string> Wilayah, string? LatestWeek);
 
-public sealed record WadHubFieldSummary(int PengamatanUnits, int SubsidenStakes);
+public sealed record WadHubFieldSummary(
+    int PengamatanUnits,
+    int SubsidenStakes,
+    int ActiveOfficers,
+    int ReportsToday);
 
 public sealed record WadHubDevices(int Total, string? FirmwareVersion);
 
@@ -70,6 +77,8 @@ public sealed record WadAirItemDto(
     WadAirSensorValue Tmak,
     WadAirSensorValue Tmat,
     WadAirRainValue CurahHujan,
+    string? PetugasNama,
+    DateTime? DicatatPada,
     bool HasFoto,
     long? FotoId);
 
