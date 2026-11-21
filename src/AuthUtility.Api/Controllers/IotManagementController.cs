@@ -21,6 +21,7 @@ public sealed class IotManagementController(
     IIotMqttPublisher mqttPublisher,
     IotDiscoveryRegistry discoveries,
     IConfiguration configuration,
+    Microsoft.Extensions.Options.IOptions<IotMqttOptions> mqttOptions,
     ILogger<IotManagementController> logger
 ) : ControllerBase
 {
@@ -476,20 +477,186 @@ public sealed class IotManagementController(
         var device = await FindDevice(deviceId);
         if (device is null)
             return NotFound(new { message = "Perangkat tidak ditemukan." });
-        var lastReport = await db.IotDeviceReports
+
+        var reports = await db.IotDeviceReports
             .AsNoTracking()
             .Where(x => x.DeviceAgentId == device.Id)
             .OrderByDescending(x => x.ReceivedAt)
-            .FirstOrDefaultAsync(HttpContext.RequestAborted);
+            .Take(20)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        var latestReport = reports.FirstOrDefault();
+        var latestTelemetryReport = reports.FirstOrDefault(x => x.Kind == "mqtt-telemetry")
+            ?? reports.FirstOrDefault(x => x.Kind == "telemetry");
+
+        var activityEvents = await db.IotActivityEvents
+            .AsNoTracking()
+            .Where(x => x.DeviceAgentId == device.Id)
+            .OrderByDescending(x => x.OccurredAt)
+            .Take(15)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        var otaEvents = await db.IotOtaEvents
+            .AsNoTracking()
+            .Where(x => x.OtaJob.DeviceAgentId == device.Id)
+            .OrderByDescending(x => x.OccurredAt)
+            .Take(10)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        var telemetryPayload = latestTelemetryReport is null ? null : ParseJsonElementOrNull(latestTelemetryReport.PayloadJson);
+        var capabilities = ParseJsonElementOrNull(device.CapabilitiesJson);
+        var uptimeSeconds = device.LastUptimeSeconds is { } reportedUptime
+            ? (double?)reportedUptime
+            : ReadNumberFrom(telemetryPayload, "uptime_sec", "uptimeSeconds", "uptime");
+        var resetReason = ReadTextFrom(telemetryPayload, "reset_reason", "resetReason")
+            ?? ReadNestedText(capabilities, "connection", "resetReason");
+
+        var feed = new List<DiagnosticActivityDto>();
+        foreach (var report in reports.Where(x => x.Kind == "mqtt-telemetry").Take(5))
+        {
+            feed.Add(new DiagnosticActivityDto(
+                $"report-{report.Id}",
+                "telemetry",
+                "telemetry received",
+                $"Payload telemetry MQTT dari {device.DeviceId} diterima.",
+                report.ReceivedAt,
+                "neutral"));
+        }
+
+        foreach (var item in activityEvents)
+        {
+            var kind = ActivityKindFor(item.EventType);
+            feed.Add(new DiagnosticActivityDto(
+                $"activity-{item.Id}",
+                kind,
+                $"{kind} event",
+                item.Message,
+                item.OccurredAt,
+                ActivityToneFor(kind, item.Message)));
+        }
+
+        foreach (var item in otaEvents)
+        {
+            var tone = item.EventType switch
+            {
+                IotOtaEventType.Confirmed => "positive",
+                IotOtaEventType.Failed => "negative",
+                _ => "warning"
+            };
+            var description = string.IsNullOrWhiteSpace(item.Message)
+                ? $"Status OTA {item.EventType} diterima dari perangkat."
+                : item.Message!;
+            feed.Add(new DiagnosticActivityDto(
+                $"ota-{item.Id}",
+                "ota",
+                "ota event",
+                description,
+                item.OccurredAt,
+                tone));
+        }
+
+        var topicPrefix = (mqttOptions.Value.TopicPrefix ?? "rsup/wad").Trim().Trim('/');
+
         return Ok(new
         {
             device_id = device.DeviceId,
             connection = device.Status.ToString().ToLowerInvariant(),
             lastSeen = device.LastSeenAt,
-            lastValidReadingAt = lastReport?.ReceivedAt,
+            lastValidReadingAt = latestReport?.ReceivedAt,
             consecutiveFailures = 0,
-            note = device.Status == IotDeviceStatus.Online ? "Heartbeat terakhir diterima." : "Belum ada heartbeat terbaru."
+            note = device.Status == IotDeviceStatus.Online ? "Heartbeat terakhir diterima." : "Belum ada heartbeat terbaru.",
+            lastIpAddress = device.LastIpAddress,
+            lastRssi = device.LastRssi,
+            lastFirmwareVersion = device.LastFirmwareVersion,
+            lastBatteryVolt = device.LastBatteryVolt,
+            uptimeSeconds,
+            resetReason,
+            capabilities,
+            latestTelemetry = latestTelemetryReport is null ? null : new
+            {
+                kind = latestTelemetryReport.Kind,
+                source = latestTelemetryReport.Kind == "mqtt-telemetry" ? "mqtt" : "api",
+                topic = latestTelemetryReport.Kind == "mqtt-telemetry" ? $"{topicPrefix}/devices/{device.DeviceId}/telemetry" : null,
+                receivedAt = latestTelemetryReport.ReceivedAt,
+                deviceTimestamp = latestTelemetryReport.DeviceTimestamp,
+                firmwareVersion = latestTelemetryReport.FirmwareVersion,
+                payload = telemetryPayload
+            },
+            activity = feed.OrderByDescending(x => x.OccurredAt).Take(20)
         });
+    }
+
+    private sealed record DiagnosticActivityDto(
+        string Id,
+        string Kind,
+        string Title,
+        string Description,
+        DateTimeOffset OccurredAt,
+        string Tone);
+
+    private static string ActivityKindFor(string eventType) => eventType.Trim().ToLowerInvariant() switch
+    {
+        "mqtt-status" => "device",
+        "ota" => "ota",
+        "firmware" => "firmware",
+        "configuration" => "configuration",
+        "sensor" => "sensor",
+        "diagnostic" => "diagnostic",
+        var other when other.Length > 0 => other,
+        _ => "device"
+    };
+
+    private static string ActivityToneFor(string kind, string message)
+    {
+        var text = message.ToLowerInvariant();
+        if (kind == "device")
+            return text.Contains("offline") ? "negative" : "positive";
+        if (kind == "ota")
+            return text.Contains("gagal") || text.Contains("failed") ? "negative" : "warning";
+        if (kind == "firmware")
+            return "positive";
+        return "neutral";
+    }
+
+    private static double? ReadNumberFrom(JsonElement? element, params string[] names)
+    {
+        if (element is not { } payload || payload.ValueKind != JsonValueKind.Object)
+            return null;
+        foreach (var name in names)
+        {
+            if (!payload.TryGetProperty(name, out var value))
+                continue;
+            if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number))
+                return number;
+            if (value.ValueKind == JsonValueKind.String && double.TryParse(value.GetString(), out number))
+                return number;
+        }
+        return null;
+    }
+
+    private static string? ReadTextFrom(JsonElement? element, params string[] names)
+    {
+        if (element is not { } payload || payload.ValueKind != JsonValueKind.Object)
+            return null;
+        foreach (var name in names)
+        {
+            if (payload.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String)
+            {
+                var text = value.GetString();
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text;
+            }
+        }
+        return null;
+    }
+
+    private static string? ReadNestedText(JsonElement? element, string parent, string name)
+    {
+        if (element is not { } payload || payload.ValueKind != JsonValueKind.Object)
+            return null;
+        return payload.TryGetProperty(parent, out var nested)
+            ? ReadTextFrom(nested, name)
+            : null;
     }
 
     [HttpGet("firmware")]
