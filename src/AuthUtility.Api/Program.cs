@@ -100,6 +100,7 @@ builder.Services.AddSingleton<MqttBridgeService>();
 builder.Services.AddSingleton<IIotMqttPublisher>(sp => sp.GetRequiredService<MqttBridgeService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttBridgeService>());
 
+<<<<<<< HEAD
 // Beacon discovery dari ESP32 yang belum punya credential API. Registry
 // disimpan di memori dan dibatasi TTL agar endpoint anonim tidak menulis DB.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -112,10 +113,19 @@ builder.Services.Configure<IotDeviceStatusSweepOptions>(
 builder.Services.AddHostedService<IotDeviceStatusSweepService>();
 
 // QC module helpers (Api/Qc). Number generator, status engine, approval flow config.
+=======
+// QC module helpers (Api/Qc). Number generator (seq atomik PostgreSQL), status engine, alur approval berbasis master.
+builder.Services.AddScoped<IQcNumberSeqStore, NpgsqlQcNumberSeqStore>();
+>>>>>>> diani12
 builder.Services.AddScoped<QcNumberGenerator>();
 builder.Services.AddScoped<QcStatusEngine>();
-builder.Services.AddScoped<QcApprovalFlowConfig>();
+builder.Services.AddScoped<QcApprovalFlow>();
 builder.Services.AddScoped<AuthUtility.Api.Sensus.PersilReader>();
+// QC Fase 1: master CRUD + cache persil (sumber SQL Server read-only) + sync terjadwal.
+builder.Services.AddScoped<QcMasterService>();
+builder.Services.AddScoped<IQcPersilSourceReader, QcPersilSourceReader>();
+builder.Services.AddScoped<QcPersilSyncService>();
+builder.Services.AddHostedService<QcPersilSyncHostedService>();
 // Peta GIS: pembaca read-only database PostGIS WebGIS (ConnectionStrings:WebGis).
 builder.Services.AddSingleton<AuthUtility.Api.WebGis.WebGisReader>();
 

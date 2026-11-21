@@ -199,6 +199,33 @@ public record SnsMonitoringDto(
     string? PersilTerlambatError
 );
 
+// Status sensus per persil x jenis: BELUM (tidak pernah), TERLAMBAT (pernah tapi lewat batas hari), SUDAH (masih dalam batas).
+public record SnsPersilStatusDto(
+    string PersilSumber,
+    string PersilId,
+    string PersilKode,
+    string? KodeWilayah,
+    string? KodeAfdeling,
+    int JenisId,
+    string JenisName,
+    DateOnly? TerakhirSensus,
+    int? HariSejak,
+    int JumlahSensus,
+    string Status
+);
+
+public record SnsPersilStatusResultDto(
+    string Sumber,
+    int Total,
+    int Belum,
+    int Sudah,
+    int Terlambat,
+    int Page,
+    int PageSize,
+    List<SnsPersilStatusDto> Rows,
+    string? Error
+);
+
 /* =========================================================
    ANALISIS (hanya data APPROVED)
 ========================================================= */

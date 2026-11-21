@@ -6,7 +6,7 @@ public record QcDashboardInspection(long Id,string? InspectionNo,string FormCode
 public record QcDashboardFinding(long InspectionId,string Status,string Severity,DateOnly? TargetDate);
 public record QcDashboardGroup(string Key,string Label,int Total);
 public record QcDashboardRecent(QcDashboardInspection Inspection,int OpenFindingCount,int OverdueFindingCount);
-public record QcDashboardDto(DateOnly DateFrom,DateOnly DateTo,int TotalInspections,int WaitingApproval,int Approved,int RevisionRequired,
+public record QcDashboardDto(DateOnly DateFrom,DateOnly DateTo,int TotalInspections,int PendingApproval,int Approved,int Revision,
     int TotalFindings,int OpenFindings,int OverdueFindings,int CriticalOpenFindings,List<QcDashboardGroup> PerStatus,List<QcDashboardGroup> PerForm,
     List<QcDashboardGroup> PerWilayah,List<QcDashboardGroup> PerSeverity,List<QcDashboardGroup> PerFindingStatus,List<DashboardMonth> PerBulan,List<QcDashboardRecent> Latest);
 
@@ -14,7 +14,7 @@ public static class QcDashboardCalculator
 {
     public static QcDashboardDto Build(List<QcDashboardInspection> inspections,List<QcDashboardFinding> findings,DateOnly from,DateOnly to,DateOnly today)
     {
-        bool Open(QcDashboardFinding f)=>f.Status!=QcFindingStatus.Closed;
+        bool Open(QcDashboardFinding f)=>QcFindingStatus.Active.Contains(f.Status);
         bool Overdue(QcDashboardFinding f)=>Open(f) && f.TargetDate<today;
         var active=findings.Where(Open).ToList();
         var status=inspections.GroupBy(i=>i.Status).Select(g=>new QcDashboardGroup(g.Key,g.Key,g.Count())).OrderBy(g=>g.Key).ToList();
@@ -34,8 +34,8 @@ public static class QcDashboardCalculator
         var findingCounts=findings.GroupBy(f=>f.InspectionId).ToDictionary(g=>g.Key,g=>(Open:g.Count(Open),Overdue:g.Count(Overdue)));
         var recent=inspections.OrderByDescending(i=>i.InspectionDate).ThenByDescending(i=>i.Id).Take(10)
             .Select(i=>new QcDashboardRecent(i,findingCounts.GetValueOrDefault(i.Id).Open,findingCounts.GetValueOrDefault(i.Id).Overdue)).ToList();
-        return new(from,to,inspections.Count,inspections.Count(i=>i.Status==QcInspectionStatus.WaitingApproval),inspections.Count(i=>i.Status==QcInspectionStatus.Approved),
-            inspections.Count(i=>i.Status==QcInspectionStatus.RevisionRequired),findings.Count,active.Count,findings.Count(Overdue),active.Count(f=>f.Severity==QcFindingSeverity.Critical),
+        return new(from,to,inspections.Count,inspections.Count(i=>QcInspectionStatus.PendingApproval.Contains(i.Status)),inspections.Count(i=>i.Status==QcInspectionStatus.Approved),
+            inspections.Count(i=>i.Status==QcInspectionStatus.Revision),findings.Count,active.Count,findings.Count(Overdue),active.Count(f=>f.Severity==QcFindingSeverity.Critical),
             status,forms,wilayah,severity,findingStatus,months,recent);
     }
 }

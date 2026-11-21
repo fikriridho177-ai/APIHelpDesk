@@ -69,6 +69,28 @@ public class SensusBusinessTests
         Assert.NotNull(SensusBusinessContext.Validate(new(){JenisForm="FORM2"},new SnsJenis(),"FORM2"));
     }
     [Fact]
+    public void RaaStatusNormalizesAndLegacyRaRemainsFilterable()
+    {
+        Assert.Equal("RAA",SensusBusinessContext.NormalizeLand("R"));
+        Assert.Equal("RAA",SensusBusinessContext.NormalizeLand("RA"));
+        Assert.Equal("RAA",SensusBusinessContext.NormalizeLand("raa"));
+        Assert.Equal("RAA",SensusBusinessContext.NormalizeLand("Rainforest Alliance"));
+        Assert.Equal("RAA",SensusBusinessContext.FromPersil(new Dictionary<string,object?>{{"StatusLahan","R"}}).StatusLahan);
+        var legacy=Header(1,land:"RA");var modern=Header(2,land:"RAA");modern.PersilId="456";
+        var filter=Filter();filter.StatusLahan="RAA";
+        var report=SensusBusinessReportQuery.Build(new[]{legacy,modern},Kinds,filter);
+        Assert.Equal(2,report.Observations.Count);
+        Assert.All(report.Observations,x=>Assert.Equal("RAA",SensusBusinessContext.NormalizeLand(x.StatusLahan)));
+    }
+    [Fact]
+    public void LegacyRaaRuleStatusStillMatchesNormalizedLand()
+    {
+        var h=Header(land:"RAA");var rule=h.Jenis!.Rules.Single();rule.StatusLahan="RA";
+        Assert.True(SensusHptEvaluation.Evaluate(h).PerluPengendalian);
+        h.StatusLahan="RA";rule.StatusLahan="RAA";
+        Assert.True(SensusHptEvaluation.Evaluate(h).PerluPengendalian);
+    }
+    [Fact]
     public void RevisionCanClearContextWhileLegacyClientOmissionPreservesSnapshot()
     {
         var h=Header();h.Cuaca="Cerah";
@@ -137,10 +159,14 @@ public class SensusBusinessTests
     [Fact]
     public async Task ApprovedQueryMatchesPureProjectionAndProvidesFixtureForFrontendExports()
     {
-        await using var db=Db();db.Users.AddRange(new UtlUser{Id=1,UserId="petugas",Name="Petugas nyata",PasswordHash="test",GroupId=1},new UtlUser{Id=2,UserId="approver",Name="Approver nyata",PasswordHash="test",GroupId=1});
+        await using var db=Db();
+        db.Groups.AddRange(new UtlGroup{Id=1,Code="PETUGAS",Name="Asisten Lapangan"},new UtlGroup{Id=2,Code="APPROVER",Name="Manager"});
+        db.Users.AddRange(new UtlUser{Id=1,UserId="petugas",Name="Petugas nyata",PasswordHash="test",GroupId=1},new UtlUser{Id=2,UserId="approver",Name="Approver nyata",PasswordHash="test",GroupId=2});
         var a=Header();a.Jenis!.ReportGroup="HAMA";a.Jenis.Form2Enabled=true;a.JenisForm="FORM2";a.Jenis.Parameters.Add(new(){Id=11,JenisId=1,Code="JML_ULAT",Name="Ulat per pelepah",TipeData="NUMBER",Active=true,FormScope="ALL"});a.Details.Add(new(){ParameterId=11,NoPokok=1,NilaiAngka=5});
         db.SnsHeaders.Add(a);db.SnsHeaders.Add(new(){Id=2,JenisId=1,PetugasUserId=1,PersilId="REJECT",Status="REJECTED",TanggalSensus=new(2026,11,10)});await db.SaveChangesAsync();
-        var report=await SensusBusinessReportQuery.ReadAsync(db,Filter());Assert.NotNull(report);Assert.Single(report!.Observations);Assert.Equal("Petugas nyata",report.Observations[0].Petugas);
+        var report=await SensusBusinessReportQuery.ReadAsync(db,Filter());Assert.NotNull(report);Assert.Single(report!.Observations);
+        Assert.Equal("Petugas nyata",report.Observations[0].Petugas);Assert.Equal("Asisten Lapangan",report.Observations[0].PetugasJabatan);
+        Assert.Equal("Approver nyata",report.Observations[0].ApprovedBy);Assert.Equal("Manager",report.Observations[0].ApprovedByJabatan);
         var path=Path.Combine(Path.GetTempPath(),"sensus-business-report-fixture.json");await File.WriteAllTextAsync(path,JsonSerializer.Serialize(report,new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
     private sealed class Permissions(bool read,bool export,bool update=false):IPermissionService

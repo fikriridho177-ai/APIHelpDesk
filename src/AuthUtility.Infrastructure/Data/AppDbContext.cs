@@ -88,6 +88,15 @@ public class AppDbContext : DbContext
     public DbSet<QcApproval> QcApprovals => Set<QcApproval>();
     public DbSet<QcFinding> QcFindings => Set<QcFinding>();
     public DbSet<QcHistory> QcHistories => Set<QcHistory>();
+    public DbSet<QcFormApprovalStep> QcFormApprovalSteps => Set<QcFormApprovalStep>();
+    public DbSet<QcPersil> QcPersils => Set<QcPersil>();
+    public DbSet<QcPemborong> QcPemborong => Set<QcPemborong>();
+    public DbSet<QcMandor> QcMandors => Set<QcMandor>();
+    public DbSet<QcJenisPupuk> QcJenisPupuk => Set<QcJenisPupuk>();
+    public DbSet<QcGrade> QcGrades => Set<QcGrade>();
+    public DbSet<QcStandard> QcStandards => Set<QcStandard>();
+    public DbSet<QcNumberSeq> QcNumberSeqs => Set<QcNumberSeq>();
+    public DbSet<QcInspSampelPanenNenas> QcPanenNenasSamples => Set<QcInspSampelPanenNenas>();
 
     // Laporan lapangan WAD (PostgreSQL HelpDesk). Lihat 2026-11-16-wad-reporting.sql
     public DbSet<WadObject> WadObjects => Set<WadObject>();
@@ -636,13 +645,162 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("MstQcForm");
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => x.Code).IsUnique();
+            entity.HasIndex(x => new { x.Code, x.Version }).IsUnique();
+            entity.HasIndex(x => x.ExcelCode);
             entity.Property(x => x.Code).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Commodity).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Pattern).HasMaxLength(2);
+            entity.Property(x => x.TemplateFile).HasMaxLength(200);
+            entity.Property(x => x.PrintTitle).HasMaxLength(300);
+            entity.Property(x => x.ExcelCode).HasMaxLength(64);
             entity.Property(x => x.CreatedBy).HasMaxLength(100);
             entity.Property(x => x.UpdatedBy).HasMaxLength(100);
             entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+
+            entity.HasMany(x => x.ApprovalSteps)
+                .WithOne(x => x.Form)
+                .HasForeignKey(x => x.FormId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // QcFormApprovalStep — alur approval per form (master)
+        modelBuilder.Entity<QcFormApprovalStep>(entity =>
+        {
+            entity.ToTable("MstQcFormApprovalStep");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.FormId, x.Level }).IsUnique();
+            entity.Property(x => x.Label).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.JabatanKode).HasMaxLength(64);
+            entity.Property(x => x.MenuCode).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+            entity.HasOne(x => x.ApproverGroup)
+                .WithMany()
+                .HasForeignKey(x => x.ApproverGroupId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // QcPersil — cache master persil dari SQL Server (read-only source)
+        modelBuilder.Entity<QcPersil>(entity =>
+        {
+            entity.ToTable("MstQcPersil");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Sumber, x.PersilId }).IsUnique();
+            entity.HasIndex(x => new { x.WilayahKode, x.KodeAfdeling });
+            entity.HasIndex(x => new { x.Komoditas, x.Active });
+            entity.HasIndex(x => x.PersilKode);
+            entity.Property(x => x.Sumber).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.PersilId).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.PersilKode).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.NamaPersil).HasMaxLength(200);
+            entity.Property(x => x.Komoditas).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.WilayahKode).HasMaxLength(50);
+            entity.Property(x => x.KodeDivisi).HasMaxLength(50);
+            entity.Property(x => x.KodeAfdeling).HasMaxLength(50);
+            entity.Property(x => x.Kcb).HasMaxLength(50);
+            entity.Property(x => x.LuasHa).HasPrecision(12, 3);
+            entity.Property(x => x.PemborongKode).HasMaxLength(64);
+            entity.Property(x => x.PemborongNama).HasMaxLength(150);
+            entity.Property(x => x.SyncedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+        });
+
+        // QcPemborong — master pemborong (LOCAL / SYNC)
+        modelBuilder.Entity<QcPemborong>(entity =>
+        {
+            entity.ToTable("MstQcPemborong");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Kode).IsUnique();
+            entity.Property(x => x.Kode).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            entity.Property(x => x.WilayahKode).HasMaxLength(50);
+            entity.Property(x => x.Sumber).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+        });
+
+        // QcMandor — master mandor (CRUD lokal)
+        modelBuilder.Entity<QcMandor>(entity =>
+        {
+            entity.ToTable("MstQcMandor");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.KodeAfdeling);
+            entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            entity.Property(x => x.WilayahKode).HasMaxLength(50);
+            entity.Property(x => x.KodeAfdeling).HasMaxLength(50);
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+            entity.HasOne(x => x.Pemborong)
+                .WithMany()
+                .HasForeignKey(x => x.PemborongId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // QcJenisPupuk — master jenis pupuk (pola B)
+        modelBuilder.Entity<QcJenisPupuk>(entity =>
+        {
+            entity.ToTable("MstQcJenisPupuk");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Kode).IsUnique();
+            entity.Property(x => x.Kode).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Satuan).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.DosisJadwalGram).HasPrecision(12, 2);
+            entity.Property(x => x.Komoditas).HasMaxLength(32);
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+        });
+
+        // QcGrade — master grade kebersihan & pengiriman
+        modelBuilder.Entity<QcGrade>(entity =>
+        {
+            entity.ToTable("MstQcGrade");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Kode).IsUnique();
+            entity.Property(x => x.Kode).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Komoditas).HasMaxLength(32);
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+        });
+
+        // QcStandard — target % per form per parameter
+        modelBuilder.Entity<QcStandard>(entity =>
+        {
+            entity.ToTable("MstQcStandard");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.FormId, x.ParameterKey }).IsUnique();
+            entity.Property(x => x.ParameterKey).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TargetPercent).HasPrecision(6, 2);
+            entity.Property(x => x.Operator).HasMaxLength(4).IsRequired();
+            entity.Property(x => x.Keterangan).HasMaxLength(300);
+            entity.Property(x => x.CreatedBy).HasMaxLength(100);
+            entity.Property(x => x.UpdatedBy).HasMaxLength(100);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+        });
+
+        // QcNumberSeq — penomoran atomik per scope
+        modelBuilder.Entity<QcNumberSeq>(entity =>
+        {
+            entity.ToTable("MstQcNumberSeq");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.ScopeKey).IsUnique();
+            entity.Property(x => x.ScopeKey).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
         });
 
         // QcInspection — satu tabel transaksi utama
@@ -659,14 +817,19 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => x.InspectionDate);
             entity.HasIndex(x => new { x.PeriodYear, x.PeriodMonth });
             entity.HasIndex(x => new { x.Status, x.CurrentApprovalLevel });
+            entity.HasIndex(x => x.PemborongId);
+            entity.HasIndex(x => x.MandorId);
+            entity.HasIndex(x => x.InspectorUserId);
 
-            entity.Property(x => x.InspectionNo).HasMaxLength(50);
+            entity.Property(x => x.InspectionNo).HasMaxLength(150);
             entity.Property(x => x.CompanyNameSnapshot).HasMaxLength(200);
             entity.Property(x => x.WilayahKode).HasMaxLength(50);
             entity.Property(x => x.PersilSumber).HasMaxLength(20);
             entity.Property(x => x.PersilId).HasMaxLength(100);
             entity.Property(x => x.PersilKode).HasMaxLength(100);
             entity.Property(x => x.KodeAfdeling).HasMaxLength(50);
+            entity.Property(x => x.InspectorNameSnapshot).HasMaxLength(150);
+            entity.Property(x => x.NoIcarLama).HasMaxLength(100);
             entity.Property(x => x.Commodity).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
             entity.Property(x => x.CreatedBy).HasMaxLength(100);
@@ -682,6 +845,21 @@ public class AppDbContext : DbContext
                 .WithMany(x => x.Inspections)
                 .HasForeignKey(x => x.FormId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Pemborong)
+                .WithMany()
+                .HasForeignKey(x => x.PemborongId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(x => x.Mandor)
+                .WithMany()
+                .HasForeignKey(x => x.MandorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(x => x.Inspector)
+                .WithMany()
+                .HasForeignKey(x => x.InspectorUserId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasMany(x => x.Approvals)
                 .WithOne(x => x.Inspection)
@@ -699,12 +877,12 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // QcApproval — satu row per (InspectionId, Level)
+        // QcApproval — satu row per (InspectionId, Level, Revision)
         modelBuilder.Entity<QcApproval>(entity =>
         {
             entity.ToTable("TrnQcApproval");
             entity.HasKey(x => x.Id);
-            entity.HasIndex(x => new { x.InspectionId, x.Level }).IsUnique();
+            entity.HasIndex(x => new { x.InspectionId, x.Level, x.Revision }).IsUnique();
             entity.HasIndex(x => x.Status);
 
             entity.Property(x => x.Action).HasMaxLength(32).IsRequired();
@@ -790,6 +968,23 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // QcInspSampelPanenNenas — detail typed Panen Nenas (Fase 3, pola A)
+        modelBuilder.Entity<QcInspSampelPanenNenas>(entity =>
+        {
+            entity.ToTable("TrnQcInspSampelPanenNenas");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.InspectionId, x.RowNo }).IsUnique();
+
+            entity.Property(x => x.NomorJalur).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Keterangan).HasMaxLength(250);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamptz");
+
+            entity.HasOne(x => x.Inspection)
+                .WithMany()
+                .HasForeignKey(x => x.InspectionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // WadObject — master bangunan/patok/persil/projek WAD

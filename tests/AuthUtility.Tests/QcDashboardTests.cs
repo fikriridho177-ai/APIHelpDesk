@@ -19,11 +19,11 @@ public class QcDashboardTests
         db.Menus.AddRange(new UtlMenu{Id=1,Code="QC_DASHBOARD"},new UtlMenu{Id=2,Code="QC_INSPEKSI"});
         db.GroupMenus.AddRange(new UtlGroupMenu{GroupId=1,MenuId=1,CanRead=true,CanView=true},new UtlGroupMenu{GroupId=1,MenuId=2,CanRead=false,CanView=true});
         db.QcForms.Add(new(){Id=1,Code="QC-TEST",Name="Pemeriksaan",Commodity="KELAPA"});
-        db.QcInspections.AddRange(new QcInspection{Id=1,FormId=1,InspectionDate=Day,CreatedBy="owner",Status=QcInspectionStatus.WaitingApproval,WilayahKode="W1"},
+        db.QcInspections.AddRange(new QcInspection{Id=1,FormId=1,InspectionDate=Day,CreatedBy="owner",Status=QcInspectionStatus.Submitted,WilayahKode="W1"},
             new QcInspection{Id=2,FormId=1,InspectionDate=Day,CreatedBy="other",Status=QcInspectionStatus.Approved,WilayahKode="W2"},
             new QcInspection{Id=3,FormId=1,InspectionDate=Day.AddDays(-1),CreatedBy="owner",Status=QcInspectionStatus.Draft});
         db.QcFindings.AddRange(new QcFinding{Id=1,InspectionId=1,Status=QcFindingStatus.Open,Severity=QcFindingSeverity.Minor,TargetDate=Day.AddDays(-1)},
-            new QcFinding{Id=2,InspectionId=1,Status=QcFindingStatus.Closed,Severity=QcFindingSeverity.Critical,TargetDate=Day.AddDays(-1)},
+            new QcFinding{Id=2,InspectionId=1,Status=QcFindingStatus.Verified,Severity=QcFindingSeverity.Critical,TargetDate=Day.AddDays(-1)},
             new QcFinding{Id=3,InspectionId=2,Status=QcFindingStatus.Open,Severity=QcFindingSeverity.Critical});
         await db.SaveChangesAsync();return db;
     }
@@ -35,7 +35,7 @@ public class QcDashboardTests
     public async Task DashboardPreservesOwnerHandlerVisibilityAndExcludesFindingsOutsideSelectedInspections()
     {
         await using var db=await Database();
-        var owner=await Get(db);Assert.Equal(1,owner.TotalInspections);Assert.Equal(1,owner.WaitingApproval);
+        var owner=await Get(db);Assert.Equal(1,owner.TotalInspections);Assert.Equal(1,owner.PendingApproval);
         Assert.Equal(2,owner.TotalFindings);Assert.Equal(1,owner.OpenFindings);Assert.Equal(1,owner.OverdueFindings);Assert.Equal(0,owner.CriticalOpenFindings);
         Assert.Equal("MINOR",Assert.Single(owner.PerSeverity).Key);Assert.Equal(1,Assert.Single(owner.Latest).Inspection.Id);
         db.GroupMenus.Single(r=>r.MenuId==2).CanRead=true;await db.SaveChangesAsync();
@@ -74,14 +74,14 @@ public class QcDashboardTests
     }
 
     [Fact]
-    public void OverdueAndCriticalCountsRespectClosedNullAndTodayTargets()
+    public void OverdueAndCriticalCountsRespectVerifiedNullAndTodayTargets()
     {
-        var inspections=new List<QcDashboardInspection>{new(1,"QC-1","TEST","Test",Day,null,QcInspectionStatus.RevisionRequired)};
-        var findings=new List<QcDashboardFinding>{new(1,QcFindingStatus.Closed,QcFindingSeverity.Critical,Day.AddDays(-1)),
+        var inspections=new List<QcDashboardInspection>{new(1,"QC-1","TEST","Test",Day,null,QcInspectionStatus.Revision)};
+        var findings=new List<QcDashboardFinding>{new(1,QcFindingStatus.Done,QcFindingSeverity.Critical,Day.AddDays(-1)),
             new(1,QcFindingStatus.Verified,QcFindingSeverity.Major,Day.AddDays(-1)),new(1,QcFindingStatus.Open,QcFindingSeverity.Critical,Day),
-            new(1,QcFindingStatus.FollowUp,QcFindingSeverity.Minor,null)};
+            new(1,QcFindingStatus.InProgress,QcFindingSeverity.Minor,null)};
         var data=QcDashboardCalculator.Build(inspections,findings,Day,Day,Day);
-        Assert.Equal(3,data.OpenFindings);Assert.Equal(1,data.OverdueFindings);Assert.Equal(1,data.CriticalOpenFindings);Assert.Equal(1,data.RevisionRequired);
+        Assert.Equal(3,data.OpenFindings);Assert.Equal(1,data.OverdueFindings);Assert.Equal(2,data.CriticalOpenFindings);Assert.Equal(1,data.Revision);
         Assert.Equal("Belum diisi",Assert.Single(data.PerWilayah).Label);Assert.Equal(3,data.PerSeverity.Sum(g=>g.Total));
         Assert.Equal(1,Assert.Single(data.Latest).OverdueFindingCount);
     }

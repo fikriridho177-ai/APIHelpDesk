@@ -11,8 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AuthUtility.Api.Controllers;
 
 // Finding / temuan QC — one-to-many per inspeksi. Lifecycle terpisah dari inspeksi.
-// Phase 1: OPEN -> FOLLOW_UP -> VERIFIED -> CLOSED. (WAITING_VERIFICATION didefinisikan
-// untuk flow penuh, belum digerakkan endpoint.)
+// Fase 2: OPEN -> IN_PROGRESS -> DONE -> VERIFIED (terminal).
 [ApiController]
 [Route("api/qc/findings")]
 [Authorize]
@@ -65,7 +64,7 @@ public class QcFindingsController(
         var rows = await q.OrderByDescending(f => f.Id).Take(MaxListSize).ToListAsync(ct);
 
         var items = rows
-            .Where(f => overdue != true || (f.Status != QcFindingStatus.Closed && f.TargetDate < today))
+            .Where(f => overdue != true || (QcFindingStatus.Active.Contains(f.Status) && f.TargetDate < today))
             .Select(f => BuildListItem(f, f.Inspection?.InspectionNo, today))
             .ToList();
 
@@ -142,10 +141,10 @@ public class QcFindingsController(
     }
 
     /* =========================================================
-       FOLLOW-UP / VERIFY / CLOSE
+       FOLLOW-UP / DONE / VERIFY
     ========================================================= */
 
-    // POST /api/qc/findings/{id}/follow-up  (OPEN|FOLLOW_UP -> FOLLOW_UP, tambah catatan)
+    // POST /api/qc/findings/{id}/follow-up  (OPEN|IN_PROGRESS -> IN_PROGRESS, tambah catatan)
     [HttpPost("{id:long}/follow-up")]
     public async Task<IActionResult> FollowUp(long id, [FromBody] QcFindingFollowUpRequest? body, CancellationToken ct)
     {
@@ -159,10 +158,10 @@ public class QcFindingsController(
         if (!access.Has(QcAccess.MenuFinding, MenuPermission.Update) && !access.IsSuperAdmin)
             return NoAccess("menambah tindak lanjut temuan.");
 
-        if (f.Status != QcFindingStatus.Open && f.Status != QcFindingStatus.FollowUp)
-            return BadRequest(new { message = "Tindak lanjut hanya bisa dilakukan pada temuan OPEN / FOLLOW_UP." });
+        if (f.Status != QcFindingStatus.Open && f.Status != QcFindingStatus.InProgress)
+            return BadRequest(new { message = "Tindak lanjut hanya bisa dilakukan pada temuan OPEN / IN_PROGRESS." });
 
-        f.Status = QcFindingStatus.FollowUp;
+        f.Status = QcFindingStatus.InProgress;
         f.FollowUpNote = AppendNote(f.FollowUpNote, body?.FollowUpNote, access.User.Name);
         f.UpdatedBy = access.User.UserId;
         f.UpdatedAt = DateTime.UtcNow;
@@ -171,7 +170,33 @@ public class QcFindingsController(
         return await GetFinding(id, ct);
     }
 
-    // POST /api/qc/findings/{id}/verify  (FOLLOW_UP|WAITING_VERIFICATION -> VERIFIED)
+    // POST /api/qc/findings/{id}/done  (OPEN|IN_PROGRESS -> DONE, PIC menyatakan selesai)
+    [HttpPost("{id:long}/done")]
+    public async Task<IActionResult> Done(long id, [FromBody] QcFindingFollowUpRequest? body, CancellationToken ct)
+    {
+        var access = await QcAccess.LoadAsync(db, CurrentUserId);
+        if (access == null) return Forbid();
+
+        var f = await db.QcFindings.Include(f => f.Inspection).FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (f == null || !access.CanSee(f.Inspection!))
+            return NotFound(new { message = "Temuan tidak ditemukan." });
+
+        if (!access.Has(QcAccess.MenuFinding, MenuPermission.Update) && !access.IsSuperAdmin)
+            return NoAccess("menyelesaikan temuan.");
+
+        if (f.Status != QcFindingStatus.Open && f.Status != QcFindingStatus.InProgress)
+            return BadRequest(new { message = "Temuan hanya bisa diselesaikan dari status OPEN / IN_PROGRESS." });
+
+        f.Status = QcFindingStatus.Done;
+        f.FollowUpNote = AppendNote(f.FollowUpNote, body?.FollowUpNote, access.User.Name);
+        f.UpdatedBy = access.User.UserId;
+        f.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync(ct);
+        return await GetFinding(id, ct);
+    }
+
+    // POST /api/qc/findings/{id}/verify  (DONE -> VERIFIED, terminal)
     [HttpPost("{id:long}/verify")]
     public async Task<IActionResult> Verify(long id, CancellationToken ct)
     {
@@ -185,37 +210,12 @@ public class QcFindingsController(
         if (!access.Has(QcAccess.MenuFinding, MenuPermission.Update) && !access.IsSuperAdmin)
             return NoAccess("memverifikasi temuan.");
 
-        if (f.Status != QcFindingStatus.FollowUp && f.Status != QcFindingStatus.WaitingVerification)
-            return BadRequest(new { message = "Verifikasi hanya bisa dilakukan pada temuan FOLLOW_UP." });
+        if (f.Status != QcFindingStatus.Done)
+            return BadRequest(new { message = "Verifikasi hanya bisa dilakukan pada temuan DONE." });
 
         f.Status = QcFindingStatus.Verified;
         f.VerifiedByUserId = access.UserId;
         f.VerifiedDate = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
-        f.UpdatedBy = access.User.UserId;
-        f.UpdatedAt = DateTime.UtcNow;
-
-        await db.SaveChangesAsync(ct);
-        return await GetFinding(id, ct);
-    }
-
-    // POST /api/qc/findings/{id}/close  (VERIFIED -> CLOSED)
-    [HttpPost("{id:long}/close")]
-    public async Task<IActionResult> CloseFinding(long id, CancellationToken ct)
-    {
-        var access = await QcAccess.LoadAsync(db, CurrentUserId);
-        if (access == null) return Forbid();
-
-        var f = await db.QcFindings.Include(f => f.Inspection).FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (f == null || !access.CanSee(f.Inspection!))
-            return NotFound(new { message = "Temuan tidak ditemukan." });
-
-        if (!access.Has(QcAccess.MenuFinding, MenuPermission.Update) && !access.IsSuperAdmin)
-            return NoAccess("menutup temuan.");
-
-        if (f.Status != QcFindingStatus.Verified)
-            return BadRequest(new { message = "Temuan hanya bisa ditutup setelah VERIFIED." });
-
-        f.Status = QcFindingStatus.Closed;
         f.UpdatedBy = access.User.UserId;
         f.UpdatedAt = DateTime.UtcNow;
 
@@ -230,14 +230,14 @@ public class QcFindingsController(
     private static QcFindingListItemDto BuildListItem(QcFinding f, string? inspectionNo, DateOnly today) =>
         new(f.Id, f.FindingNo, f.InspectionId, inspectionNo, f.Category, f.Description, f.Severity,
             f.Status, f.PicUserId, f.PicNameSnapshot, f.TargetDate,
-            f.Status != QcFindingStatus.Closed && f.TargetDate.HasValue && f.TargetDate.Value < today,
+            QcFindingStatus.Active.Contains(f.Status) && f.TargetDate.HasValue && f.TargetDate.Value < today,
             f.CreatedAt);
 
     private static QcFindingDetailDto BuildDetail(QcFinding f, DateOnly today) =>
         new(f.Id, f.FindingNo, f.InspectionId, f.Inspection?.InspectionNo, f.Inspection?.Status ?? "",
             f.Category, f.Description, f.Severity, f.Status, f.PicUserId, f.PicNameSnapshot,
             f.TargetDate, f.FollowUpNote, f.VerifiedByUserId, f.VerifiedBy?.Name, f.VerifiedDate,
-            f.Status != QcFindingStatus.Closed && f.TargetDate.HasValue && f.TargetDate.Value < today,
+            QcFindingStatus.Active.Contains(f.Status) && f.TargetDate.HasValue && f.TargetDate.Value < today,
             f.CreatedBy, f.CreatedAt, f.UpdatedAt);
 
     private static string? AppendNote(string? existing, string? add, string userName)

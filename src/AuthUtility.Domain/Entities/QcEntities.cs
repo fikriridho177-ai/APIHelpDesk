@@ -2,38 +2,45 @@ namespace AuthUtility.Domain.Entities;
 
 /* =========================================================
    STATUS / ENUM CONSTANTS
-   Phase 1: 6 status inspeksi (tanpa SUBMITTED — SUBMIT adalah aksi).
+   Fase 2: DRAFT -> SUBMITTED -> IN_REVIEW -> APPROVED -> CLOSED,
+   dengan siklus REVISION (pengembalian oleh approver, bukan reject).
    ========================================================= */
 
 // Status inspeksi QC. Lihat QcStatusEngine untuk transisi legal.
 public static class QcInspectionStatus
 {
     public const string Draft = "DRAFT";
-    public const string WaitingApproval = "WAITING_APPROVAL";
-    public const string RevisionRequired = "REVISION_REQUIRED";
-    public const string Rejected = "REJECTED";
+    // Menunggu review pertama setelah submit (baris pembuat otomatis approved).
+    public const string Submitted = "SUBMITTED";
+    // Sudah melewati minimal satu review approver, masih berjenjang.
+    public const string InReview = "IN_REVIEW";
+    // Dikembalikan approver untuk diperbaiki pembuat (catatan wajib).
+    public const string Revision = "REVISION";
     public const string Approved = "APPROVED";
     public const string Closed = "CLOSED";
 
     public static readonly string[] All =
-        { Draft, WaitingApproval, RevisionRequired, Rejected, Approved, Closed };
+        { Draft, Submitted, InReview, Revision, Approved, Closed };
 
-    // Boleh edit DataJson / field umum oleh pembuat: DRAFT & REVISION_REQUIRED.
-    public static readonly string[] Editable = { Draft, RevisionRequired };
+    // Boleh edit DataJson / field umum oleh pembuat: DRAFT & REVISION.
+    public static readonly string[] Editable = { Draft, Revision };
 
     // Boleh membuat Finding (temuan adalah bagian hasil pemeriksaan).
     public static readonly string[] FindingCreatable =
-        { Draft, WaitingApproval, RevisionRequired, Approved };
+        { Draft, Submitted, InReview, Revision, Approved };
 
-    // Terminal: tidak ada transisi keluar (kecuali admin khusus, tidak Phase 1).
-    public static readonly string[] Terminal = { Rejected, Closed };
+    // Terminal: tidak ada transisi keluar.
+    public static readonly string[] Terminal = { Closed };
+
+    // Sedang menunggu approval (antrean approver).
+    public static readonly string[] PendingApproval = { Submitted, InReview };
 }
 
 // Aksi approval (disimpan di QcApproval.Action).
+// Pengembalian untuk revisi menggantikan reject + request-revision lama.
 public static class QcApprovalAction
 {
     public const string Approve = "APPROVE";
-    public const string Reject = "REJECT";
     public const string RequestRevision = "REQUEST_REVISION";
 }
 
@@ -42,7 +49,6 @@ public static class QcApprovalStatus
 {
     public const string Pending = "PENDING";
     public const string Approved = "APPROVED";
-    public const string Rejected = "REJECTED";
     public const string RevisionRequired = "REVISION_REQUIRED";
 }
 
@@ -56,23 +62,19 @@ public static class QcFindingSeverity
     public static readonly string[] All = { Minor, Major, Critical };
 }
 
-// Status temuan. Phase 1 pakai: OPEN -> FOLLOW_UP -> VERIFIED -> CLOSED.
-// (WAITING_VERUNICATION didefinisikan untuk flow penuh, belum digerakkan endpoint Phase 1.)
+// Status temuan. Fase 2: OPEN -> IN_PROGRESS -> DONE -> VERIFIED.
+// VERIFIED = terminal; tidak ada status CLOSED terpisah lagi.
 public static class QcFindingStatus
 {
     public const string Open = "OPEN";
-    public const string FollowUp = "FOLLOW_UP";
-    public const string WaitingVerification = "WAITING_VERIFICATION";
+    public const string InProgress = "IN_PROGRESS";
+    public const string Done = "DONE";
     public const string Verified = "VERIFIED";
-    public const string Closed = "CLOSED";
 
-    public static readonly string[] All =
-        { Open, FollowUp, WaitingVerification, Verified, Closed };
+    public static readonly string[] All = { Open, InProgress, Done, Verified };
 
     // Status yang masih aktif dan menghalangi inspection CLOSE.
-    // Phase 1: seluruh finding harus CLOSED sebelum inspection boleh CLOSED.
-    public static readonly string[] Active =
-        { Open, FollowUp, WaitingVerification, Verified };
+    public static readonly string[] Active = { Open, InProgress, Done };
 }
 
 // Aksi yang dicatat di QcHistory (audit trail per inspeksi).
@@ -82,7 +84,6 @@ public static class QcHistoryAction
     public const string Update = "UPDATE";
     public const string Submit = "SUBMIT";
     public const string Approve = "APPROVE";
-    public const string Reject = "REJECT";
     public const string RequestRevision = "REQUEST_REVISION";
     public const string Resubmit = "RESUBMIT";
     public const string Close = "CLOSE";
@@ -105,6 +106,21 @@ public class QcForm
 
     public string? Description { get; set; }
 
+    // Versi form: satu Code boleh punya beberapa versi; inspeksi lama tetap merujuk versinya.
+    public int Version { get; set; } = 1;
+
+    public DateOnly? EffectiveFrom { get; set; }
+
+    // Pola detail: A sampel jalur, B dosis pupuk, C inventaris, D pengiriman, E rekap bulanan.
+    public string? Pattern { get; set; }
+
+    public string? TemplateFile { get; set; }
+
+    public string? PrintTitle { get; set; }
+
+    // Kode form asli pada file Excel (FRM-QC-...); null bila kosong/bentrok menunggu konfirmasi.
+    public string? ExcelCode { get; set; }
+
     public bool Active { get; set; } = true;
 
     public string? CreatedBy { get; set; }
@@ -116,6 +132,8 @@ public class QcForm
     public DateTime? UpdatedAt { get; set; }
 
     public ICollection<QcInspection> Inspections { get; set; } = new List<QcInspection>();
+
+    public ICollection<QcFormApprovalStep> ApprovalSteps { get; set; } = new List<QcFormApprovalStep>();
 }
 
 /* =========================================================
@@ -151,6 +169,25 @@ public class QcInspection
 
     public string? KodeAfdeling { get; set; }
 
+    // Pemborong & mandor pelaksana (master QC lokal / sync).
+    public int? PemborongId { get; set; }
+
+    public QcPemborong? Pemborong { get; set; }
+
+    public int? MandorId { get; set; }
+
+    public QcMandor? Mandor { get; set; }
+
+    // Inspektur pelaksana (user aplikasi); nama di-snapshot agar histori tetap terbaca.
+    public int? InspectorUserId { get; set; }
+
+    public UtlUser? Inspector { get; set; }
+
+    public string? InspectorNameSnapshot { get; set; }
+
+    // Nomor ICAR lama (format menunggu konfirmasi; disimpan teks bebas).
+    public string? NoIcarLama { get; set; }
+
     public string Commodity { get; set; } = "";
 
     // Periode untuk reporting (opsional per form).
@@ -162,6 +199,10 @@ public class QcInspection
 
     // Level yang sedang menunggu approval (0 = belum submit).
     public int CurrentApprovalLevel { get; set; }
+
+    // Siklus revisi: 0 = pengajuan pertama; +1 setiap resubmit setelah REVISION.
+    // Baris approval lama per revisi tetap disimpan (unique InspectionId+Level+Revision).
+    public int Revision { get; set; }
 
     // Field spesifik per form (hibrida). Field filter/dashboard tetap kolom relational.
     public string? DataJson { get; set; }
@@ -189,7 +230,7 @@ public class QcInspection
 }
 
 /* =========================================================
-   3. QcApproval — one-to-many, satu row per (InspectionId, Level)
+   3. QcApproval — one-to-many, satu row per (InspectionId, Level, Revision)
    ========================================================= */
 
 public class QcApproval
@@ -202,6 +243,9 @@ public class QcApproval
 
     public int Level { get; set; }
 
+    // Siklus revisi baris ini (mengikuti QcInspection.Revision saat dibuat).
+    public int Revision { get; set; }
+
     public int? ApproverUserId { get; set; }
 
     public UtlUser? Approver { get; set; }
@@ -212,10 +256,10 @@ public class QcApproval
 
     public UtlGroup? ApproverGroup { get; set; }
 
-    // APPROVE / REJECT / REQUEST_REVISION
+    // APPROVE / REQUEST_REVISION (kosong saat PENDING; REJECT hanya baris legacy).
     public string Action { get; set; } = "";
 
-    // PENDING / APPROVED / REJECTED / REVISION_REQUIRED
+    // PENDING / APPROVED / REVISION_REQUIRED (REJECTED hanya baris legacy).
     public string Status { get; set; } = QcApprovalStatus.Pending;
 
     public string? Comment { get; set; }
@@ -256,7 +300,7 @@ public class QcFinding
 
     public DateOnly? TargetDate { get; set; }
 
-    // OPEN / FOLLOW_UP / WAITING_VERIFICATION / VERIFIED / CLOSED
+    // OPEN / IN_PROGRESS / DONE / VERIFIED
     public string Status { get; set; } = QcFindingStatus.Open;
 
     public string? FollowUpNote { get; set; }
@@ -292,7 +336,7 @@ public class QcHistory
 
     public UtlUser? User { get; set; }
 
-    // CREATE / UPDATE / SUBMIT / APPROVE / REJECT / REQUEST_REVISION / RESUBMIT / CLOSE
+    // CREATE / UPDATE / SUBMIT / APPROVE / REQUEST_REVISION / RESUBMIT / CLOSE
     public string Action { get; set; } = "";
 
     public string? FromStatus { get; set; }
