@@ -254,6 +254,96 @@ public partial class SensusController(
             terlambatError));
     }
 
+    // Status sensus seluruh persil aktif (belum / sudah / terlambat) dengan pencarian dan paging.
+    [HttpGet("monitoring/persil")]
+    public async Task<IActionResult> GetPersilStatus(
+        int? jenisId, string? wilayah, string sumber = "KLP", int hariTerlambat = 30,
+        string? search = null, string? status = null, int page = 1, int pageSize = 50)
+    {
+        if (!await permissions.HasPermissionAsync(User, SnsMenu.Monitoring, MenuPermission.Read)) return Forbid();
+
+        var source = PersilReader.Find(sumber);
+        if (source == null) return BadRequest(new { message = "Sumber persil tidak dikenal." });
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 10, 200);
+        var hari = Math.Max(1, hariTerlambat);
+        var keyword = search?.Trim();
+        var statusFilter = status?.Trim().ToUpperInvariant();
+
+        try
+        {
+            var combos = await BuildPersilStatus(source, jenisId, wilayah, today, hari);
+            bool Match(string? value) => value != null && keyword != null && value.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+            var filtered = combos.Where(x => string.IsNullOrEmpty(keyword)
+                || Match(x.PersilKode) || Match(x.PersilId) || Match(x.KodeWilayah) || Match(x.KodeAfdeling) || Match(x.JenisName));
+            if (statusFilter is "BELUM" or "SUDAH" or "TERLAMBAT") filtered = filtered.Where(x => x.Status == statusFilter);
+
+            var total = filtered.Count();
+            var rows = filtered
+                .OrderBy(x => x.Status == "BELUM" ? 0 : x.Status == "TERLAMBAT" ? 1 : 2)
+                .ThenBy(x => x.Status == "TERLAMBAT" ? -(x.HariSejak ?? 0) : (x.HariSejak ?? 0))
+                .ThenBy(x => x.KodeWilayah).ThenBy(x => x.PersilKode).ThenBy(x => x.JenisName)
+                .Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            return Ok(new SnsPersilStatusResultDto(
+                source.Key, total,
+                combos.Count(x => x.Status == "BELUM"),
+                combos.Count(x => x.Status == "SUDAH"),
+                combos.Count(x => x.Status == "TERLAMBAT"),
+                page, pageSize, rows, null));
+        }
+        catch (DbException error)
+        {
+            logger.LogError(error, "Gagal membaca status persil {Sumber}", source.Key);
+            return Ok(new SnsPersilStatusResultDto(source.Key, 0, 0, 0, 0, page, pageSize, new(),
+                $"Gagal membaca data persil dari database {source.Database}."));
+        }
+    }
+
+    private async Task<List<SnsPersilStatusDto>> BuildPersilStatus(
+        PersilReader.Source source, int? jenisId, string? wilayah, DateOnly today, int hari)
+    {
+        var jenisList = await db.SnsJenis.AsNoTracking()
+            .Where(x => x.Active && (jenisId == null || x.Id == jenisId) && (x.Komoditas == "SEMUA" || x.Komoditas == source.Komoditas))
+            .Select(x => new { x.Id, x.Name })
+            .ToListAsync();
+        if (jenisList.Count == 0) return new();
+
+        var persilList = (await persilReader.ListAsync(source, wilayah))
+            .Where(p => !string.IsNullOrWhiteSpace(p.PersilId))
+            .Take(PersilReader.MaxRows)
+            .ToList();
+
+        var recentQuery = db.SnsHeaders.AsNoTracking()
+            .Where(x => x.PersilSumber == source.Key && (x.Status == SnsStatus.Approved || x.Status == SnsStatus.Submitted))
+            .Where(x => wilayah == null || x.KodeWilayah == wilayah);
+        var child = await recentQuery.SelectMany(x => x.HptDetails.Select(d => new { x.PersilId, JenisId = d.HptId, x.TanggalSensus }))
+            .Where(x => jenisId == null || x.JenisId == jenisId)
+            .GroupBy(x => new { x.PersilId, x.JenisId })
+            .Select(g => new { g.Key.PersilId, g.Key.JenisId, Last = g.Max(x => x.TanggalSensus), Count = g.Count() })
+            .ToListAsync();
+        var legacy = await recentQuery.Where(x => !x.HptDetails.Any() && x.JenisId != null && (jenisId == null || x.JenisId == jenisId))
+            .GroupBy(x => new { x.PersilId, JenisId = x.JenisId!.Value })
+            .Select(g => new { g.Key.PersilId, g.Key.JenisId, Last = g.Max(x => x.TanggalSensus), Count = g.Count() })
+            .ToListAsync();
+        var stats = child.Concat(legacy).GroupBy(x => (x.PersilId, x.JenisId))
+            .ToDictionary(g => g.Key, g => (Last: g.Max(x => x.Last), Count: g.Sum(x => x.Count)));
+
+        var batas = today.AddDays(-hari);
+        return (
+            from persil in persilList
+            from jenis in jenisList
+            let stat = stats.TryGetValue((persil.PersilId!, jenis.Id), out var s) ? (Last: (DateOnly?)s.Last, Count: s.Count) : (Last: (DateOnly?)null, Count: 0)
+            let last = stat.Last
+            select new SnsPersilStatusDto(
+                source.Key, persil.PersilId!, persil.Kode, persil.Wilayah, persil.Afdeling, jenis.Id, jenis.Name,
+                last, last == null ? null : today.DayNumber - last.Value.DayNumber, stat.Count,
+                last == null ? "BELUM" : last < batas ? "TERLAMBAT" : "SUDAH"))
+            .ToList();
+    }
+
     /* =========================================================
        ANALISIS (hanya data APPROVED)
     ========================================================= */

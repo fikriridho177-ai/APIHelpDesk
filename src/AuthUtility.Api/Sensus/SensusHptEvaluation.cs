@@ -58,7 +58,10 @@ public static class SensusHptEvaluation
             return value.HasValue && decimal.TryParse(r.ConditionValue?.Replace(',','.'),NumberStyles.Float,CultureInfo.InvariantCulture,out var expected)?Compare(value.Value,r.ConditionOperator!,expected):null;
         }
         var text=Text(h,r.ConditionParameterCode);
-        return text!=null && r.ConditionOperator=="="?text.Equals(r.ConditionValue,StringComparison.OrdinalIgnoreCase):null;
+        if(text==null||r.ConditionOperator!="=")return null;
+        return r.ConditionParameterCode.Equals("STATUS_LAHAN",StringComparison.OrdinalIgnoreCase)
+            ?SensusBusinessContext.NormalizeLand(text)==SensusBusinessContext.NormalizeLand(r.ConditionValue)
+            :text.Equals(r.ConditionValue,StringComparison.OrdinalIgnoreCase);
     }
     public static string Describe(SnsHptRule r)=>$"{(r.ConditionParameterCode==null?"":$"{r.ConditionParameterCode} {r.ConditionOperator} {r.ConditionValue}: ")}{r.Aggregation} {r.ParameterCode} {r.Operator} {r.ThresholdValue.ToString(CultureInfo.InvariantCulture)} {r.ThresholdUnit}";
     public static SnsEvaluationDto Evaluate(SnsHeader h)
@@ -81,7 +84,7 @@ public static class SensusHptEvaluation
         foreach(var r in rules)
         {
             if(r.StatusLahan!=null && h.StatusLahan==null){unknown=true;continue;}
-            if(r.StatusLahan!=null && r.StatusLahan!=h.StatusLahan || r.JenisForm!=null && r.JenisForm!=h.JenisForm)continue;
+            if(r.StatusLahan!=null && SensusBusinessContext.NormalizeLand(r.StatusLahan)!=SensusBusinessContext.NormalizeLand(h.StatusLahan) || r.JenisForm!=null && r.JenisForm!=h.JenisForm)continue;
             if(!Operators.Contains(r.Operator)||!Aggregations.Contains(r.Aggregation)||!Colors.Contains(r.Color)||!Colors.Contains(r.ElseColor)||r.ResultCode is not ("PERLU_PENGENDALIAN" or "MONITORING")){unknown=true;continue;}
             var condition=Condition(h,r);if(condition==null){unknown=true;continue;}if(!condition.Value)continue;
             var value=Number(h,r.ParameterCode,r.Aggregation);if(!value.HasValue){unknown=true;continue;}

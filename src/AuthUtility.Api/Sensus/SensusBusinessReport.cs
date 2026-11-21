@@ -21,7 +21,7 @@ public record SnsReportSample(int No,Dictionary<string,object?> Values);
 public record SnsReportObservation(long Id,string? SensusNo,string Periode,DateOnly Tanggal,int JenisId,string JenisName,string ReportGroup,
     string PersilSumber,string PersilId,string PersilKode,string? Wilayah,string? Afdeling,string StatusLahan,string JenisForm,
     int Sampel,int Terserang,decimal? Persen,SnsBusinessContextDto Context,SnsEvaluationDto Evaluation,
-    string Petugas,string? ApprovedBy,DateTime? ApprovedAt,List<SnsReportParameter> Parameters,List<SnsReportSample> Details);
+    string Petugas,string? ApprovedBy,DateTime? ApprovedAt,string? PetugasJabatan,string? ApprovedByJabatan,List<SnsReportParameter> Parameters,List<SnsReportSample> Details);
 public record SnsReportMatrix(string Periode,string? Wilayah,string? Afdeling,string PersilSumber,string PersilId,string PersilKode,string StatusLahan,string JenisForm,
     decimal? LuasHa,int? Populasi,string? BulanTanam,int? Sampel,int? Jalur,int? MatiPetir,int? MatiHpt,int? MatiLain,string? Pengendalian,string? MusuhAlami,string? Cuaca,
     List<SnsReportObservation> Hpt,List<string> Notes);
@@ -56,6 +56,7 @@ public static class SensusBusinessReportQuery
         if(f.JenisForm!=null)q=q.Where(h=>h.JenisForm==f.JenisForm);
         var land=SensusBusinessContext.NormalizeLand(f.StatusLahan);
         if(land=="BELUM_DIKETAHUI")q=q.Where(h=>h.StatusLahan==null||h.StatusLahan=="");
+        else if(land=="RAA")q=q.Where(h=>h.StatusLahan=="RAA"||h.StatusLahan=="RA");
         else if(land!=null)q=q.Where(h=>h.StatusLahan==land);
         return q;
     }
@@ -67,6 +68,13 @@ public static class SensusBusinessReportQuery
             .Include(h=>h.HptDetails).ThenInclude(d=>d.Hpt).ThenInclude(k=>k!.Rules)
             .Include(h=>h.Details).ThenInclude(d=>d.Parameter)
             .Include(h=>h.Petugas).Include(h=>h.ApprovedBy).AsSplitQuery().ToListAsync(ct);
+        // Jabatan dimuat terpisah: ThenInclude(Group) dalam split query mengembalikan hasil kosong di provider InMemory.
+        var users=headers.SelectMany(h=>new[]{h.Petugas,h.ApprovedBy}).Where(u=>u!=null).Select(u=>u!).Distinct().ToList();
+        if(users.Count>0){
+            var groupIds=users.Select(u=>u.GroupId).Distinct().ToList();
+            var groups=await db.Groups.AsNoTracking().Where(g=>groupIds.Contains(g.Id)).ToDictionaryAsync(g=>g.Id,ct);
+            foreach(var u in users)u.Group=groups.GetValueOrDefault(u.GroupId);
+        }
         var kinds=await db.SnsJenis.AsNoTracking().Where(k=>k.Active||q.Any(h=>h.HptDetails.Any(d=>d.HptId==k.Id)||!h.HptDetails.Any()&&h.JenisId==k.Id)).OrderBy(k=>k.ReportGroup).ThenBy(k=>k.Name).ThenBy(k=>k.Id)
             .Select(k=>new SnsReportKind(k.Id,k.Code,k.Name,k.ReportGroup)).ToListAsync(ct);
         return Build(headers,kinds,filter);
@@ -77,7 +85,7 @@ public static class SensusBusinessReportQuery
         var approved=source.Where(h=>h.Status==SnsStatus.Approved&&h.TanggalSensus>=from&&h.TanggalSensus<=to)
             .Where(h=>string.IsNullOrWhiteSpace(filter.Wilayah)||h.KodeWilayah==filter.Wilayah.Trim())
             .Where(h=>filter.JenisId==null||h.HptDetails.Any(d=>d.HptId==filter.JenisId)||h.HptDetails.Count==0&&h.JenisId==filter.JenisId).Where(h=>filter.JenisForm==null||h.JenisForm==filter.JenisForm)
-            .Where(h=>land==null||(land=="BELUM_DIKETAHUI"?string.IsNullOrEmpty(h.StatusLahan):h.StatusLahan==land)).ToList();
+            .Where(h=>land==null||(land=="BELUM_DIKETAHUI"?string.IsNullOrEmpty(h.StatusLahan):land=="RAA"?h.StatusLahan is "RAA" or "RA":h.StatusLahan==land)).ToList();
         // One latest approved observation per HPT/parcel/form/land/month. No double-counted rechecks.
         var selected=approved.SelectMany(SensusParcelHpt.Expand)
             .Where(h=>filter.JenisId==null||h.JenisId==filter.JenisId)
@@ -91,7 +99,8 @@ public static class SensusBusinessReportQuery
                 .Select(g=>new SnsReportSample(g.Key,g.GroupBy(d=>d.Parameter!.Code).ToDictionary(p=>p.Key,p=>(object?)p.Last().NilaiAngka??p.Last().NilaiTeks))).ToList();
             return new SnsReportObservation(h.Id,h.SensusNo,h.TanggalSensus.ToString("yyyy-MM"),h.TanggalSensus,h.JenisId??0,h.Jenis?.Name??"",h.Jenis?.ReportGroup??"LAINNYA",
                 h.PersilSumber,h.PersilId,h.PersilKode,h.KodeWilayah,h.KodeAfdeling,string.IsNullOrWhiteSpace(h.StatusLahan)?"BELUM_DIKETAHUI":h.StatusLahan,h.JenisForm,h.JumlahPokokSampel,h.JumlahPokokTerserang,
-                Percent(h.JumlahPokokTerserang,h.JumlahPokokSampel),SensusBusinessContext.Dto(h),SensusHptEvaluation.Evaluate(h),h.Petugas?.Name??"",h.ApprovedBy?.Name,h.ApprovedAt,parameters,details);
+                Percent(h.JumlahPokokTerserang,h.JumlahPokokSampel),SensusBusinessContext.Dto(h),SensusHptEvaluation.Evaluate(h),h.Petugas?.Name??"",h.ApprovedBy?.Name,h.ApprovedAt,
+                h.Petugas?.Group?.Name,h.ApprovedBy?.Group?.Name,parameters,details);
         }).OrderBy(o=>o.Periode).ThenBy(o=>o.Wilayah).ThenBy(o=>o.PersilKode).ThenBy(o=>o.PersilSumber).ThenBy(o=>o.PersilId)
             .ThenBy(o=>o.JenisForm).ThenBy(o=>o.StatusLahan).ThenBy(o=>o.JenisId).ToList();
         var matrix=observations.GroupBy(o=>new{o.Periode,o.Wilayah,o.Afdeling,o.PersilSumber,o.PersilId,o.PersilKode,o.StatusLahan,o.JenisForm}).Select(g=>

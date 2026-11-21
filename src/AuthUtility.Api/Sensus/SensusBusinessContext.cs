@@ -14,7 +14,7 @@ public static class SensusBusinessContext
         var key=value.Trim().ToUpperInvariant().Replace('-','_').Replace(' ','_');
         return key switch {"O" or "ORG" or "ORGANIC" or "ORGANIK"=>"ORGANIK",
             "N" or "NON_ORG" or "NONORGANIK" or "NON_ORGANIC" or "NON_ORGANIK"=>"NON_ORGANIK",
-            "R" or "RA" or "RAINFOREST_ALLIANCE"=>"RA",_=>key};
+            "R" or "RA" or "RAA" or "RAINFOREST_ALLIANCE"=>"RAA",_=>key};
     }
 
     public static SensusPersilContext FromPersil(IReadOnlyDictionary<string,object?> source)

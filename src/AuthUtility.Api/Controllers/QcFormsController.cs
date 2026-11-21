@@ -17,7 +17,7 @@ public class QcFormsController(AppDbContext db) : ControllerBase
 {
     private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    // Daftar form aktif. ?commodity=KELAPA|NANAS
+    // Daftar form aktif versi terbaru per kode. ?commodity=KELAPA|NANAS
     [HttpGet]
     public async Task<IActionResult> GetForms(string? commodity, CancellationToken ct)
     {
@@ -28,20 +28,27 @@ public class QcFormsController(AppDbContext db) : ControllerBase
         if (!string.IsNullOrWhiteSpace(commodity))
             q = q.Where(x => x.Commodity == commodity.ToUpperInvariant());
 
-        var forms = await q.OrderBy(x => x.Name).ToListAsync(ct);
+        var forms = (await q.OrderBy(x => x.Name).ToListAsync(ct))
+            .GroupBy(x => x.Code)
+            .Select(g => g.OrderByDescending(x => x.Version).First())
+            .OrderBy(x => x.Name)
+            .ToList();
 
         return Ok(forms.Select(x => new QcFormDto(
             x.Id, x.Code, x.Name, x.Commodity, x.Description, x.Active)));
     }
 
-    // Detail satu form.
+    // Detail satu form (versi terbaru bila kode punya beberapa versi).
     [HttpGet("{code}")]
     public async Task<IActionResult> GetForm(string code, CancellationToken ct)
     {
         var access = await QcAccess.LoadAsync(db, CurrentUserId);
         if (access == null) return Forbid();
 
-        var form = await db.QcForms.AsNoTracking().FirstOrDefaultAsync(x => x.Code == code, ct);
+        var form = await db.QcForms.AsNoTracking()
+            .Where(x => x.Code == code)
+            .OrderByDescending(x => x.Version)
+            .FirstOrDefaultAsync(ct);
         if (form == null) return NotFound(new { message = "Form QC tidak ditemukan." });
 
         return Ok(new QcFormDto(form.Id, form.Code, form.Name, form.Commodity, form.Description, form.Active));

@@ -13,9 +13,10 @@ public partial class SensusController
     {
         if(!await BusinessRead())return Forbid();
         var wilayah=await db.SnsHeaders.AsNoTracking().Where(h=>h.KodeWilayah!=null).Select(h=>h.KodeWilayah!).Distinct().OrderBy(s=>s).ToListAsync();
-        var land=await db.SnsHeaders.AsNoTracking().Where(h=>h.StatusLahan!=null).Select(h=>h.StatusLahan!).Distinct().ToListAsync();
+        var land=(await db.SnsHeaders.AsNoTracking().Where(h=>h.StatusLahan!=null).Select(h=>h.StatusLahan!).Distinct().ToListAsync())
+            .Select(SensusBusinessContext.NormalizeLand).Where(v=>v!=null).Select(v=>v!).Distinct().ToList();
         var kinds=await db.SnsJenis.AsNoTracking().OrderBy(k=>k.Name).Select(k=>new{k.Id,k.Code,k.Name,k.Form2Enabled}).ToListAsync();
-        return Ok(new{wilayah,statusLahan=land.Concat(new[]{"ORGANIK","NON_ORGANIK","RA","BELUM_DIKETAHUI"}).Distinct().OrderBy(v=>v),jenis=kinds});
+        return Ok(new{wilayah,statusLahan=land.Concat(new[]{"ORGANIK","NON_ORGANIK","RAA","BELUM_DIKETAHUI"}).Distinct().OrderBy(v=>v),jenis=kinds});
     }
     [HttpGet("business-report")]
     public async Task<IActionResult> BusinessReport([FromQuery]SensusBusinessFilter filter,CancellationToken ct)=>await ReadBusinessReport(filter,false,ct);

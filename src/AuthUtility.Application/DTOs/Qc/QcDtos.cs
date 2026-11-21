@@ -38,6 +38,7 @@ public record QcInspectionListItemDto(
     int? PeriodYear,
     string Status,
     int CurrentApprovalLevel,
+    int Revision,
     DateTime CreatedAt,
     DateTime? SubmittedAt,
     DateTime? ApprovedAt,
@@ -59,6 +60,7 @@ public record QcInspectionListResult(
 public record QcApprovalDto(
     long Id,
     int Level,
+    int Revision,
     int? ApproverUserId,
     string? ApproverNameSnapshot,
     int? ApproverGroupId,
@@ -103,6 +105,14 @@ public record QcInspectionDetailDto(
     JsonDocument? Data,
     string? KodeAfdeling,
     string? PersilId,
+    int? PemborongId,
+    string? PemborongNama,
+    int? MandorId,
+    string? MandorNama,
+    int? InspectorUserId,
+    string? InspectorNama,
+    string? NoIcarLama,
+    int FormVersion,
     List<QcApprovalDto> Approvals,
     List<QcFindingListItemDto> Findings,
     List<QcHistoryDto> Histories
@@ -123,6 +133,11 @@ public class CreateQcInspectionRequest
     public string? KodeAfdeling { get; set; }
     public int? PeriodMonth { get; set; }
     public int? PeriodYear { get; set; }
+    public int? PemborongId { get; set; }
+    public int? MandorId { get; set; }
+    public int? InspectorUserId { get; set; }
+    public string? InspectorName { get; set; }
+    public string? NoIcarLama { get; set; }
     // Field spesifik form sebagai JSON (object -> disimpan jsonb).
     public JsonDocument? Data { get; set; }
 }
@@ -139,6 +154,11 @@ public class UpdateQcInspectionRequest
     public string? KodeAfdeling { get; set; }
     public int? PeriodMonth { get; set; }
     public int? PeriodYear { get; set; }
+    public int? PemborongId { get; set; }
+    public int? MandorId { get; set; }
+    public int? InspectorUserId { get; set; }
+    public string? InspectorName { get; set; }
+    public string? NoIcarLama { get; set; }
     public JsonDocument? Data { get; set; }
 }
 
@@ -162,13 +182,15 @@ public record QcPendingApprovalDto(
     string? PersilKode,
     string Commodity,
     int CurrentApprovalLevel,
+    int Revision,
     DateTime SubmittedAt,
     string? LastActionBy,
     DateTime? LastActionAt,
     int MaxApprovalLevel,
     string ApprovalLabel,
     string? ApprovalRoleName,
-    string? RequiredGroupCode
+    string? ApproverGroupName,
+    bool ScopeByAfdeling
 );
 
 /* ---------- Finding: list & detail ---------- */
@@ -213,3 +235,14 @@ public class QcFindingFollowUpRequest
 {
     public string? FollowUpNote { get; set; }
 }
+
+/* ---------- Referensi header inspeksi (pemborong & mandor aktif) ---------- */
+
+public record QcPemborongRefDto(int Id, string Kode, string Nama, string? WilayahKode);
+
+public record QcMandorRefDto(int Id, string Nama, string? WilayahKode, string? KodeAfdeling, int? PemborongId, string? PemborongNama);
+
+public record QcInspectionRefsDto(
+    List<QcPemborongRefDto> Pemborong,
+    List<QcMandorRefDto> Mandor
+);

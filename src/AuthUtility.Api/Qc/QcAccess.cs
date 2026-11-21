@@ -19,12 +19,13 @@ public class QcAccess
     public const string MenuFinding = "QC_FINDING";
     public const string MenuMonitoring = "QC_MONITORING";
     public const string MenuReport = "QC_REPORT";
+    public const string MenuMaster = "QC_MASTER";
 
     public int UserId { get; private init; }
     public UtlUser User { get; private init; } = null!;
     public bool IsSuperAdmin { get; private init; }
 
-    // Kode group user — dipakai validasi approver per level (lihat QcApprovalFlowConfig).
+    // Kode group user — dipakai validasi approver per level (lihat QcApprovalFlow).
     public string? GroupCode { get; private init; }
 
     private Dictionary<int, UtlMenu> _menus = new();
@@ -81,13 +82,24 @@ public class QcAccess
         };
     }
 
-    // Approver level aktif: CanApprove pada menu level + (group cocok bila diisi) atau SuperAdmin.
-    public bool CanApproveOn(string menuCode, string? requiredGroupCode)
+    // Approver step aktif: SuperAdmin, atau anggota group approver step,
+    // atau punya hak Approve pada menu step (fallback selama group belum dipetakan).
+    public bool CanApproveStep(QcApprovalFlow.Step step)
     {
         if (IsSuperAdmin) return true;
-        if (!Has(menuCode, MenuPermission.Approve)) return false;
-        return string.IsNullOrWhiteSpace(requiredGroupCode)
-            || string.Equals(GroupCode, requiredGroupCode, StringComparison.OrdinalIgnoreCase);
+        if (step.ApproverGroupId != null && User.GroupId == step.ApproverGroupId) return true;
+        return Has(step.MenuCode, MenuPermission.Approve);
+    }
+
+    // Scope afdeling (step.ScopeByAfdeling): cocokkan DeptId user (dari master
+    // karyawan) dengan KodeAfdeling inspeksi. DeptId kosong = belum dipetakan,
+    // sementara dianggap unscoped (asumsi terdokumentasi, menunggu konfirmasi §6).
+    public bool MatchesAfdeling(string? kodeAfdeling)
+    {
+        if (IsSuperAdmin) return true;
+        if (string.IsNullOrWhiteSpace(kodeAfdeling)) return true;
+        if (string.IsNullOrWhiteSpace(User.DeptId)) return true;
+        return string.Equals(User.DeptId.Trim(), kodeAfdeling.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     // Handler = boleh melihat inspeksi orang lain (Read di Inspeksi / Approve di Approval).
